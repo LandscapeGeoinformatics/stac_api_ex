@@ -1,0 +1,52 @@
+{
+  "type": "Collection",
+  "id": "hihydro_top_sub-stc",
+  "stac_version": "1.0.0",
+  "description": "stc",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./STC_M_250m_SUBSOIL_cog.tif/STC_M_250m_SUBSOIL_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./STC_M_250m_TOPSOIL_cog.tif/STC_M_250m_TOPSOIL_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub"
+    }
+  ],
+  "title": "hihydro_top_sub-stc",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0009657159614,
+          179.99965539083183,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2023-10-14T13:07:30.569000Z",
+          "2023-10-14T13:07:45.122000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

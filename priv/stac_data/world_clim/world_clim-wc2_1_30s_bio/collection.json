@@ -1,0 +1,154 @@
+{
+  "type": "Collection",
+  "id": "world_clim-wc2_1_30s_bio",
+  "stac_version": "1.0.0",
+  "description": "wc2_1_30s_bio",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_15_cog.tif/w2_1_30s_bio_15_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_16_cog.tif/w2_1_30s_bio_16_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_17_cog.tif/w2_1_30s_bio_17_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_18_cog.tif/w2_1_30s_bio_18_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_19_cog.tif/w2_1_30s_bio_19_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_1_cog.tif/w2_1_30s_bio_1_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_2_cog.tif/w2_1_30s_bio_2_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_3_cog.tif/w2_1_30s_bio_3_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_4_cog.tif/w2_1_30s_bio_4_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_5_cog.tif/w2_1_30s_bio_5_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_6_cog.tif/w2_1_30s_bio_6_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_7_cog.tif/w2_1_30s_bio_7_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_8_cog.tif/w2_1_30s_bio_8_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_bio_9_cog.tif/w2_1_30s_bio_9_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./wc2_1_30s_bio_10_cog.tif/wc2_1_30s_bio_10_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./wc2_1_30s_bio_11_cog.tif/wc2_1_30s_bio_11_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./wc2_1_30s_bio_12_cog.tif/wc2_1_30s_bio_12_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./wc2_1_30s_bio_13_cog.tif/wc2_1_30s_bio_13_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./wc2_1_30s_bio_14_cog.tif/wc2_1_30s_bio_14_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim"
+    }
+  ],
+  "title": "world_clim-wc2_1_30s_bio",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T12:12:14.850000Z",
+          "2024-02-13T12:17:43.283000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "GEO",
+    "GOOD Stuff"
+  ],
+  "providers": [
+    {
+      "name": "Landscape Geoinformatics",
+      "description": "Landscape Geoinformatics Lab, University of Tartu, Estonia, produced all derived products, mosaics",
+      "roles": [
+        "licensor",
+        "producer",
+        "processor",
+        "host"
+      ],
+      "url": "https://landscape-geoinformatics.ut.ee"
+    }
+  ]
+}

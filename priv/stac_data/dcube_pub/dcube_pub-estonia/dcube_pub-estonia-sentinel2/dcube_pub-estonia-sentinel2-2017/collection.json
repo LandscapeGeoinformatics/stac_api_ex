@@ -1,0 +1,45 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub-estonia-sentinel2-2017",
+  "stac_version": "1.0.0",
+  "description": "2017",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2"
+    }
+  ],
+  "title": "dcube_pub-estonia-sentinel2-2017",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          Infinity,
+          Infinity,
+          -Infinity,
+          -Infinity
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          null,
+          null
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "missing"
+  ]
+}

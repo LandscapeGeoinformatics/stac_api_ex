@@ -1,0 +1,152 @@
+{
+  "type": "Collection",
+  "id": "est-topo-mtr-buffer_size_with_log_interp250m_pzone",
+  "stac_version": "1.0.0",
+  "description": "buffer_size_with_log_interp250m_pzone",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_10_cog.tif/buffer_size_with_log_interp250m_pzone_10_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_11_cog.tif/buffer_size_with_log_interp250m_pzone_11_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_12_cog.tif/buffer_size_with_log_interp250m_pzone_12_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_13_cog.tif/buffer_size_with_log_interp250m_pzone_13_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_14_cog.tif/buffer_size_with_log_interp250m_pzone_14_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_15_cog.tif/buffer_size_with_log_interp250m_pzone_15_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_16_cog.tif/buffer_size_with_log_interp250m_pzone_16_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_17_cog.tif/buffer_size_with_log_interp250m_pzone_17_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_18_cog.tif/buffer_size_with_log_interp250m_pzone_18_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_19_cog.tif/buffer_size_with_log_interp250m_pzone_19_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_1_cog.tif/buffer_size_with_log_interp250m_pzone_1_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_20_cog.tif/buffer_size_with_log_interp250m_pzone_20_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_21_cog.tif/buffer_size_with_log_interp250m_pzone_21_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_22_cog.tif/buffer_size_with_log_interp250m_pzone_22_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_2_cog.tif/buffer_size_with_log_interp250m_pzone_2_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_3_cog.tif/buffer_size_with_log_interp250m_pzone_3_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_4_cog.tif/buffer_size_with_log_interp250m_pzone_4_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_5_cog.tif/buffer_size_with_log_interp250m_pzone_5_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_6_cog.tif/buffer_size_with_log_interp250m_pzone_6_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_7_cog.tif/buffer_size_with_log_interp250m_pzone_7_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_8_cog.tif/buffer_size_with_log_interp250m_pzone_8_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./buffer_size_with_log_interp250m_pzone_9_cog.tif/buffer_size_with_log_interp250m_pzone_9_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr:"
+    }
+  ],
+  "title": "est-topo-mtr-buffer_size_with_log_interp250m_pzone",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.62436849080996,
+          57.08089829205183,
+          28.719458527717457,
+          59.85023866978794
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2021-01-19T16:38:59.579000Z",
+          "2021-01-19T16:48:53.343000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

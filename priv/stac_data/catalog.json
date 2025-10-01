@@ -1,0 +1,50 @@
+{
+  "type": "Catalog",
+  "id": "geo-assets",
+  "stac_version": "1.0.0",
+  "description": "dummy",
+  "links": [
+    {
+      "rel": "root",
+      "href": "./catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr:"
+    },
+    {
+      "rel": "child",
+      "href": "./C3S-LC-L4-LCCS-Map-300m-P1Y/collection.json",
+      "type": "application/json",
+      "title": "C3S-LC-L4-LCCS-Map-300m-P1Y"
+    },
+    {
+      "rel": "child",
+      "href": "./world_clim/collection.json",
+      "type": "application/json",
+      "title": "world_clim"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub"
+    },
+    {
+      "rel": "self",
+      "href": "/data/home/stac_deploy/STACGenerator/stac/geo-assets/catalog.json",
+      "type": "application/json"
+    }
+  ],
+  "title": "geo-assets"
+}

@@ -1,0 +1,119 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "WCavail_M_250m_SUBSOIL_cog",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-180.0, -90.0009657159614],
+        [-180.0, 90.0],
+        [179.99965524368662, 90.0],
+        [179.99965524368662, -90.0009657159614],
+        [-180.0, -90.0009657159614]
+      ]
+    ]
+  },
+  "bbox": [-180.0, -90.0009657159614, 179.99965524368662, 90.0],
+  "properties": {
+    "datetime": "2023-10-14T14:06:13.425000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "/api/stac/v1/",
+      "type": "application/json",
+      "title": "Aoraki STAC API"
+    },
+    {
+      "rel": "collection",
+      "href": "/api/stac/v1/collections/hihydro_top_sub-wcavail",
+      "type": "application/json",
+      "title": "hihydro_top_sub-wcavail"
+    },
+    {
+      "rel": "parent",
+      "href": "/api/stac/v1/collections/hihydro_top_sub-wcavail",
+      "type": "application/json",
+      "title": "hihydro_top_sub-wcavail"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/hihydro_top_sub%2Fwcavail%2FWCavail_M_250m_SUBSOIL_cog.tif?generation=1697292373418367&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int32",
+          "spatial_resolution": 254.23652232174163,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [-180.0, -90.0009657159614],
+              [-180.0, 90.0],
+              [179.99965524368662, 90.0],
+              [179.99965524368662, -90.0009657159614],
+              [-180.0, -90.0009657159614]
+            ]
+          ]
+        },
+        "bbox": [-180.0, -90.0009657159614, 179.99965524368662, 90.0],
+        "transform": [
+          0.00227618823616542, 0.0, -180.0, 0.0, -0.00227618823616542, 90.0,
+          0.0, 0.0, 1.0
+        ]
+      },
+      "file:size": 6678339794,
+      "roles": ["data"]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/hihydro_top_sub/wcavail/WCavail_M_250m_SUBSOIL_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int32",
+          "spatial_resolution": 254.23652232174163,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [-180.0, -90.0009657159614],
+              [-180.0, 90.0],
+              [179.99965524368662, 90.0],
+              [179.99965524368662, -90.0009657159614],
+              [-180.0, -90.0009657159614]
+            ]
+          ]
+        },
+        "bbox": [-180.0, -90.0009657159614, 179.99965524368662, 90.0],
+        "transform": [
+          0.00227618823616542, 0.0, -180.0, 0.0, -0.00227618823616542, 90.0,
+          0.0, 0.0, 1.0
+        ]
+      },
+      "file:size": 6678339794,
+      "roles": ["data"]
+    }
+  },
+  "collection": "hihydro_top_sub-wcavail"
+}

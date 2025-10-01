@@ -1,0 +1,47 @@
+{
+  "type": "Collection",
+  "id": "est-topo-mtr-chm_test_annual",
+  "stac_version": "1.0.0",
+  "description": "chm_test_annual",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./CHM_2021_suvi_cog.tif/CHM_2021_suvi_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr:"
+    }
+  ],
+  "title": "est-topo-mtr-chm_test_annual",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          25.635622916357057,
+          57.47798966405833,
+          27.90963729838,
+          58.6736570275351
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2022-07-03T20:38:51.414000Z",
+          "2022-07-03T20:38:51.414000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

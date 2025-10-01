@@ -1,0 +1,111 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub-estonia-sentinel2",
+  "stac_version": "1.0.0",
+  "description": "sentinel2",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-2017/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-2017"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-bsi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-bsi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-evi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-evi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-fvc/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-fvc"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-gndvi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-gndvi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-ndmi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-ndmi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-ndvi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-ndvi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-ndwi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-ndwi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-savi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-savi"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-wiw/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-wiw"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia"
+    }
+  ],
+  "title": "dcube_pub-estonia-sentinel2",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072036889028,
+          57.47121886444548,
+          28.275493984062805,
+          59.83122737438482
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2025-01-23T08:56:59.086000Z",
+          "2025-04-08T12:53:44.544000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "missing"
+  ]
+}

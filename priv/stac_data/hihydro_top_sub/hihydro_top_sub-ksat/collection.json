@@ -1,0 +1,52 @@
+{
+  "type": "Collection",
+  "id": "hihydro_top_sub-ksat",
+  "stac_version": "1.0.0",
+  "description": "ksat",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./Ksat_M_250m_SUBSOIL_cog.tif/Ksat_M_250m_SUBSOIL_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./Ksat_M_250m_TOPSOIL_cog.tif/Ksat_M_250m_TOPSOIL_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub"
+    }
+  ],
+  "title": "hihydro_top_sub-ksat",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0009657159614,
+          179.99965524368662,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2023-10-14T14:26:20.607000Z",
+          "2023-10-14T14:31:15.214000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

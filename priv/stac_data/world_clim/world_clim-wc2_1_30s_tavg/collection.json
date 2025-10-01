@@ -1,0 +1,102 @@
+{
+  "type": "Collection",
+  "id": "world_clim-wc2_1_30s_tavg",
+  "stac_version": "1.0.0",
+  "description": "wc2_1_30s_tavg",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_01_cog.tif/w2_1_30s_tavg_01_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_02_cog.tif/w2_1_30s_tavg_02_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_03_cog.tif/w2_1_30s_tavg_03_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_04_cog.tif/w2_1_30s_tavg_04_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_05_cog.tif/w2_1_30s_tavg_05_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_06_cog.tif/w2_1_30s_tavg_06_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_07_cog.tif/w2_1_30s_tavg_07_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_08_cog.tif/w2_1_30s_tavg_08_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_09_cog.tif/w2_1_30s_tavg_09_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_10_cog.tif/w2_1_30s_tavg_10_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_11_cog.tif/w2_1_30s_tavg_11_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_tavg_12_cog.tif/w2_1_30s_tavg_12_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim"
+    }
+  ],
+  "title": "world_clim-wc2_1_30s_tavg",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T12:13:40.306000Z",
+          "2024-02-13T12:13:56.237000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

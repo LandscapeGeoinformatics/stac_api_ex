@@ -1,0 +1,310 @@
+<!-- lib/stac_api_web/controllers/stac_browser_html/search.html.heex -->
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <h1 class="text-2xl font-bold text-gray-900">🔍 STAC Item Search</h1>
+      </div>
+      <div class="flex space-x-2">
+        <a href="/stac/browse" 
+           class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+          ← Back to Browser
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Form -->
+  <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 mb-6">
+    <form action="/stac/search" method="get" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Collections -->
+        <div>
+          <label for="collections" class="block text-sm font-medium text-gray-700 mb-2">
+            Collections
+          </label>
+          <input type="text" 
+                 id="collections" 
+                 name="collections" 
+                 value={@search_params["collections"] || ""}
+                 placeholder="e.g., collection1,collection2"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <p class="text-xs text-gray-500 mt-1">Comma-separated collection IDs</p>
+        </div>
+
+        <!-- IDs -->
+        <div>
+          <label for="ids" class="block text-sm font-medium text-gray-700 mb-2">
+            Item IDs
+          </label>
+          <input type="text" 
+                 id="ids" 
+                 name="ids" 
+                 value={@search_params["ids"] || ""}
+                 placeholder="e.g., item1,item2,item3"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <p class="text-xs text-gray-500 mt-1">Comma-separated item IDs</p>
+        </div>
+
+        <!-- Limit -->
+        <div>
+          <label for="limit" class="block text-sm font-medium text-gray-700 mb-2">
+            Limit
+          </label>
+          <input type="number" 
+                 id="limit" 
+                 name="limit" 
+                 value={@search_params["limit"] || "10"}
+                 min="1" 
+                 max="100"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <p class="text-xs text-gray-500 mt-1">Max results (1-100)</p>
+        </div>
+      </div>
+
+      <!-- Date Range -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="datetime_start" class="block text-sm font-medium text-gray-700 mb-2">
+            Start Date
+          </label>
+          <input type="datetime-local" 
+                 id="datetime_start" 
+                 name="datetime_start" 
+                 value={@search_params["datetime_start"] || ""}
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label for="datetime_end" class="block text-sm font-medium text-gray-700 mb-2">
+            End Date
+          </label>
+          <input type="datetime-local" 
+                 id="datetime_end" 
+                 name="datetime_end" 
+                 value={@search_params["datetime_end"] || ""}
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+      </div>
+
+      <!-- Bounding Box -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Bounding Box (West, South, East, North)
+        </label>
+        <div class="grid grid-cols-4 gap-2">
+          <input type="number" 
+                 name="bbox_west" 
+                 value={get_bbox_value(@search_params, 0)}
+                 step="any"
+                 placeholder="West"
+                 class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input type="number" 
+                 name="bbox_south" 
+                 value={get_bbox_value(@search_params, 1)}
+                 step="any"
+                 placeholder="South"
+                 class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input type="number" 
+                 name="bbox_east" 
+                 value={get_bbox_value(@search_params, 2)}
+                 step="any"
+                 placeholder="East"
+                 class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input type="number" 
+                 name="bbox_north" 
+                 value={get_bbox_value(@search_params, 3)}
+                 step="any"
+                 placeholder="North"
+                 class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Geographic bounding box coordinates</p>
+      </div>
+
+      <!-- Search Buttons -->
+      <div class="flex space-x-3">
+        <button type="submit" 
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+          🔍 Search Items
+        </button>
+        <button type="button" 
+                onclick="searchAsJson()"
+                class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors">
+          📄 Get JSON Results
+        </button>
+        <a href="/stac/search" 
+           class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+          Clear
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Search Results -->
+  <%= if length(@search_results) > 0 do %>
+    <div class="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+      <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h2 class="text-lg font-medium text-gray-900">
+            Search Results (<%= @total_count %> items found)
+          </h2>
+        </div>
+      </div>
+
+      <div class="divide-y divide-gray-200">
+        <%= for item <- @search_results do %>
+          <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+            <div class="space-y-4">
+              <!-- Item Header -->
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <div class="flex items-center space-x-3 mb-2">
+                    <h3 class="text-lg font-medium text-gray-900">
+                      <%= get_item_id(item) %>
+                    </h3>
+                    <%= if get_collection_id(item) do %>
+                      <span class="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        <%= get_collection_id(item) %>
+                      </span>
+                    <% end %>
+                  </div>
+                  
+                  <div class="text-sm text-gray-600 space-y-1">
+                    <%= if get_datetime(item) do %>
+                      <p><strong>Date:</strong> <%= get_datetime(item) %></p>
+                    <% end %>
+                    
+                    <%= if get_bbox(item) do %>
+                      <p><strong>Bbox:</strong> <%= inspect(get_bbox(item)) %></p>
+                    <% end %>
+                    
+                    <%= if get_properties(item) do %>
+                      <p><strong>Properties:</strong> <%= length(Map.keys(get_properties(item))) %> fields</p>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Assets Section -->
+              <%= if get_assets(item) && map_size(get_assets(item)) > 0 do %>
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-gray-900 mb-3">
+                    📁 Assets (<%= map_size(get_assets(item)) %> files)
+                  </h4>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <%= for {asset_key, asset} <- get_assets(item) do %>
+                      <div class="bg-white border border-gray-200 rounded-md p-3">
+                        <div class="flex justify-between items-start mb-2">
+                          <div class="flex-1 min-w-0">
+                            <h5 class="text-sm font-medium text-gray-900 truncate">
+                              <%= asset_key %>
+                            </h5>
+
+                            <%= if Map.get(asset, "title") do %>
+                              <p class="text-xs text-gray-500 truncate">
+                                <%= Map.get(asset, "title") %>
+                              </p>
+                            <% end %>
+                          </div>
+
+                          <!-- Asset type indicator based on MIME type -->
+                          <%= if Map.get(asset, "type") do %>
+                            <span class="text-sm ml-2">
+                              <%= cond do %>
+                                <% String.contains?(Map.get(asset, "type", ""), "image") -> %>
+                                  🖼️
+                                <% String.contains?(Map.get(asset, "type", ""), "json") -> %>
+                                  📄
+                                <% String.contains?(Map.get(asset, "type", ""), "xml") -> %>
+                                  📋
+                                <% String.contains?(Map.get(asset, "type", ""), "zip") -> %>
+                                  📦
+                                <% true -> %>
+                                  📁
+                              <% end %>
+                            </span>
+                          <% end %>
+                        </div>
+
+                        <%= if Map.get(asset, "type") do %>
+                          <p class="text-xs text-gray-500 mb-2">
+                            Type: <%= Map.get(asset, "type") %>
+                          </p>
+                        <% end %>
+
+                        <%= if Map.get(asset, "href") do %>
+                          <a href={Map.get(asset, "href")}
+                            target="_blank"
+                            class="inline-flex items-center px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            title={"Download #{asset_key}"}>
+                            ⬇️ Download
+                          </a>
+                        <% else %>
+                          <span class="inline-flex items-center px-3 py-1 text-xs font-medium bg-gray-300 text-gray-500 rounded cursor-not-allowed">
+                            No download link
+                          </span>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              <% else %>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p class="text-sm text-yellow-700">⚠️ No assets available for this item</p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <%= if map_size(@search_params) > 0 do %>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <div class="text-yellow-600">
+          <h3 class="text-lg font-medium mb-2">No Results Found</h3>
+          <p>Try adjusting your search criteria and search again.</p>
+        </div>
+      </div>
+    <% else %>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+        <div class="text-blue-600">
+          <h3 class="text-lg font-medium mb-2">Ready to Search</h3>
+          <p>Fill in the search criteria above and click "Search Items" to find STAC items.</p>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>
+
+<script>
+function searchAsJson() {
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  const params = new URLSearchParams();
+  
+  for (let [key, value] of formData.entries()) {
+    if (value.trim() !== '') {
+      if (!key.startsWith('bbox_')) {
+        params.append(key, value);
+      }
+    }
+  }
+  
+  // Assemble bbox if any bbox values are provided
+  const bboxWest = formData.get('bbox_west');
+  const bboxSouth = formData.get('bbox_south');
+  const bboxEast = formData.get('bbox_east');
+  const bboxNorth = formData.get('bbox_north');
+  
+  if (bboxWest || bboxSouth || bboxEast || bboxNorth) {
+    const bbox = [bboxWest || '', bboxSouth || '', bboxEast || '', bboxNorth || ''].join(',');
+    if (bbox !== ',,,') {
+      params.append('bbox', bbox);
+    }
+  }
+  
+  const url = `/stac/search/api?${params.toString()}`;
+  window.open(url, '_blank');
+}
+</script>

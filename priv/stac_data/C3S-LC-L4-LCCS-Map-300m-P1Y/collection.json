@@ -1,0 +1,48 @@
+{
+  "type": "Collection",
+  "id": "C3S-LC-L4-LCCS-Map-300m-P1Y",
+  "stac_version": "1.0.0",
+  "description": "C3S-LC-L4-LCCS-Map-300m-P1Y",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./C3S-LC-L4-LCCS-Map-300m-P1Y-collection1/collection.json",
+      "type": "application/json",
+      "title": "C3S-LC-L4-LCCS-Map-300m-P1Y-collection1"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    }
+  ],
+  "title": "C3S-LC-L4-LCCS-Map-300m-P1Y",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.00000000001438,
+          180.00000000002876,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T09:23:07.334000Z",
+          "2024-02-13T09:23:50.115000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

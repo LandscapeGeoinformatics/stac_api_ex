@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "estsoil_labeled_pzone_5_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          27.73211402652305,
+          58.90036282802779
+        ],
+        [
+          27.831154025400256,
+          59.79658172427782
+        ],
+        [
+          28.719458527717457,
+          59.76799889143544
+        ],
+        [
+          28.597586884712733,
+          58.87250856166608
+        ],
+        [
+          27.73211402652305,
+          58.90036282802779
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    27.73211402652305,
+    58.87250856166608,
+    28.719458527717457,
+    59.79658172427782
+  ],
+  "properties": {
+    "datetime": "2021-01-19T14:56:03.282000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-estsoil_labeled_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-estsoil_labeled_pzone"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Festsoil_labeled_pzone%2Festsoil_labeled_pzone_5_cog.tif?generation=1611068163280572&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 0.0,
+          "data_type": "int16",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                715000.0,
+                6535000.0
+              ],
+              [
+                715000.0,
+                6635000.0
+              ],
+              [
+                765000.0,
+                6635000.0
+              ],
+              [
+                765000.0,
+                6535000.0
+              ],
+              [
+                715000.0,
+                6535000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          715000.0,
+          6535000.0,
+          765000.0,
+          6635000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          715000.0,
+          0.0,
+          -5.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 2340161,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/estsoil_labeled_pzone/estsoil_labeled_pzone_5_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 0.0,
+          "data_type": "int16",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                715000.0,
+                6535000.0
+              ],
+              [
+                715000.0,
+                6635000.0
+              ],
+              [
+                765000.0,
+                6635000.0
+              ],
+              [
+                765000.0,
+                6535000.0
+              ],
+              [
+                715000.0,
+                6535000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          715000.0,
+          6535000.0,
+          765000.0,
+          6635000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          715000.0,
+          0.0,
+          -5.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 2340161,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-estsoil_labeled_pzone"
+}

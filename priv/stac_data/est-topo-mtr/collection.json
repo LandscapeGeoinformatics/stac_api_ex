@@ -1,0 +1,132 @@
+{
+  "type": "Collection",
+  "id": "est-topo-mtr",
+  "stac_version": "1.0.0",
+  "description": "est-topo-mtr:",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-buffer_size_default_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-buffer_size_default_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-buffer_size_with_log_interp250m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-buffer_size_with_log_interp250m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-buffer_size_with_log_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-buffer_size_with_log_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-chm_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-chm_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-chm_test_annual/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-chm_test_annual"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-dem_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-dem_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-estsoil_labeled_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-estsoil_labeled_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-flowacc_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-flowacc_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-flowlength_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-flowlength_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-ls_faktor5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-ls_faktor5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-slope_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-slope_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-specific_slopenlength_default_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-specific_slopenlength_default_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-specific_slopenlength_with_log_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-specific_slopenlength_with_log_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-tri_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-tri_5m_pzone"
+    },
+    {
+      "rel": "child",
+      "href": "./est-topo-mtr-twi_5m_pzone/collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-twi_5m_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    }
+  ],
+  "title": "est-topo-mtr:",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.62436849080996,
+          57.08089829205183,
+          28.719458527717457,
+          59.85023866978794
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2021-01-19T14:49:47.820000Z",
+          "2022-07-03T20:38:51.414000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

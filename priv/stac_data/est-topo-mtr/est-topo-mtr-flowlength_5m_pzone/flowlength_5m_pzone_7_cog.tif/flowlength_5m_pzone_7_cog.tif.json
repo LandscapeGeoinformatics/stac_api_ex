@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "flowlength_5m_pzone_7_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          23.38385522184184,
+          59.40148253975939
+        ],
+        [
+          23.375662725052425,
+          59.85023866978794
+        ],
+        [
+          26.050813897741463,
+          59.83592195710938
+        ],
+        [
+          26.023918220408238,
+          59.387350774160204
+        ],
+        [
+          23.38385522184184,
+          59.40148253975939
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    23.375662725052425,
+    59.387350774160204,
+    26.050813897741463,
+    59.85023866978794
+  ],
+  "properties": {
+    "datetime": "2021-01-19T14:58:02.785000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-flowlength_5m_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-flowlength_5m_pzone"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Fflowlength_5m_pzone%2Fflowlength_5m_pzone_7_cog.tif?generation=1611068282783197&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": null,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                465000.0,
+                6585000.0
+              ],
+              [
+                465000.0,
+                6635000.0
+              ],
+              [
+                615000.0,
+                6635000.0
+              ],
+              [
+                615000.0,
+                6585000.0
+              ],
+              [
+                465000.0,
+                6585000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          465000.0,
+          6585000.0,
+          615000.0,
+          6635000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          465000.0,
+          0.0,
+          -5.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 318164130,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/flowlength_5m_pzone/flowlength_5m_pzone_7_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": null,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                465000.0,
+                6585000.0
+              ],
+              [
+                465000.0,
+                6635000.0
+              ],
+              [
+                615000.0,
+                6635000.0
+              ],
+              [
+                615000.0,
+                6585000.0
+              ],
+              [
+                465000.0,
+                6585000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          465000.0,
+          6585000.0,
+          615000.0,
+          6635000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          465000.0,
+          0.0,
+          -5.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 318164130,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-flowlength_5m_pzone"
+}

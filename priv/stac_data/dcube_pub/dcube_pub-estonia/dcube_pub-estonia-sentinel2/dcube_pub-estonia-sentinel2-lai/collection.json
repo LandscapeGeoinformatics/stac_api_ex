@@ -1,0 +1,93 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub-estonia-sentinel2-lai",
+  "stac_version": "1.0.0",
+  "description": "lai",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2017/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2017"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2018/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2018"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2019/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2019"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2020/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2020"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2021/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2021"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2022/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2022"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2023/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2023"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel2-lai-2024/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-lai-2024"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2"
+    }
+  ],
+  "title": "dcube_pub-estonia-sentinel2-lai",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072036889028,
+          57.47121886444548,
+          28.275493984062805,
+          59.83122737438482
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2025-01-23T11:01:24.539000Z",
+          "2025-01-23T12:43:19.997000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "missing"
+  ]
+}

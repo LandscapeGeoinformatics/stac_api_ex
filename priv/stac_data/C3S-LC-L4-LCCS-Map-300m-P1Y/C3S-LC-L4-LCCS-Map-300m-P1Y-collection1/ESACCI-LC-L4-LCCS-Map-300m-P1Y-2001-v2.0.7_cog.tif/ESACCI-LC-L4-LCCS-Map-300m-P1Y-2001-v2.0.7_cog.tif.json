@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2001-v2.0.7_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -180.0,
+          -90.00000000001438
+        ],
+        [
+          -180.0,
+          90.0
+        ],
+        [
+          180.00000000002876,
+          90.0
+        ],
+        [
+          180.00000000002876,
+          -90.00000000001438
+        ],
+        [
+          -180.0,
+          -90.00000000001438
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -180.0,
+    -90.00000000001438,
+    180.00000000002876,
+    90.0
+  ],
+  "properties": {
+    "datetime": "2024-02-13T09:23:10.996000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "C3S-LC-L4-LCCS-Map-300m-P1Y-collection1"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "C3S-LC-L4-LCCS-Map-300m-P1Y-collection1"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/C3S-LC-L4-LCCS-Map-300m-P1Y%2Fcollection1%2FESACCI-LC-L4-LCCS-Map-300m-P1Y-2001-v2.0.7_cog.tif?generation=1707816190993498&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 0.0,
+          "data_type": "uint8",
+          "spatial_resolution": 310.26105432869923,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.00000000001438
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                180.00000000002876,
+                90.0
+              ],
+              [
+                180.00000000002876,
+                -90.00000000001438
+              ],
+              [
+                -180.0,
+                -90.00000000001438
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.00000000001438,
+          180.00000000002876,
+          90.0
+        ],
+        "transform": [
+          0.002777777777778,
+          0.0,
+          -180.0,
+          0.0,
+          -0.002777777777778,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 747778192,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/C3S-LC-L4-LCCS-Map-300m-P1Y/collection1/ESACCI-LC-L4-LCCS-Map-300m-P1Y-2001-v2.0.7_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 0.0,
+          "data_type": "uint8",
+          "spatial_resolution": 310.26105432869923,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.00000000001438
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                180.00000000002876,
+                90.0
+              ],
+              [
+                180.00000000002876,
+                -90.00000000001438
+              ],
+              [
+                -180.0,
+                -90.00000000001438
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.00000000001438,
+          180.00000000002876,
+          90.0
+        ],
+        "transform": [
+          0.002777777777778,
+          0.0,
+          -180.0,
+          0.0,
+          -0.002777777777778,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 747778192,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "C3S-LC-L4-LCCS-Map-300m-P1Y-collection1"
+}

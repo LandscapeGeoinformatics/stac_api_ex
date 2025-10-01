@@ -1,0 +1,291 @@
+# STAC API Testing Suite
+# Use with VS Code REST Client extension or similar tools
+# 
+# Base URL: http://localhost:4000
+# 
+# To use this file:
+# 1. Install REST Client extension in VS Code
+# 2. Make sure your Phoenix server is running (mix phx.server)
+# 3. Click "Send Request" above each request
+
+### ========================================
+### ROOT ENDPOINT
+### ========================================
+
+# Get STAC root catalog
+GET http://localhost:4000/
+Accept: application/json
+
+### ========================================
+### COLLECTIONS ENDPOINTS
+### ========================================
+
+# Get all collections
+GET http://localhost:4000/collections
+Accept: application/json
+
+# Get specific collection by ID
+GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin
+Accept: application/json
+
+# Get items in a specific collection
+GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin/items
+Accept: application/geo+json
+
+# Get items in another collection
+GET http://localhost:4000/collections/est-topo-mtr-dem_5m_pzone/items
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - BASIC QUERIES
+### ========================================
+
+# Basic search (default limit 10)
+GET http://localhost:4000/search
+Accept: application/geo+json
+
+# Search with custom limit
+GET http://localhost:4000/search?limit=5
+Accept: application/geo+json
+
+# Search with pagination
+GET http://localhost:4000/search?limit=5&offset=10
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - SPATIAL QUERIES
+### ========================================
+
+# Search by bounding box (Estonia area)
+GET http://localhost:4000/search?bbox=21,57,28,60
+Accept: application/geo+json
+
+# Search by bounding box (global area)
+GET http://localhost:4000/search?bbox=0,0,10,10
+Accept: application/geo+json
+
+# Search by bounding box (Europe area)
+GET http://localhost:4000/search?bbox=-10,35,40,70
+Accept: application/geo+json
+
+# Search by bounding box (small area)
+GET http://localhost:4000/search?bbox=24,58,26,60
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - TEMPORAL QUERIES
+### ========================================
+
+# Search by datetime range (2024)
+GET http://localhost:4000/search?datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
+Accept: application/geo+json
+
+# Search by datetime range (2025)
+GET http://localhost:4000/search?datetime=2025-01-01T00:00:00Z/2025-12-31T23:59:59Z
+Accept: application/geo+json
+
+# Search by specific date
+GET http://localhost:4000/search?datetime=2024-02-13T12:00:00Z
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - COLLECTION FILTERS
+### ========================================
+
+# Search by single collection
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin
+Accept: application/geo+json
+
+# Search by another collection
+GET http://localhost:4000/search?collections=est-topo-mtr-dem_5m_pzone
+Accept: application/geo+json
+
+# Search by multiple collections
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin,est-topo-mtr-dem_5m_pzone
+Accept: application/geo+json
+
+# Search by collection with limit
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&limit=20
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - COMBINED QUERIES
+### ========================================
+
+# Collection + Bounding Box
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90
+Accept: application/geo+json
+
+# Collection + Bounding Box + Limit
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=5
+Accept: application/geo+json
+
+# Collection + Datetime + Limit
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
+Accept: application/geo+json
+
+# Bounding Box + Datetime
+GET http://localhost:4000/search?bbox=21,57,28,60&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
+Accept: application/geo+json
+
+# Full combination
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - SPATIAL INTERSECTS
+### ========================================
+
+# Search by intersects with Polygon (Estonia)
+GET http://localhost:4000/search?intersects={"type":"Polygon","coordinates":[[[21,57],[21,60],[28,60],[28,57],[21,57]]]}&limit=5
+Accept: application/geo+json
+
+# Search by intersects with Point (Tallinn)
+GET http://localhost:4000/search?intersects={"type":"Point","coordinates":[24.7536,59.4370]}&limit=5
+Accept: application/geo+json
+
+# Search by intersects with larger area
+GET http://localhost:4000/search?intersects={"type":"Polygon","coordinates":[[[0,0],[0,90],[180,90],[180,0],[0,0]]]}&limit=10
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - ID FILTERS
+### ========================================
+
+# Search by specific item ID
+GET http://localhost:4000/search?ids=w2_1_30s_tmin_01_cog.tif
+Accept: application/geo+json
+
+# Search by multiple item IDs
+GET http://localhost:4000/search?ids=w2_1_30s_tmin_01_cog.tif,w2_1_30s_tmin_02_cog.tif
+Accept: application/geo+json
+
+### ========================================
+### SEARCH ENDPOINT - PAGINATION TESTS
+### ========================================
+
+# First page
+GET http://localhost:4000/search?limit=5&offset=0
+Accept: application/geo+json
+
+# Second page
+GET http://localhost:4000/search?limit=5&offset=5
+Accept: application/geo+json
+
+# Third page
+GET http://localhost:4000/search?limit=5&offset=10
+Accept: application/geo+json
+
+# Large limit test
+GET http://localhost:4000/search?limit=100
+Accept: application/geo+json
+
+# Maximum limit test
+GET http://localhost:4000/search?limit=1000
+Accept: application/geo+json
+
+### ========================================
+### BROWSER INTERFACE ENDPOINTS
+### ========================================
+
+# STAC Browser interface
+GET http://localhost:4000/stac/browse
+Accept: text/html
+
+# STAC Search interface
+GET http://localhost:4000/stac/search
+Accept: text/html
+
+# STAC Browser API search
+GET http://localhost:4000/stac/search/api?limit=5
+Accept: application/json
+
+### ========================================
+### ERROR HANDLING TESTS
+### ========================================
+
+# Invalid collection ID
+GET http://localhost:4000/collections/nonexistent-collection
+Accept: application/json
+
+# Invalid search parameters
+GET http://localhost:4000/search?bbox=invalid,bbox,format
+Accept: application/geo+json
+
+# Invalid datetime format
+GET http://localhost:4000/search?datetime=invalid-date
+Accept: application/geo+json
+
+# Invalid intersects geometry
+GET http://localhost:4000/search?intersects={"type":"Invalid","coordinates":[]}
+Accept: application/geo+json
+
+### ========================================
+### PERFORMANCE TESTS
+### ========================================
+
+# Large result set
+GET http://localhost:4000/search?limit=500
+Accept: application/geo+json
+
+# Complex query with large result
+GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=200
+Accept: application/geo+json
+
+### ========================================
+### STAC COMPLIANCE TESTS
+### ========================================
+
+# Check if response includes required STAC fields
+GET http://localhost:4000/search?limit=1
+Accept: application/geo+json
+
+# Check collections response format
+GET http://localhost:4000/collections
+Accept: application/json
+
+# Check single collection format
+GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin
+Accept: application/json
+
+### ========================================
+### CUSTOM HEADERS TESTS
+### ========================================
+
+# Test with different Accept headers
+GET http://localhost:4000/search?limit=5
+Accept: application/json
+
+GET http://localhost:4000/search?limit=5
+Accept: application/geo+json
+
+GET http://localhost:4000/search?limit=5
+Accept: */*
+
+### ========================================
+### TESTING NOTES
+### ========================================
+#
+# 1. Start your Phoenix server: mix phx.server
+# 2. Make sure PostGIS database is running
+# 3. Test endpoints in order to understand the API
+# 4. Check response headers and status codes
+# 5. Verify GeoJSON structure compliance
+# 6. Test error handling with invalid parameters
+# 7. Monitor response times for performance
+# 8. Check pagination links in responses
+#
+# Expected Results:
+# - Basic search: Should return 714 items total
+# - Collections: Should return 140 collections
+# - Bbox queries: Should filter by spatial extent
+# - Datetime queries: Should filter by temporal range
+# - Collection filters: Should filter by collection ID
+# - Combined queries: Should apply multiple filters
+# - Pagination: Should work with limit/offset
+# - Error handling: Should return proper error responses
+#
+# Issues to Watch For:
+# - PostGIS errors with intersects queries
+# - JSON serialization errors
+# - Incorrect GeoJSON geometry formats

@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "specific_slopenlength_with_log_pzone_4_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          24.25089843216598,
+          57.607082450068226
+        ],
+        [
+          24.257314872499165,
+          58.50491504255472
+        ],
+        [
+          25.11493389477969,
+          58.50032312694511
+        ],
+        [
+          25.087136412273217,
+          57.60260513264059
+        ],
+        [
+          24.25089843216598,
+          57.607082450068226
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    24.25089843216598,
+    57.60260513264059,
+    25.11493389477969,
+    58.50491504255472
+  ],
+  "properties": {
+    "datetime": "2021-01-19T16:30:20.865000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-specific_slopenlength_with_log_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-specific_slopenlength_with_log_pzone"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Fspecific_slopenlength_with_log_pzone%2Fspecific_slopenlength_with_log_pzone_4_cog.tif?generation=1611073820861861&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -1.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                515000.0,
+                6385000.0
+              ],
+              [
+                515000.0,
+                6485000.0
+              ],
+              [
+                565000.0,
+                6485000.0
+              ],
+              [
+                565000.0,
+                6385000.0
+              ],
+              [
+                515000.0,
+                6385000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          515000.0,
+          6385000.0,
+          565000.0,
+          6485000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          515000.0,
+          0.0,
+          -5.0,
+          6485000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 496455388,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/specific_slopenlength_with_log_pzone/specific_slopenlength_with_log_pzone_4_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -1.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                515000.0,
+                6385000.0
+              ],
+              [
+                515000.0,
+                6485000.0
+              ],
+              [
+                565000.0,
+                6485000.0
+              ],
+              [
+                565000.0,
+                6385000.0
+              ],
+              [
+                515000.0,
+                6385000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          515000.0,
+          6385000.0,
+          565000.0,
+          6485000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          515000.0,
+          0.0,
+          -5.0,
+          6485000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 496455388,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-specific_slopenlength_with_log_pzone"
+}

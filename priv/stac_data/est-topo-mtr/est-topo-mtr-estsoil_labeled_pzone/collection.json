@@ -1,0 +1,152 @@
+{
+  "type": "Collection",
+  "id": "est-topo-mtr-estsoil_labeled_pzone",
+  "stac_version": "1.0.0",
+  "description": "estsoil_labeled_pzone",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_10_cog.tif/estsoil_labeled_pzone_10_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_11_cog.tif/estsoil_labeled_pzone_11_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_12_cog.tif/estsoil_labeled_pzone_12_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_13_cog.tif/estsoil_labeled_pzone_13_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_14_cog.tif/estsoil_labeled_pzone_14_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_15_cog.tif/estsoil_labeled_pzone_15_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_16_cog.tif/estsoil_labeled_pzone_16_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_17_cog.tif/estsoil_labeled_pzone_17_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_18_cog.tif/estsoil_labeled_pzone_18_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_19_cog.tif/estsoil_labeled_pzone_19_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_1_cog.tif/estsoil_labeled_pzone_1_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_20_cog.tif/estsoil_labeled_pzone_20_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_21_cog.tif/estsoil_labeled_pzone_21_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_22_cog.tif/estsoil_labeled_pzone_22_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_2_cog.tif/estsoil_labeled_pzone_2_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_3_cog.tif/estsoil_labeled_pzone_3_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_4_cog.tif/estsoil_labeled_pzone_4_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_5_cog.tif/estsoil_labeled_pzone_5_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_6_cog.tif/estsoil_labeled_pzone_6_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_7_cog.tif/estsoil_labeled_pzone_7_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_8_cog.tif/estsoil_labeled_pzone_8_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./estsoil_labeled_pzone_9_cog.tif/estsoil_labeled_pzone_9_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr:"
+    }
+  ],
+  "title": "est-topo-mtr-estsoil_labeled_pzone",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.62436849080996,
+          57.08089829205183,
+          28.719458527717457,
+          59.85023866978794
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2021-01-19T14:55:52.902000Z",
+          "2021-01-19T14:56:47.454000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

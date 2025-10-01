@@ -1,0 +1,120 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub",
+  "stac_version": "1.0.0",
+  "description": "dcube_pub",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_bsi_2024_cog.tif/est_s2_bsi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_evi_2024_cog.tif/est_s2_evi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_fvc_2024_cog.tif/est_s2_fvc_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_gndvi_2024_cog.tif/est_s2_gndvi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_lai_2024_cog.tif/est_s2_lai_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_ndmi_2024_cog.tif/est_s2_ndmi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_ndvi_2024_cog.tif/est_s2_ndvi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_ndwi_2024_cog.tif/est_s2_ndwi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_savi_2024_cog.tif/est_s2_savi_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./est_s2_wiw_2024_cog.tif/est_s2_wiw_2024_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    }
+  ],
+  "title": "dcube_pub",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072036889028,
+          57.47121886444548,
+          28.275493984062805,
+          59.83122737438482
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-12-13T13:15:56.017000Z",
+          "2025-04-08T13:01:33.452000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "providers": [
+    {
+      "name": "Landscape Geoinformatics",
+      "description": "Landscape Geoinformatics Lab, University of Tartu, Estonia, produced all derived products, mosaics",
+      "roles": [
+        "licensor",
+        "producer",
+        "processor",
+        "host"
+      ],
+      "url": "https://landscape-geoinformatics.ut.ee"
+    },
+    {
+      "name": "Land Board Estonia",
+      "description": "Land Board Estonia - Maa-Amet, provider of the source DEM and LIDAR data, the soilmap of Estonia, ETAK topographic database, adminstrative units,under Estonian Landboard Open Data License (https://geoportaal.maaamet.ee/docs/Avaandmed/Licence-of-open-data-of-Estonian-Land-Board.pdf)",
+      "roles": [
+        "licensor",
+        "producer"
+      ],
+      "url": "https://www.maaamet.ee/en"
+    }
+  ]
+}

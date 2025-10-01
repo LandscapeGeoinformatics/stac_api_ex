@@ -1,0 +1,42 @@
+{
+  "type": "Collection",
+  "id": "hihydro_top_sub-wcavail",
+  "stac_version": "1.0.0",
+  "description": "Water availability data for subsoil and topsoil layers",
+  "links": [
+    {
+      "rel": "root",
+      "href": "/api/stac/v1/",
+      "type": "application/json",
+      "title": "Aoraki STAC API"
+    },
+    {
+      "rel": "item",
+      "href": "/api/stac/v1/collections/hihydro_top_sub-wcavail/items/WCavail_M_250m_SUBSOIL_cog",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "/api/stac/v1/collections/hihydro_top_sub-wcavail/items/WCavail_M_250m_TOPSOIL_cog",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "/api/stac/v1/",
+      "type": "application/json",
+      "title": "Aoraki STAC API"
+    }
+  ],
+  "title": "Water Availability Collection",
+  "extent": {
+    "spatial": {
+      "bbox": [[-180.0, -90.0009657159614, 179.99965524368662, 90.0]]
+    },
+    "temporal": {
+      "interval": [
+        ["2023-10-14T14:06:13.425000Z", "2023-10-14T14:09:03.722000Z"]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

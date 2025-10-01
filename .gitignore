@@ -1,0 +1,25 @@
+# Elixir & Erlang
+/_build/
+/deps/
+/erl_crash.dump
+/elixir_ls/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.sw?
+*~
+*.bak
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Mix lock file (optional to ignore in libs, but include for apps)
+# mix.lock
+
+# Secrets or generated data (add only if needed)
+/priv/static/assets/
+/priv/static/cache_manifest.json
+

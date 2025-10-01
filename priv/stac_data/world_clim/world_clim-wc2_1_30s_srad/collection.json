@@ -1,0 +1,102 @@
+{
+  "type": "Collection",
+  "id": "world_clim-wc2_1_30s_srad",
+  "stac_version": "1.0.0",
+  "description": "wc2_1_30s_srad",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_01_cog.tif/w2_1_30s_srad_01_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_02_cog.tif/w2_1_30s_srad_02_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_03_cog.tif/w2_1_30s_srad_03_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_04_cog.tif/w2_1_30s_srad_04_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_05_cog.tif/w2_1_30s_srad_05_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_06_cog.tif/w2_1_30s_srad_06_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_07_cog.tif/w2_1_30s_srad_07_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_08_cog.tif/w2_1_30s_srad_08_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_09_cog.tif/w2_1_30s_srad_09_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_10_cog.tif/w2_1_30s_srad_10_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_11_cog.tif/w2_1_30s_srad_11_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_srad_12_cog.tif/w2_1_30s_srad_12_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim"
+    }
+  ],
+  "title": "world_clim-wc2_1_30s_srad",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T12:13:22.456000Z",
+          "2024-02-13T12:13:38.801000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

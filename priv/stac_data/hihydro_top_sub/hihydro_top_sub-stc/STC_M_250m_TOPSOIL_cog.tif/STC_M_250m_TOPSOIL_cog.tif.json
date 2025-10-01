@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "STC_M_250m_TOPSOIL_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -180.0,
+          -90.0009657159614
+        ],
+        [
+          -180.0,
+          90.0
+        ],
+        [
+          179.99965524368662,
+          90.0
+        ],
+        [
+          179.99965524368662,
+          -90.0009657159614
+        ],
+        [
+          -180.0,
+          -90.0009657159614
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -180.0,
+    -90.0009657159614,
+    179.99965524368662,
+    90.0
+  ],
+  "properties": {
+    "datetime": "2023-10-14T13:07:45.122000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-stc"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-stc"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/hihydro_top_sub%2Fstc%2FSTC_M_250m_TOPSOIL_cog.tif?generation=1697288865117339&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 255.0,
+          "data_type": "uint8",
+          "spatial_resolution": 254.23652232174163,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.0009657159614
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                179.99965524368662,
+                90.0
+              ],
+              [
+                179.99965524368662,
+                -90.0009657159614
+              ],
+              [
+                -180.0,
+                -90.0009657159614
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.0009657159614,
+          179.99965524368662,
+          90.0
+        ],
+        "transform": [
+          0.00227618823616542,
+          0.0,
+          -180.0,
+          0.0,
+          -0.00227618823616542,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 190244311,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/hihydro_top_sub/stc/STC_M_250m_TOPSOIL_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": 255.0,
+          "data_type": "uint8",
+          "spatial_resolution": 254.23652232174163,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.0009657159614
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                179.99965524368662,
+                90.0
+              ],
+              [
+                179.99965524368662,
+                -90.0009657159614
+              ],
+              [
+                -180.0,
+                -90.0009657159614
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.0009657159614,
+          179.99965524368662,
+          90.0
+        ],
+        "transform": [
+          0.00227618823616542,
+          0.0,
+          -180.0,
+          0.0,
+          -0.00227618823616542,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 190244311,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "hihydro_top_sub-stc"
+}

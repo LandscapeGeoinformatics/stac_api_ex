@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "w2_1_30s_wind_11_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -180.0,
+          -90.0
+        ],
+        [
+          -180.0,
+          90.0
+        ],
+        [
+          180.0,
+          90.0
+        ],
+        [
+          180.0,
+          -90.0
+        ],
+        [
+          -180.0,
+          -90.0
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -180.0,
+    -90.0,
+    180.0,
+    90.0
+  ],
+  "properties": {
+    "datetime": "2024-02-13T12:15:00.242000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim-wc2_1_30s_wind"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim-wc2_1_30s_wind"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/world_clim%2Fwc2_1_30s_wind%2Fw2_1_30s_wind_11_cog.tif?generation=1707826500238989&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -3.3999999521443642e+38,
+          "data_type": "float32",
+          "spatial_resolution": 930.7831629271202,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.0
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                180.0,
+                90.0
+              ],
+              [
+                180.0,
+                -90.0
+              ],
+              [
+                -180.0,
+                -90.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ],
+        "transform": [
+          0.008333333333333333,
+          0.0,
+          -180.0,
+          0.0,
+          -0.008333333333333333,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 381400671,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/world_clim/wc2_1_30s_wind/w2_1_30s_wind_11_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -3.3999999521443642e+38,
+          "data_type": "float32",
+          "spatial_resolution": 930.7831629271202,
+          "unit": "degree",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 4326,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -180.0,
+                -90.0
+              ],
+              [
+                -180.0,
+                90.0
+              ],
+              [
+                180.0,
+                90.0
+              ],
+              [
+                180.0,
+                -90.0
+              ],
+              [
+                -180.0,
+                -90.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ],
+        "transform": [
+          0.008333333333333333,
+          0.0,
+          -180.0,
+          0.0,
+          -0.008333333333333333,
+          90.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 381400671,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "world_clim-wc2_1_30s_wind"
+}

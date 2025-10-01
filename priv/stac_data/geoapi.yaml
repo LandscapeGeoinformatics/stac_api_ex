@@ -1,0 +1,16 @@
+geo-assets:
+  type: stac-collection
+  title: geo-assets
+  description: geo-assets
+  keywords: []
+  links:
+  - {}
+  extents:
+    spatial: {}
+    temporal: {}
+  providers:
+  - type: stac
+    name: pySTACHateoas
+    data: /data/home/stac_deploy/STACGenerator/stac/geo-assets
+    file_types:
+    - catalog.json

@@ -1,0 +1,72 @@
+{
+  "type": "Collection",
+  "id": "hihydro_top_sub",
+  "stac_version": "1.0.0",
+  "description": "hihydro_top_sub",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub-Soil_Group/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-Soil_Group"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub-ksat/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-ksat"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub-ormc/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-ormc"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub-stc/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-stc"
+    },
+    {
+      "rel": "child",
+      "href": "./hihydro_top_sub-wcavail/collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub-wcavail"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    }
+  ],
+  "title": "hihydro_top_sub",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0009657159614,
+          179.99965539083183,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2023-10-14T13:07:30.569000Z",
+          "2024-02-13T12:25:37.469000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

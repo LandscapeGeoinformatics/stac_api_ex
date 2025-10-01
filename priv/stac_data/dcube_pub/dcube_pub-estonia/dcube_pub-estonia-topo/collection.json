@@ -1,0 +1,89 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub-estonia-topo",
+  "stac_version": "1.0.0",
+  "description": "Topographic metrics for Estonia. The collection contains digital elevation model (DEM), slope length and steepness factor (LS factor), slope, terrain roughness index (TRI) and terrain wetness index (TWI).",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./dem_10m_clipped_cog.tif/dem_10m_clipped_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./lsfaktor_10m_clipped_cog.tif/lsfaktor_10m_clipped_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./slope_10m_clipped_cog.tif/slope_10m_clipped_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./tri_10m_clipped_cog.tif/tri_10m_clipped_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./twi_10m_clipped_cog.tif/twi_10m_clipped_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia"
+    }
+  ],
+  "title": "dcube_pub-estonia-topo",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072036889028,
+          57.47121886444548,
+          28.275493984062805,
+          59.83122737438482
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2025-04-08T11:30:36.494000Z",
+          "2025-04-08T11:30:48.463000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "providers": [
+    {
+      "name": "Landscape Geoinformatics",
+      "description": "Landscape Geoinformatics Lab, University of Tartu, Estonia, produced all derived products, mosaics",
+      "roles": [
+        "licensor",
+        "producer",
+        "processor",
+        "host"
+      ],
+      "url": "https://landscape-geoinformatics.ut.ee"
+    },
+    {
+      "name": "Land Board Estonia",
+      "description": "Land Board Estonia - Maa-Amet, provider of the source DEM and LIDAR data, the soilmap of Estonia, ETAK topographic database, adminstrative units,under Estonian Landboard Open Data License (https://geoportaal.maaamet.ee/docs/Avaandmed/Licence-of-open-data-of-Estonian-Land-Board.pdf)",
+      "roles": [
+        "licensor",
+        "producer"
+      ],
+      "url": "https://www.maaamet.ee/en"
+    }
+  ]
+}

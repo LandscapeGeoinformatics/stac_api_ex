@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "CHM_2021_suvi_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          25.635622916357057,
+          57.52478224806099
+        ],
+        [
+          25.689417662585885,
+          58.6736570275351
+        ],
+        [
+          27.90963729838,
+          58.62532674202231
+        ],
+        [
+          27.78536431918865,
+          57.47798966405833
+        ],
+        [
+          25.635622916357057,
+          57.52478224806099
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    25.635622916357057,
+    57.47798966405833,
+    27.90963729838,
+    58.6736570275351
+  ],
+  "properties": {
+    "datetime": "2022-07-03T20:38:51.414000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-chm_test_annual"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-chm_test_annual"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Fchm_test_annual%2FCHM_2021_suvi_cog.tif?generation=1656880731409525&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -99999.0,
+          "data_type": "float32",
+          "spatial_resolution": 4.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                598000.0,
+                6377000.0
+              ],
+              [
+                598000.0,
+                6505000.0
+              ],
+              [
+                727000.0,
+                6505000.0
+              ],
+              [
+                727000.0,
+                6377000.0
+              ],
+              [
+                598000.0,
+                6377000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          598000.0,
+          6377000.0,
+          727000.0,
+          6505000.0
+        ],
+        "transform": [
+          4.0,
+          0.0,
+          598000.0,
+          0.0,
+          -4.0,
+          6505000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 1804038023,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/chm_test_annual/CHM_2021_suvi_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -99999.0,
+          "data_type": "float32",
+          "spatial_resolution": 4.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                598000.0,
+                6377000.0
+              ],
+              [
+                598000.0,
+                6505000.0
+              ],
+              [
+                727000.0,
+                6505000.0
+              ],
+              [
+                727000.0,
+                6377000.0
+              ],
+              [
+                598000.0,
+                6377000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          598000.0,
+          6377000.0,
+          727000.0,
+          6505000.0
+        ],
+        "transform": [
+          4.0,
+          0.0,
+          598000.0,
+          0.0,
+          -4.0,
+          6505000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 1804038023,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-chm_test_annual"
+}

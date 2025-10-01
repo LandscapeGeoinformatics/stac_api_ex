@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "est_s2_gndvi_2023-09-01_2023-10-31_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          21.81394693850103,
+          57.51634335172187
+        ],
+        [
+          21.664072036889028,
+          59.83122737438482
+        ],
+        [
+          28.275493984062805,
+          59.78303169138562
+        ],
+        [
+          28.001647181842078,
+          57.47121886444548
+        ],
+        [
+          21.81394693850103,
+          57.51634335172187
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    21.664072036889028,
+    57.47121886444548,
+    28.275493984062805,
+    59.83122737438482
+  ],
+  "properties": {
+    "datetime": "2025-01-23T10:54:13.217000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-gndvi-2023"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel2-gndvi-2023"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/dcube_pub%2Festonia%2Fsentinel2%2Fgndvi%2F2023%2Fest_s2_gndvi_2023-09-01_2023-10-31_cog.tif?generation=1737629653212231&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "float32",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                369000.0,
+                6377000.0
+              ],
+              [
+                369000.0,
+                6635000.0
+              ],
+              [
+                740000.0,
+                6635000.0
+              ],
+              [
+                740000.0,
+                6377000.0
+              ],
+              [
+                369000.0,
+                6377000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          369000.0,
+          6377000.0,
+          740000.0,
+          6635000.0
+        ],
+        "transform": [
+          10.0,
+          0.0,
+          369000.0,
+          0.0,
+          -10.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 1496444289,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/dcube_pub/estonia/sentinel2/gndvi/2023/est_s2_gndvi_2023-09-01_2023-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "float32",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                369000.0,
+                6377000.0
+              ],
+              [
+                369000.0,
+                6635000.0
+              ],
+              [
+                740000.0,
+                6635000.0
+              ],
+              [
+                740000.0,
+                6377000.0
+              ],
+              [
+                369000.0,
+                6377000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          369000.0,
+          6377000.0,
+          740000.0,
+          6635000.0
+        ],
+        "transform": [
+          10.0,
+          0.0,
+          369000.0,
+          0.0,
+          -10.0,
+          6635000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 1496444289,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "dcube_pub-estonia-sentinel2-gndvi-2023"
+}

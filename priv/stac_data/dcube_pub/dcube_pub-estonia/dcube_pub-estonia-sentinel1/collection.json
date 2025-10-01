@@ -1,0 +1,51 @@
+{
+  "type": "Collection",
+  "id": "dcube_pub-estonia-sentinel1",
+  "stac_version": "1.0.0",
+  "description": "sentinel1",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "child",
+      "href": "./dcube_pub-estonia-sentinel1-rvi/collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia-sentinel1-rvi"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "dcube_pub-estonia"
+    }
+  ],
+  "title": "dcube_pub-estonia-sentinel1",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072036889028,
+          57.47121886444548,
+          28.275493984062805,
+          59.83122737438482
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2025-04-08T13:00:16.925000Z",
+          "2025-04-08T13:01:33.452000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "missing"
+  ]
+}

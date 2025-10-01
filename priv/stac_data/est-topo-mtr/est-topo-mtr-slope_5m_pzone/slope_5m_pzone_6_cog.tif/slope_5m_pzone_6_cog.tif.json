@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "slope_5m_pzone_6_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          21.685074276072406,
+          58.48425613193399
+        ],
+        [
+          21.65511405438438,
+          58.9328875273058
+        ],
+        [
+          23.39183550675589,
+          58.95264943659075
+        ],
+        [
+          23.399611719600536,
+          58.503767007558075
+        ],
+        [
+          21.685074276072406,
+          58.48425613193399
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    21.65511405438438,
+    58.48425613193399,
+    23.399611719600536,
+    58.95264943659075
+  ],
+  "properties": {
+    "datetime": "2021-01-19T15:48:42.312000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-slope_5m_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-slope_5m_pzone"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Fslope_5m_pzone%2Fslope_5m_pzone_6_cog.tif?generation=1611071322310754&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                365000.0,
+                6485000.0
+              ],
+              [
+                365000.0,
+                6535000.0
+              ],
+              [
+                465000.0,
+                6535000.0
+              ],
+              [
+                465000.0,
+                6485000.0
+              ],
+              [
+                365000.0,
+                6485000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          365000.0,
+          6485000.0,
+          465000.0,
+          6535000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          365000.0,
+          0.0,
+          -5.0,
+          6535000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 393641702,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/slope_5m_pzone/slope_5m_pzone_6_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                365000.0,
+                6485000.0
+              ],
+              [
+                365000.0,
+                6535000.0
+              ],
+              [
+                465000.0,
+                6535000.0
+              ],
+              [
+                465000.0,
+                6485000.0
+              ],
+              [
+                365000.0,
+                6485000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          365000.0,
+          6485000.0,
+          465000.0,
+          6535000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          365000.0,
+          0.0,
+          -5.0,
+          6535000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 393641702,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-slope_5m_pzone"
+}

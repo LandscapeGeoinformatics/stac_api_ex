@@ -1,0 +1,197 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
+  ],
+  "id": "twi_5m_pzone_3_cog.tif",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          26.724409378438843,
+          57.12836441464864
+        ],
+        [
+          26.79312550702337,
+          58.02540265133372
+        ],
+        [
+          28.481841899198322,
+          57.97673401126993
+        ],
+        [
+          28.37177354576061,
+          57.08089829205183
+        ],
+        [
+          26.724409378438843,
+          57.12836441464864
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    26.724409378438843,
+    57.08089829205183,
+    28.481841899198322,
+    58.02540265133372
+  ],
+  "properties": {
+    "datetime": "2021-01-20T09:14:14.632000Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-twi_5m_pzone"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "est-topo-mtr-twi_5m_pzone"
+    }
+  ],
+  "assets": {
+    "image": {
+      "href": "https://storage.googleapis.com/download/storage/v1/b/geo-assets/o/est-topo-mtr%2Ftwi_5m_pzone%2Ftwi_5m_pzone_3_cog.tif?generation=1611134054628003&alt=media",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -99999.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                665000.0,
+                6335000.0
+              ],
+              [
+                665000.0,
+                6435000.0
+              ],
+              [
+                765000.0,
+                6435000.0
+              ],
+              [
+                765000.0,
+                6335000.0
+              ],
+              [
+                665000.0,
+                6335000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          665000.0,
+          6335000.0,
+          765000.0,
+          6435000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          665000.0,
+          0.0,
+          -5.0,
+          6435000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 568073933,
+      "roles": [
+        "data"
+      ]
+    },
+    "gsdata": {
+      "href": "gs://geo-assets/est-topo-mtr/twi_5m_pzone/twi_5m_pzone_3_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "raster:bands": [
+        {
+          "nodata": -99999.0,
+          "data_type": "float32",
+          "spatial_resolution": 5.0,
+          "unit": "metre",
+          "sampling": "area"
+        }
+      ],
+      "proj:epsg": {
+        "epsg": 3301,
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                665000.0,
+                6335000.0
+              ],
+              [
+                665000.0,
+                6435000.0
+              ],
+              [
+                765000.0,
+                6435000.0
+              ],
+              [
+                765000.0,
+                6335000.0
+              ],
+              [
+                665000.0,
+                6335000.0
+              ]
+            ]
+          ]
+        },
+        "bbox": [
+          665000.0,
+          6335000.0,
+          765000.0,
+          6435000.0
+        ],
+        "transform": [
+          5.0,
+          0.0,
+          665000.0,
+          0.0,
+          -5.0,
+          6435000.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "file:size": 568073933,
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "collection": "est-topo-mtr-twi_5m_pzone"
+}

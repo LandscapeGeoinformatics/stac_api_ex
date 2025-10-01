@@ -1,0 +1,47 @@
+{
+  "type": "Collection",
+  "id": "hihydro_top_sub-Soil_Group",
+  "stac_version": "1.0.0",
+  "description": "Soil_Group",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./Hydrologic_Soil_Group_250m_cog.tif/Hydrologic_Soil_Group_250m_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "hihydro_top_sub"
+    }
+  ],
+  "title": "hihydro_top_sub-Soil_Group",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0009657159614,
+          179.99965524368662,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T12:25:37.469000Z",
+          "2024-02-13T12:25:37.469000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0"
+}

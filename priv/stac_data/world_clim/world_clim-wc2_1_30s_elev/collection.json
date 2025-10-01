@@ -1,0 +1,50 @@
+{
+  "type": "Collection",
+  "id": "world_clim-wc2_1_30s_elev",
+  "stac_version": "1.0.0",
+  "description": "wc2_1_30s_elev",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "geo-assets"
+    },
+    {
+      "rel": "item",
+      "href": "./w2_1_30s_elev_cog.tif/w2_1_30s_elev_cog.tif.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "world_clim"
+    }
+  ],
+  "title": "world_clim-wc2_1_30s_elev",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          -90.0,
+          180.0,
+          90.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-02-13T12:13:02.442000Z",
+          "2024-02-13T12:13:02.442000Z"
+        ]
+      ]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "GOOD"
+  ]
+}
