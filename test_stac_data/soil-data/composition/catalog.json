@@ -1,0 +1,33 @@
+{
+  "type": "Catalog",
+  "id": "soil-composition",
+  "stac_version": "1.0.0",
+  "title": "Soil Composition",
+  "description": "Soil texture, structure and compositional properties",
+  "extent": {
+    "spatial": {
+      "bbox": [[-180.0, -90.0, 180.0, 90.0]]
+    },
+    "temporal": {
+      "interval": [["2023-10-14T13:07:30.569Z", "2024-02-13T12:25:37.469Z"]]
+    }
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "Soil Data"
+    },
+    {
+      "rel": "self",
+      "href": "catalog.json",
+      "type": "application/json"
+    }
+  ]
+}

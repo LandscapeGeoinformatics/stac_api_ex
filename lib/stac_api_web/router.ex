@@ -25,6 +25,7 @@ defmodule StacApiWeb.Router do
     get "/", RootController, :index
     get "/search", SearchController, :index
     post "/search", SearchController, :index
+    get "/catalog/:id", RootController, :catalog
     get "/collections", CollectionsController, :index
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items

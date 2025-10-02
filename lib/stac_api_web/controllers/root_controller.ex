@@ -2,7 +2,7 @@
 defmodule StacApiWeb.RootController do
   use StacApiWeb, :controller
   alias StacApi.Repo
-  alias StacApi.Data.Collection
+  alias StacApi.Data.{Collection, Catalog}
   alias StacApiWeb.LinkResolver
   import Ecto.Query
 
@@ -11,11 +11,27 @@ defmodule StacApiWeb.RootController do
   end
 
   def index(conn, _params) do
-    # Get collections for child links
-    collections = Repo.all(from c in Collection, limit: 20, order_by: [asc: c.id])
-    
-    # Build child links from collections
-    child_links = Enum.map(collections, fn collection ->
+
+    sub_catalogs = Repo.all(from c in Catalog,
+      where: c.depth == 0 and c.id != "pygeoapi-stac",
+      order_by: [asc: c.id]
+    )
+
+
+    root_collections = Repo.all(from c in Collection,
+      where: is_nil(c.catalog_id),
+      order_by: [asc: c.id]
+    )
+
+    # Build child links from sub-catalogs
+    sub_catalog_child_links = Enum.map(sub_catalogs, fn catalog ->
+      LinkResolver.create_link("child", "/api/stac/v1/catalog/#{catalog.id}",
+        title: catalog.title || catalog.id
+      )
+    end)
+
+    # Build child links ONLY from direct root collections
+    root_collection_child_links = Enum.map(root_collections, fn collection ->
       LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
         title: collection.title || collection.id
       )
@@ -62,9 +78,80 @@ defmodule StacApiWeb.RootController do
           type: "text/html",
           title: "Web Browser Interface"
         )
-      ] ++ child_links,
+      ] ++ sub_catalog_child_links ++ root_collection_child_links,
       stac_extensions: []
     })
+  end
+
+  def catalog(conn, %{"id" => catalog_id}) do
+    case Repo.get(Catalog, catalog_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Catalog not found"})
+
+      catalog ->
+        # Get child catalogs
+        child_catalogs = Repo.all(from c in Catalog,
+          where: c.parent_catalog_id == ^catalog_id,
+          order_by: [asc: c.id]
+        )
+
+        # Get collections in this catalog
+        collections = Repo.all(from c in Collection,
+          where: c.catalog_id == ^catalog_id,
+          order_by: [asc: c.id]
+        )
+
+        # Build child links from sub-catalogs
+        catalog_child_links = Enum.map(child_catalogs, fn child ->
+          LinkResolver.create_link("child", "/api/stac/v1/catalog/#{child.id}",
+            title: child.title || child.id
+          )
+        end)
+
+        # Build child links from collections
+        collection_child_links = Enum.map(collections, fn collection ->
+          LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
+            title: collection.title || collection.id
+          )
+        end)
+
+
+        catalog_response = %{
+          stac_version: catalog.stac_version || "1.0.0",
+          type: "Catalog",
+          id: catalog.id,
+          title: catalog.title,
+          description: catalog.description,
+          extent: catalog.extent,
+          links: [
+            LinkResolver.create_link("root", "/api/stac/v1/"),
+            LinkResolver.create_link("self", "/api/stac/v1/catalog/#{catalog.id}")
+          ] ++ catalog_child_links ++ collection_child_links
+        }
+
+        # Add parent link for sub-catalogs
+        # Depth 0 catalogs (except root) should link to root, deeper catalogs link to their parent
+        parent_link = case catalog.parent_catalog_id do
+          nil when catalog.id != "pygeoapi-stac" ->
+            # Top-level sub-catalog links to root
+            LinkResolver.create_link("parent", "/api/stac/v1/")
+          parent_id when is_binary(parent_id) ->
+            # Sub-catalog links to parent catalog
+            LinkResolver.create_link("parent", "/api/stac/v1/catalog/#{parent_id}")
+          _ ->
+            nil
+        end
+
+        catalog_response = if parent_link do
+          Map.put(catalog_response, :links, [parent_link | catalog_response.links])
+        else
+          catalog_response
+        end
+
+        json(conn, catalog_response)
+    end
   end
 
   def openapi(conn, _params) do
@@ -250,42 +337,42 @@ defmodule StacApiWeb.RootController do
             <h1>Aoraki STAC API Documentation</h1>
             <p>SpatioTemporal Asset Catalog API for geospatial data discovery and access</p>
         </div>
-        
+
         <h2>API Endpoints</h2>
-        
+
         <div class="endpoint">
             <div class="method">GET</div>
             <div class="path">/api/stac/v1/</div>
             <p><strong>Landing Page</strong> - Provides links to API capabilities and collections</p>
         </div>
-        
+
         <div class="endpoint">
             <div class="method">GET</div>
             <div class="path">/api/stac/v1/collections</div>
             <p><strong>List Collections</strong> - Returns all available collections</p>
         </div>
-        
+
         <div class="endpoint">
             <div class="method">GET</div>
             <div class="path">/api/stac/v1/collections/{collection_id}</div>
             <p><strong>Get Collection</strong> - Returns details for a specific collection</p>
         </div>
-        
+
         <div class="endpoint">
             <div class="method">GET</div>
             <div class="path">/api/stac/v1/search</div>
             <p><strong>Search Items</strong> - Search for STAC items with various filters</p>
         </div>
-        
+
         <div class="endpoint">
             <div class="method">GET</div>
             <div class="path">/web/browse</div>
             <p><strong>Web Interface</strong> - HTML browser interface for exploring data</p>
         </div>
-        
+
         <h2>STAC Compliance</h2>
         <p>This API implements the <a href="https://api.stacspec.org/v1.0.0/core">STAC API - Core</a> specification.</p>
-        
+
         <h2>OpenAPI Specification</h2>
         <p><a href="/api/stac/v1/openapi.json">Download OpenAPI 3.0 specification</a></p>
     </body>
