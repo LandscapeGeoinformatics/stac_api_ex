@@ -11,12 +11,10 @@ defmodule StacApiWeb.RootController do
   end
 
   def index(conn, _params) do
-
     sub_catalogs = Repo.all(from c in Catalog,
       where: c.depth == 0 and c.id != "pygeoapi-stac",
       order_by: [asc: c.id]
     )
-
 
     root_collections = Repo.all(from c in Collection,
       where: is_nil(c.catalog_id),

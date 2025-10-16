@@ -12,7 +12,9 @@ defmodule StacApiWeb.CollectionsController do
      # data sanitization and link resolution
       safe_collections = Enum.map(collections, fn collection ->
         sanitized = sanitize_collection(collection)
-        Map.put(sanitized, :links, LinkResolver.resolve_links(sanitized.links))
+        custom_links = collection.links || []
+        links = StacApiWeb.DynamicLinkGenerator.generate_collection_links(collection, custom_links)
+        Map.put(sanitized, :links, links)
       end)
 
       json(conn, %{
@@ -43,8 +45,9 @@ defmodule StacApiWeb.CollectionsController do
 
         collection ->
           safe_collection = sanitize_collection(collection)
-          # Resolve links from database
-          resolved_links = LinkResolver.resolve_links(safe_collection.links)
+          # Generate links dynamically
+          custom_links = collection.links || []
+          resolved_links = StacApiWeb.DynamicLinkGenerator.generate_collection_links(collection, custom_links)
           
           # Return as proper STAC Collection object
           stac_collection = Map.merge(safe_collection, %{
@@ -70,7 +73,9 @@ defmodule StacApiWeb.CollectionsController do
       items = Repo.all(query)
       sanitized_items = Enum.map(items, fn item ->
         sanitized = sanitize_item(item)
-        Map.put(sanitized, :links, LinkResolver.resolve_links(sanitized.links))
+        custom_links = item.links || []
+        links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
+        Map.put(sanitized, :links, links)
       end)
 
       json(conn, %{
@@ -99,7 +104,8 @@ defmodule StacApiWeb.CollectionsController do
 
         item ->
           sanitized_item = sanitize_item(item)
-          resolved_links = LinkResolver.resolve_links(sanitized_item.links)
+          custom_links = item.links || []
+          resolved_links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
           
           json(conn, Map.put(sanitized_item, :links, resolved_links))
       end

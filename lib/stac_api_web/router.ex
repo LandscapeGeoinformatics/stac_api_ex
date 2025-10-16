@@ -22,16 +22,40 @@ defmodule StacApiWeb.Router do
   scope "/api/stac/v1", StacApiWeb do
     pipe_through :api
 
+    # Root and search endpoints
     get "/", RootController, :index
     get "/search", SearchController, :index
     post "/search", SearchController, :index
     get "/catalog/:id", RootController, :catalog
+    get "/openapi.json", RootController, :openapi
+    get "/docs", RootController, :docs
+
+    # Legacy collection endpoints (for backward compatibility)
     get "/collections", CollectionsController, :index
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items
     get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
-    get "/openapi.json", RootController, :openapi
-    get "/docs", RootController, :docs
+
+    # CRUD endpoints for catalogs
+    get "/catalogs", CatalogsCrudController, :index
+    post "/catalogs", CatalogsCrudController, :create
+    get "/catalogs/:id", CatalogsCrudController, :show
+    put "/catalogs/:id", CatalogsCrudController, :update
+    delete "/catalogs/:id", CatalogsCrudController, :delete
+
+    # CRUD endpoints for collections
+    get "/collections", CollectionsCrudController, :index
+    post "/collections", CollectionsCrudController, :create
+    get "/collections/:id", CollectionsCrudController, :show
+    put "/collections/:id", CollectionsCrudController, :update
+    delete "/collections/:id", CollectionsCrudController, :delete
+
+    # CRUD endpoints for items
+    get "/items", ItemsCrudController, :index
+    post "/items", ItemsCrudController, :create
+    get "/items/:id", ItemsCrudController, :show
+    put "/items/:id", ItemsCrudController, :update
+    delete "/items/:id", ItemsCrudController, :delete
   end
 
   # Web/GUI interface endpoints

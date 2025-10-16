@@ -1,0 +1,752 @@
+{
+  "info": {
+    "name": "STAC API CRUD Operations",
+    "description": "Complete STAC API collection with CRUD operations including cascade delete functionality",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "api_version",
+      "value": "/api/stac/v1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Root API",
+      "item": [
+        {
+          "name": "Get Root API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", ""]
+            },
+            "description": "Get the root STAC API landing page with all available catalogs and collections"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Catalogs",
+      "item": [
+        {
+          "name": "Create Root Catalog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"satellite-imagery\",\n  \"title\": \"Satellite Imagery Catalog\",\n  \"description\": \"Collection of satellite imagery datasets\",\n  \"type\": \"Catalog\",\n  \"stac_version\": \"1.0.0\",\n  \"links\": [\n    {\n      \"rel\": \"license\",\n      \"href\": \"https://creativecommons.org/licenses/by/4.0/\",\n      \"title\": \"CC BY 4.0\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs"]
+            },
+            "description": "Create a root-level catalog (no parent_catalog_id)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Nested Catalog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"sentinel-catalog\",\n  \"title\": \"Sentinel Satellite Catalog\",\n  \"description\": \"Nested catalog for Sentinel satellite data\",\n  \"type\": \"Catalog\",\n  \"stac_version\": \"1.0.0\",\n  \"parent_catalog_id\": \"satellite-imagery\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs"]
+            },
+            "description": "Create a nested catalog under the satellite-imagery catalog"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Catalogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs"]
+            },
+            "description": "List all catalogs"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs/satellite-imagery",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs", "satellite-imagery"]
+            },
+            "description": "Get a specific catalog by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Catalog",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"satellite-imagery\",\n  \"title\": \"Updated Satellite Imagery Catalog\",\n  \"description\": \"Updated description with more details\",\n  \"type\": \"Catalog\",\n  \"stac_version\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs/satellite-imagery",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs", "satellite-imagery"]
+            },
+            "description": "Update an existing catalog"
+          },
+          "response": []
+        },
+        {
+          "name": "🚨 DELETE Catalog (Cascade)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/catalogs/satellite-imagery",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "catalogs", "satellite-imagery"]
+            },
+            "description": "⚠️ CASCADE DELETE: Deletes catalog and ALL children (collections, items, nested catalogs)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Collections",
+      "item": [
+        {
+          "name": "Create Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"sentinel-2-l2a\",\n  \"title\": \"Sentinel-2 Level-2A\",\n  \"description\": \"Sentinel-2 Level-2A surface reflectance products\",\n  \"license\": \"CC-BY-4.0\",\n  \"catalog_id\": \"satellite-imagery\",\n  \"stac_version\": \"1.0.0\",\n  \"extent\": {\n    \"spatial\": {\n      \"bbox\": [\n        [-180, -90, 180, 90]\n      ]\n    },\n    \"temporal\": {\n      \"interval\": [\n        [\"2015-06-23T00:00:00Z\", \"2024-12-31T23:59:59Z\"]\n      ]\n    }\n  },\n  \"links\": [\n    {\n      \"rel\": \"provider\",\n      \"href\": \"https://www.esa.int\",\n      \"title\": \"European Space Agency\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections"]
+            },
+            "description": "Create a collection under the satellite-imagery catalog"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Root Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"standalone-collection\",\n  \"title\": \"Standalone Collection\",\n  \"description\": \"Collection not associated with any catalog\",\n  \"license\": \"CC-BY-4.0\",\n  \"stac_version\": \"1.0.0\",\n  \"extent\": {\n    \"spatial\": {\n      \"bbox\": [\n        [-180, -90, 180, 90]\n      ]\n    },\n    \"temporal\": {\n      \"interval\": [\n        [\"2020-01-01T00:00:00Z\", \"2024-12-31T23:59:59Z\"]\n      ]\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections"]
+            },
+            "description": "Create a collection without catalog_id (root-level collection)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Collections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections"]
+            },
+            "description": "List all collections"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections/sentinel-2-l2a",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections", "sentinel-2-l2a"]
+            },
+            "description": "Get a specific collection by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Collection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"sentinel-2-l2a\",\n  \"title\": \"Updated Sentinel-2 Level-2A\",\n  \"description\": \"Updated collection description with more details\",\n  \"license\": \"CC-BY-4.0\",\n  \"catalog_id\": \"satellite-imagery\",\n  \"stac_version\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections/sentinel-2-l2a",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections", "sentinel-2-l2a"]
+            },
+            "description": "Update an existing collection"
+          },
+          "response": []
+        },
+        {
+          "name": "🚨 DELETE Collection (Cascade)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections/sentinel-2-l2a",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "collections", "sentinel-2-l2a"]
+            },
+            "description": "⚠️ CASCADE DELETE: Deletes collection and ALL items in the collection"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Create STAC Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"S2A_MSIL2A_20240115T101031_N0509_R022_T32UQD_20240115T135456\",\n  \"collection_id\": \"sentinel-2-l2a\",\n  \"stac_version\": \"1.0.0\",\n  \"geometry\": {\n    \"type\": \"Polygon\",\n    \"coordinates\": [[\n      [11.999999999999999, 55.999999999999999],\n      [12.000000000000000, 56.000000000000000],\n      [12.000000000000000, 56.000000000000000],\n      [11.999999999999999, 55.999999999999999],\n      [11.999999999999999, 55.999999999999999]\n    ]]\n  },\n  \"bbox\": [11.999999999999999, 55.999999999999999, 12.000000000000000, 56.000000000000000],\n  \"datetime\": \"2024-01-15T10:10:31Z\",\n  \"properties\": {\n    \"datetime\": \"2024-01-15T10:10:31Z\",\n    \"platform\": \"sentinel-2a\",\n    \"constellation\": \"sentinel-2\",\n    \"instruments\": [\"msi\"],\n    \"gsd\": 10,\n    \"eo:cloud_cover\": 5.2\n  },\n  \"assets\": {\n    \"B02\": {\n      \"href\": \"https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a/tiles/32/U/QD/2024/1/15/0/B02.tif\",\n      \"type\": \"image/tiff; application=geotiff; profile=cloud-optimized\",\n      \"title\": \"Blue\",\n      \"roles\": [\"data\"]\n    },\n    \"thumbnail\": {\n      \"href\": \"https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/32/U/QD/2024/1/15/0/preview.jpg\",\n      \"type\": \"image/jpeg\",\n      \"roles\": [\"thumbnail\"]\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items"]
+            },
+            "description": "Create a STAC item in the sentinel-2-l2a collection"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Simple Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"simple-test-item\",\n  \"collection_id\": \"sentinel-2-l2a\",\n  \"stac_version\": \"1.0.0\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [24.7536, 59.4370]\n  },\n  \"bbox\": [24.7, 59.4, 24.8, 59.5],\n  \"datetime\": \"2024-01-01T12:00:00Z\",\n  \"properties\": {\n    \"datetime\": \"2024-01-01T12:00:00Z\",\n    \"description\": \"Simple test item\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items"]
+            },
+            "description": "Create a simple test item"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items"]
+            },
+            "description": "List all items"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items/simple-test-item",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items", "simple-test-item"]
+            },
+            "description": "Get a specific item by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"simple-test-item\",\n  \"collection_id\": \"sentinel-2-l2a\",\n  \"stac_version\": \"1.0.0\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [24.7536, 59.4370]\n  },\n  \"bbox\": [24.7, 59.4, 24.8, 59.5],\n  \"datetime\": \"2024-01-01T12:00:00Z\",\n  \"properties\": {\n    \"datetime\": \"2024-01-01T12:00:00Z\",\n    \"description\": \"Updated simple test item\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items/simple-test-item",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items", "simple-test-item"]
+            },
+            "description": "Update an existing item"
+          },
+          "response": []
+        },
+        {
+          "name": "🚨 DELETE Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/items/simple-test-item",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "items", "simple-test-item"]
+            },
+            "description": "Delete a specific item (no cascade - items have no children)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔍 Search & Browse",
+      "item": [
+        {
+          "name": "Search Items (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/search?collections=sentinel-2-l2a&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "search"],
+              "query": [
+                {
+                  "key": "collections",
+                  "value": "sentinel-2-l2a"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Search items using GET method with query parameters"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Items (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collections\": [\"sentinel-2-l2a\"],\n  \"bbox\": [11.9, 55.9, 12.1, 56.1],\n  \"datetime\": \"2024-01-15T10:00:00Z/2024-01-15T11:00:00Z\",\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/search",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", "search"]
+            },
+            "description": "Search items using POST method with complex filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Collection Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections/sentinel-2-l2a/items",
+              "host": ["{{base_url}}"],
+              "path": [
+                "{{api_version}}",
+                "collections",
+                "sentinel-2-l2a",
+                "items"
+              ]
+            },
+            "description": "Get all items in a specific collection"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Collection Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/collections/sentinel-2-l2a/items/simple-test-item",
+              "host": ["{{base_url}}"],
+              "path": [
+                "{{api_version}}",
+                "collections",
+                "sentinel-2-l2a",
+                "items",
+                "simple-test-item"
+              ]
+            },
+            "description": "Get a specific item from a collection"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧪 Demo Flow",
+      "item": [
+        {
+          "name": "1. Create Demo Data",
+          "item": [
+            {
+              "name": "Create Demo Catalog",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"demo-catalog\",\n  \"title\": \"Demo Catalog\",\n  \"description\": \"Catalog for demonstration purposes\",\n  \"type\": \"Catalog\",\n  \"stac_version\": \"1.0.0\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/catalogs",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "catalogs"]
+                },
+                "description": "Step 1: Create a demo catalog"
+              },
+              "response": []
+            },
+            {
+              "name": "Create Demo Collection",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"demo-collection\",\n  \"title\": \"Demo Collection\",\n  \"description\": \"Collection for demonstration\",\n  \"license\": \"CC-BY-4.0\",\n  \"catalog_id\": \"demo-catalog\",\n  \"stac_version\": \"1.0.0\",\n  \"extent\": {\n    \"spatial\": {\n      \"bbox\": [[-180, -90, 180, 90]]\n    },\n    \"temporal\": {\n      \"interval\": [[\"2020-01-01T00:00:00Z\", \"2024-12-31T23:59:59Z\"]]\n    }\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/collections",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "collections"]
+                },
+                "description": "Step 2: Create a demo collection"
+              },
+              "response": []
+            },
+            {
+              "name": "Create Demo Items",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"demo-item-1\",\n  \"collection_id\": \"demo-collection\",\n  \"stac_version\": \"1.0.0\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [0, 0]\n  },\n  \"bbox\": [-0.1, -0.1, 0.1, 0.1],\n  \"datetime\": \"2024-01-01T12:00:00Z\",\n  \"properties\": {\n    \"datetime\": \"2024-01-01T12:00:00Z\",\n    \"description\": \"First demo item\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/items",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "items"]
+                },
+                "description": "Step 3: Create first demo item"
+              },
+              "response": []
+            },
+            {
+              "name": "Create Second Demo Item",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"demo-item-2\",\n  \"collection_id\": \"demo-collection\",\n  \"stac_version\": \"1.0.0\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [1, 1]\n  },\n  \"bbox\": [0.9, 0.9, 1.1, 1.1],\n  \"datetime\": \"2024-01-02T12:00:00Z\",\n  \"properties\": {\n    \"datetime\": \"2024-01-02T12:00:00Z\",\n    \"description\": \"Second demo item\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/items",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "items"]
+                },
+                "description": "Step 4: Create second demo item"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Verify Demo Data",
+          "item": [
+            {
+              "name": "Check Demo Catalog",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/catalogs/demo-catalog",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "catalogs", "demo-catalog"]
+                },
+                "description": "Verify demo catalog exists"
+              },
+              "response": []
+            },
+            {
+              "name": "Check Demo Collection",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/collections/demo-collection",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "collections", "demo-collection"]
+                },
+                "description": "Verify demo collection exists"
+              },
+              "response": []
+            },
+            {
+              "name": "Check Demo Items",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/collections/demo-collection/items",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "{{api_version}}",
+                    "collections",
+                    "demo-collection",
+                    "items"
+                  ]
+                },
+                "description": "Verify demo items exist"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Test Cascade Delete",
+          "item": [
+            {
+              "name": "🚨 DELETE Demo Catalog (Full Cascade)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/catalogs/demo-catalog",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "catalogs", "demo-catalog"]
+                },
+                "description": "⚠️ DEMO: This will delete the entire hierarchy - catalog, collection, and both items in one operation!"
+              },
+              "response": []
+            },
+            {
+              "name": "Verify Everything Deleted",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/catalogs/demo-catalog",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "catalogs", "demo-catalog"]
+                },
+                "description": "Verify the demo catalog and all its children were deleted"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Response Examples",
+      "item": [
+        {
+          "name": "Success Response Format",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", ""]
+            },
+            "description": "Example of success response format with dynamic links"
+          },
+          "response": [
+            {
+              "name": "Success Response Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"stac_version\": \"1.0.0\",\n  \"id\": \"aoraki-stac-api\",\n  \"title\": \"Aoraki STAC API\",\n  \"description\": \"SpatioTemporal Asset Catalog API for geospatial data discovery and access\",\n  \"type\": \"Catalog\",\n  \"conformsTo\": [\n    \"https://api.stacspec.org/v1.0.0/core\",\n    \"https://api.stacspec.org/v1.0.0/item-search\"\n  ],\n  \"links\": [\n    {\n      \"rel\": \"self\",\n      \"href\": \"/api/stac/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"root\",\n      \"href\": \"/api/stac/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"child\",\n      \"href\": \"/api/stac/v1/catalogs/satellite-imagery\",\n      \"type\": \"application/json\",\n      \"title\": \"Satellite Imagery Catalog\"\n    }\n  ],\n  \"stac_extensions\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cascade Delete Response Example",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_version}}", ""]
+            },
+            "description": "Example of cascade delete response format"
+          },
+          "response": [
+            {
+              "name": "Cascade Delete Response",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}{{api_version}}/catalogs/demo-catalog",
+                  "host": ["{{base_url}}"],
+                  "path": ["{{api_version}}", "catalogs", "demo-catalog"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Catalog deleted successfully\",\n  \"cascade_deleted\": {\n    \"items\": 2,\n    \"collections\": 1,\n    \"catalogs\": 0\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
