@@ -5,11 +5,14 @@ defmodule StacApi.Data.Importer do
   """
 
   alias StacApi.Repo
-  alias StacApi.Data.{Collection, Item}
+  alias StacApi.Data.{Collection, Item, Catalog}
   require Logger
 
   def import_from_directory(data_path \\ "priv/stac_data") do
     Logger.info("Starting STAC data import from #{data_path}")
+
+    catalogs_imported = import_catalogs(data_path)
+    Logger.info("Imported #{catalogs_imported} catalogs")
 
     collections_imported = import_collections(data_path)
     Logger.info("Imported #{collections_imported} collections")
@@ -17,7 +20,79 @@ defmodule StacApi.Data.Importer do
     items_imported = import_items(data_path)
     Logger.info("Imported #{items_imported} items")
 
-    {:ok, %{collections: collections_imported, items: items_imported}}
+    {:ok, %{catalogs: catalogs_imported, collections: collections_imported, items: items_imported}}
+  end
+
+  defp import_catalogs(data_path) do
+    catalog_files = Path.join([data_path, "**", "catalog.json"])
+
+    catalog_files
+    |> Path.wildcard()
+    |> Enum.map(&import_catalog_file(&1, data_path))
+    |> Enum.count(& &1 == :ok)
+  end
+
+  defp import_catalog_file(file_path, data_path) do
+    try do
+      catalog_data = file_path |> File.read!() |> Jason.decode!()
+
+      # Calculate depth and parent from file path
+      depth = calculate_depth_from_path(file_path, data_path)
+      parent_catalog_id = determine_parent_catalog_id(file_path, data_path)
+
+      catalog_attrs = %{
+        id: catalog_data["id"],
+        title: catalog_data["title"],
+        description: catalog_data["description"],
+        type: catalog_data["type"] || "Catalog",
+        stac_version: catalog_data["stac_version"] || "1.0.0",
+        extent: catalog_data["extent"],
+        links: make_links_relative(catalog_data["links"] || []),
+        parent_catalog_id: parent_catalog_id,
+        depth: depth
+      }
+
+      %Catalog{}
+      |> Catalog.changeset(catalog_attrs)
+      |> Repo.insert(on_conflict: :replace_all, conflict_target: :id)
+
+      :ok
+    rescue
+      error ->
+        Logger.error("Failed to import catalog from #{file_path}: #{inspect(error)}")
+        :error
+    end
+  end
+
+  def calculate_depth_from_path(file_path, base_path) do
+    # Remove base path and get directory path
+    relative_path = Path.relative_to(file_path, base_path)
+    dir_path = Path.dirname(relative_path)
+    path_segments = Path.split(dir_path) |> Enum.reject(&(&1 == "." || &1 == "" || &1 == "/"))
+
+
+    # 1 segment means first-level catalog
+    # 2+ segments means deeper catalogs
+    case path_segments do
+      [] -> 0  # catalog.json in root - depth 0
+      [_single_dir] -> 0  # catalog.json in top-level directory (soil-data, estonia-remote-sensing) - depth 0
+      [_parent, _child] -> 1  # catalog.json in subdirectory - depth 1
+      [_parent, _child, _grandchild] -> 2  # catalog.json in sub-subdirectory - depth 2
+      _ -> 2  # Max depth is 2
+    end
+  end
+
+  def determine_parent_catalog_id(file_path, base_path) do
+    relative_path = Path.relative_to(file_path, base_path)
+    dir_path = Path.dirname(relative_path)
+    path_segments = Path.split(dir_path) |> Enum.reject(&(&1 == "." || &1 == "" || &1 == "/"))
+
+    case path_segments do
+      [] -> nil
+      [_single_dir] -> nil
+      [parent, _child] -> parent  # Second level catalog - parent is parent directory
+      _ -> nil
+    end
   end
 
   defp import_collections(data_path) do
@@ -25,13 +100,15 @@ defmodule StacApi.Data.Importer do
 
     collection_files
     |> Path.wildcard()
-    |> Enum.map(&import_collection_file/1)
+    |> Enum.map(&import_collection_file(&1, data_path))
     |> Enum.count(& &1 == :ok)
   end
 
-  defp import_collection_file(file_path) do
+  defp import_collection_file(file_path, data_path) do
     try do
       collection_data = file_path |> File.read!() |> Jason.decode!()
+
+      catalog_id = determine_catalog_for_collection(file_path, data_path)
 
       collection_attrs = %{
         id: collection_data["id"],
@@ -43,7 +120,8 @@ defmodule StacApi.Data.Importer do
         properties: collection_data["properties"] || %{},
         stac_version: collection_data["stac_version"],
         stac_extensions: collection_data["stac_extensions"] || [],
-        links: make_links_relative(collection_data["links"] || [])
+        links: make_links_relative(collection_data["links"] || []),
+        catalog_id: catalog_id
       }
 
       %Collection{}
@@ -55,6 +133,27 @@ defmodule StacApi.Data.Importer do
       error ->
         Logger.error("Failed to import collection from #{file_path}: #{inspect(error)}")
         :error
+    end
+  end
+
+  def determine_catalog_for_collection(file_path, base_path) do
+    relative_path = Path.relative_to(file_path, base_path)
+    dir_path = Path.dirname(relative_path)
+    path_segments = Path.split(dir_path) |> Enum.reject(&(&1 == "." || &1 == "" || &1 == "/"))
+
+    case path_segments do
+      [_catalog_dir] ->
+        # Collection is directly under catalog: priv/test_stac_data/soil-data/collection.json -> soil-data
+        List.last(path_segments)
+      [_parent_catalog, child_catalog] ->
+        # Collection is under sub-catalog: soil-data/hydro-logical-properties/collection.json -> hydro-logical-properties
+        child_catalog
+      [_parent_catalog, _child_catalog, grandchild_catalog] ->
+        # Collection is under grandchild catalog: estonia-remote-sensing/sentinel2-indices/collection.json -> sentinel2-indices
+        grandchild_catalog
+      _ ->
+        # Default fallback
+        nil
     end
   end
 
@@ -88,7 +187,7 @@ defmodule StacApi.Data.Importer do
   end
 
   defp import_stac_item(item_data) do
-    # Parse datetime
+ 
     datetime = parse_datetime(get_in(item_data, ["properties", "datetime"]))
 
     # Convert GeoJSON geometry to PostGIS format

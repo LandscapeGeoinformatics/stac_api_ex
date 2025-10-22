@@ -21,7 +21,10 @@ defmodule StacApiWeb.LinkResolver do
   def resolve_url(url) when is_binary(url) do
     case String.starts_with?(url, ["http://", "https://"]) do
       true -> url  # Already absolute
-      false -> "#{base_url()}#{url}"
+      false -> 
+        # Fix malformed relative URLs
+        normalized_url = normalize_relative_url(url)
+        "#{base_url()}#{normalized_url}"
     end
   end
 
@@ -40,6 +43,24 @@ defmodule StacApiWeb.LinkResolver do
           Map.put(link_map, "href", resolve_url(href))
         %{href: href} = link_map ->
           Map.put(link_map, :href, resolve_url(href))
+        link ->
+          link
+      end
+    end)
+  end
+
+  @doc """
+  Resolves links with context (e.g., collection ID for collection-specific links).
+  """
+  def resolve_links_with_context(links, context \\ %{}) when is_list(links) do
+    Enum.map(links, fn link ->
+      case link do
+        %{"href" => href} = link_map ->
+          resolved_href = resolve_url_with_context(href, context)
+          Map.put(link_map, "href", resolved_href)
+        %{href: href} = link_map ->
+          resolved_href = resolve_url_with_context(href, context)
+          Map.put(link_map, :href, resolved_href)
         link ->
           link
       end
@@ -149,6 +170,61 @@ defmodule StacApiWeb.LinkResolver do
 
   defp base_url do
     Application.get_env(:stac_api, :base_url, "http://localhost:4000")
+  end
+
+  defp resolve_url_with_context(url, context) do
+    case String.starts_with?(url, ["http://", "https://"]) do
+      true -> url  # Already absolute
+      false -> 
+        normalized_url = normalize_relative_url_with_context(url, context)
+        "#{base_url()}#{normalized_url}"
+    end
+  end
+
+  defp normalize_relative_url(url) do
+    cond do
+      # Handle malformed root links
+      String.contains?(url, "../../../catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "../catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "catalog.json") -> "/api/stac/v1/"
+      
+      # Handle malformed collection self links
+      String.contains?(url, "collection.json") -> "/api/stac/v1/collections"
+      
+      # Handle malformed items links
+      url == "items" -> "/api/stac/v1/collections/items"
+      
+      # Ensure proper leading slash for other relative URLs
+      String.starts_with?(url, "/") -> url
+      true -> "/#{url}"
+    end
+  end
+
+  defp normalize_relative_url_with_context(url, context) do
+    collection_id = Map.get(context, :collection_id)
+    
+    cond do
+      # Handle malformed root links
+      String.contains?(url, "../../../catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "../catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "catalog.json") -> "/api/stac/v1/"
+      
+      # Handle malformed collection self links
+      String.contains?(url, "collection.json") and collection_id ->
+        "/api/stac/v1/collections/#{collection_id}"
+      String.contains?(url, "collection.json") ->
+        "/api/stac/v1/collections"
+      
+      # Handle malformed items links
+      url == "items" and collection_id ->
+        "/api/stac/v1/collections/#{collection_id}/items"
+      url == "items" ->
+        "/api/stac/v1/collections/items"
+      
+      # Ensure proper leading slash for other relative URLs
+      String.starts_with?(url, "/") -> url
+      true -> "/#{url}"
+    end
   end
 
   defp get_base_url_from_conn(conn) do

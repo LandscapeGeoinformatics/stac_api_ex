@@ -1,0 +1,40 @@
+{
+  "type": "Collection",
+  "id": "soil-hydraulic-properties",
+  "stac_version": "1.0.0",
+  "title": "Soil Hydraulic Properties",
+  "description": "Soil water capacity, permeability and flow characteristics",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "self",
+      "href": "collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "items",
+      "href": "items",
+      "type": "application/geo+json"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [[-180.0, -90.0009657159614, 179.99965539083183, 90.0]]
+    },
+    "temporal": {
+      "interval": [["2023-10-14T13:07:30.569Z", "2024-02-13T12:25:37.469Z"]]
+    }
+  },
+  "license": "CC-BY-4.0",
+  "keywords": ["soil", "hydraulic", "water", "capacity", "permeability"],
+  "providers": [
+    {
+      "name": "Global Soils Consortium",
+      "roles": ["producer", "processor", "host"]
+    }
+  ]
+}
