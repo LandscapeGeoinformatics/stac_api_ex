@@ -1,7 +1,7 @@
 defmodule StacApiWeb.ItemsCrudController do
   use StacApiWeb, :controller
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection}
+  alias StacApi.Data.{Item, Collection, ItemAsset}
   alias StacApiWeb.DynamicLinkGenerator
   import Ecto.Query
 
@@ -14,9 +14,15 @@ defmodule StacApiWeb.ItemsCrudController do
       {:ok, item_attrs} ->
         case upsert_item(item_attrs) do
           {:ok, item} ->
+            # Normalize assets into separate table
+            normalize_item_assets(item.id, item_attrs["assets"] || %{})
+            
             # Generate links dynamically
             custom_links = Map.get(item_attrs, "links", [])
             links = DynamicLinkGenerator.generate_item_links(item, custom_links)
+            
+            # Reconstruct assets from normalized data
+            assets = reconstruct_item_assets(item.id)
             
             item_response = %{
               type: "Feature",
@@ -26,7 +32,7 @@ defmodule StacApiWeb.ItemsCrudController do
               geometry: item.geometry,
               bbox: item.bbox,
               properties: item.properties || %{},
-              assets: item.assets || %{},
+              assets: assets,
               collection: item.collection_id,
               links: links
             }
@@ -70,6 +76,9 @@ defmodule StacApiWeb.ItemsCrudController do
         custom_links = item.links || []
         links = DynamicLinkGenerator.generate_item_links(item, custom_links)
         
+        # Reconstruct assets from normalized data
+        assets = reconstruct_item_assets(item.id)
+        
         item_response = %{
           type: "Feature",
           stac_version: item.stac_version || "1.0.0",
@@ -78,7 +87,7 @@ defmodule StacApiWeb.ItemsCrudController do
           geometry: item.geometry,
           bbox: item.bbox,
           properties: item.properties || %{},
-          assets: item.assets || %{},
+          assets: assets,
           collection: item.collection_id,
           links: links
         }
@@ -103,9 +112,15 @@ defmodule StacApiWeb.ItemsCrudController do
           {:ok, item_attrs} ->
             case update_item(item, item_attrs) do
               {:ok, updated_item} ->
+                # Normalize assets into separate table
+                normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
+                
                 # Generate links dynamically
                 custom_links = Map.get(item_attrs, "links", [])
                 links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
+                
+                # Reconstruct assets from normalized data
+                assets = reconstruct_item_assets(updated_item.id)
                 
                 item_response = %{
                   type: "Feature",
@@ -115,7 +130,7 @@ defmodule StacApiWeb.ItemsCrudController do
                   geometry: updated_item.geometry,
                   bbox: updated_item.bbox,
                   properties: updated_item.properties || %{},
-                  assets: updated_item.assets || %{},
+                  assets: assets,
                   collection: updated_item.collection_id,
                   links: links
                 }
@@ -187,6 +202,9 @@ defmodule StacApiWeb.ItemsCrudController do
       custom_links = item.links || []
       links = DynamicLinkGenerator.generate_item_links(item, custom_links)
       
+      # Reconstruct assets from normalized data
+      assets = reconstruct_item_assets(item.id)
+      
       %{
         type: "Feature",
         stac_version: item.stac_version || "1.0.0",
@@ -195,7 +213,7 @@ defmodule StacApiWeb.ItemsCrudController do
         geometry: item.geometry,
         bbox: item.bbox,
         properties: item.properties || %{},
-        assets: item.assets || %{},
+        assets: assets,
         collection: item.collection_id,
         links: links
       }
@@ -308,6 +326,36 @@ defmodule StacApiWeb.ItemsCrudController do
       Regex.replace(~r"%{(\w+)}", message, fn _, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
+    end)
+  end
+
+  @doc """
+  Normalize assets from STAC format into separate table
+  """
+  defp normalize_item_assets(item_id, assets) when is_map(assets) do
+    # First, delete existing assets for this item
+    Repo.delete_all(from a in ItemAsset, where: a.item_id == ^item_id)
+    
+    # Insert new assets
+    Enum.each(assets, fn {asset_key, asset_data} ->
+      changeset = ItemAsset.from_stac_asset(item_id, asset_key, asset_data)
+      case Repo.insert(changeset) do
+        {:ok, _} -> :ok
+        {:error, changeset} -> 
+          IO.puts("Failed to insert asset #{asset_key}: #{inspect(changeset.errors)}")
+      end
+    end)
+  end
+
+  @doc """
+  Reconstruct assets from normalized table back to STAC format
+  """
+  defp reconstruct_item_assets(item_id) do
+    assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
+    
+    Enum.reduce(assets, %{}, fn asset, acc ->
+      asset_data = ItemAsset.to_stac_asset(asset)
+      Map.put(acc, asset.asset_key, asset_data)
     end)
   end
 end

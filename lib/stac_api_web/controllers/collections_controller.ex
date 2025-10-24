@@ -1,6 +1,6 @@
 defmodule StacApiWeb.CollectionsController do
   use StacApiWeb, :controller
-  alias StacApi.Data.Collection
+  alias StacApi.Data.{Collection, ItemAsset}
   alias StacApi.Repo
   alias StacApiWeb.LinkResolver
   import Ecto.Query
@@ -73,6 +73,10 @@ defmodule StacApiWeb.CollectionsController do
       items = Repo.all(query)
       sanitized_items = Enum.map(items, fn item ->
         sanitized = sanitize_item(item)
+        # Reconstruct assets from normalized data
+        assets = reconstruct_item_assets(item.id)
+        sanitized = Map.put(sanitized, :assets, assets)
+        
         custom_links = item.links || []
         links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
         Map.put(sanitized, :links, links)
@@ -104,6 +108,10 @@ defmodule StacApiWeb.CollectionsController do
 
         item ->
           sanitized_item = sanitize_item(item)
+          # Reconstruct assets from normalized data
+          assets = reconstruct_item_assets(item.id)
+          sanitized_item = Map.put(sanitized_item, :assets, assets)
+          
           custom_links = item.links || []
           resolved_links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
           
@@ -145,9 +153,20 @@ defmodule StacApiWeb.CollectionsController do
       bbox: item.bbox || [],
       datetime: item.datetime,
       properties: item.properties || %{},
-      assets: item.assets || %{},
       links: item.links || [],
       collection: item.collection_id
     }
+  end
+
+  @doc """
+  Reconstruct assets from normalized table back to STAC format
+  """
+  defp reconstruct_item_assets(item_id) do
+    assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
+    
+    Enum.reduce(assets, %{}, fn asset, acc ->
+      asset_data = ItemAsset.to_stac_asset(asset)
+      Map.put(acc, asset.asset_key, asset_data)
+    end)
   end
 end

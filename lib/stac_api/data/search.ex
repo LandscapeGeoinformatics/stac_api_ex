@@ -6,7 +6,7 @@ defmodule StacApi.Data.Search do
 
   import Ecto.Query
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection}
+  alias StacApi.Data.{Item, Collection, ItemAsset}
 
   # Add this to your search.ex - modify the search function
 def search(params \\ %{}) do
@@ -38,6 +38,7 @@ def search(params \\ %{}) do
   raw_results
   |> Enum.map(&convert_to_item_struct/1)
   |> preload_collections()
+  |> reconstruct_assets_for_items()
 end
 
 defp convert_to_item_struct(item_map) do
@@ -49,7 +50,7 @@ defp convert_to_item_struct(item_map) do
     bbox: item_map.bbox,
     datetime: item_map.datetime,
     properties: item_map.properties,
-    assets: item_map.assets,
+    assets: %{},  # Will be reconstructed from normalized data
     links: item_map.links,
     collection_id: item_map.collection_id,
     inserted_at: item_map.inserted_at,
@@ -233,6 +234,9 @@ defp convert_geojson_geometry(item), do: item
   defp parse_datetime(_), do: nil
 
   def serialize_item_for_api(%Item{} = item) do
+  # Reconstruct assets from normalized data
+  assets = reconstruct_item_assets(item.id)
+  
   %{
     "type" => "Feature",
     "stac_version" => item.stac_version,
@@ -242,7 +246,7 @@ defp convert_geojson_geometry(item), do: item
     "bbox" => item.bbox |> serialize_bbox(),
     "properties" => item.properties |> serialize_properties(item.datetime),
     "collection" => item.collection_id,
-    "assets" => item.assets |> serialize_assets(),
+    "assets" => assets |> serialize_assets(),
     "links" => item.links |> serialize_links()
   }
 end
@@ -319,4 +323,41 @@ defp convert_coords(other), do: other
     Enum.map(list, &deep_serialize_tuples/1)
   end
   defp deep_serialize_tuples(value), do: value
+
+  @doc """
+  Reconstruct assets for multiple items efficiently
+  """
+  defp reconstruct_assets_for_items(items) do
+    item_ids = Enum.map(items, & &1.id)
+    
+    # Get all assets for these items in one query
+    assets_query = from a in ItemAsset, where: a.item_id in ^item_ids
+    all_assets = Repo.all(assets_query)
+    
+    # Group assets by item_id
+    assets_by_item = Enum.group_by(all_assets, & &1.item_id)
+    
+    # Update each item with its assets
+    Enum.map(items, fn item ->
+      item_assets = Map.get(assets_by_item, item.id, [])
+      reconstructed_assets = Enum.reduce(item_assets, %{}, fn asset, acc ->
+        asset_data = ItemAsset.to_stac_asset(asset)
+        Map.put(acc, asset.asset_key, asset_data)
+      end)
+      
+      %{item | assets: reconstructed_assets}
+    end)
+  end
+
+  @doc """
+  Reconstruct assets from normalized table back to STAC format for a single item
+  """
+  defp reconstruct_item_assets(item_id) do
+    assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
+    
+    Enum.reduce(assets, %{}, fn asset, acc ->
+      asset_data = ItemAsset.to_stac_asset(asset)
+      Map.put(acc, asset.asset_key, asset_data)
+    end)
+  end
 end
