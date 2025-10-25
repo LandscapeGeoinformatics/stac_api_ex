@@ -80,6 +80,7 @@ source $DEPLOY_TARGET/.env
 export DATABASE_URL
 export MIX_ENV
 export SECRET_KEY_BASE
+export STAC_BASE_URL
 
 _build/prod/rel/stac_api/bin/migrate
 

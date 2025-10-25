@@ -7,6 +7,20 @@ config :stac_api, StacApiWeb.Endpoint,
   secret_key_base: "JO8wCECsD8yjbyVpZ+fCuLrotVEZ4k9PmqlKlvsnVT517QlBXLoFh8RtOUCcoDL9",
   server: false
 
+
+config :stac_api, StacApi.Repo,
+  username: System.get_env("DB_USERNAME") || "postgres",
+  password: System.get_env("DB_PASSWORD") || "postgres",
+  database: System.get_env("DB_NAME") || "stac_api_#{config_env()}",
+  hostname: System.get_env("DB_HOST") || "localhost",
+  port: System.get_env("DB_PORT") || 5432,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2,
+  extensions: [{Geo.PostGIS.Extension, library: Geo}],  # Required for PostGIS
+  # This function will be called when Repo starts, overriding the config if DATABASE_URL exists
+  url: System.get_env("DATABASE_URL")
+
+
 # In test we don't send emails
 config :stac_api, StacApi.Mailer, adapter: Swoosh.Adapters.Test
 
