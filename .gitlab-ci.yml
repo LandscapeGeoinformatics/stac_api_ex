@@ -9,7 +9,7 @@ build-job:
   script:
     - echo "Compiling the code..."
     - asdf which mix
-    - mix deps.get && mix compile && mix assets.deploy
+    - mix deps.get && mix compile # && mix assets.deploy
   
 
 unit-test-job:   # This job runs in the test stage.
