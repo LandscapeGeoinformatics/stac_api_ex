@@ -1,0 +1,35 @@
+stages:
+  - build
+  - test
+  - deploy
+
+build-job:
+  stage: build
+  tags: [lgeo4-geokuup]
+  script:
+    - echo "Compiling the code..."
+    - asdf which mix
+    - mix deps.get && mix compile && mix assets.deploy
+  
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  tags: [lgeo4-geokuup]
+  environment: staging
+  variables:
+    MIX_ENV: test
+  script:
+    - echo "Running unit tests."
+    - mix deps.get && mix test
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  tags: [lgeo4-geokuup]
+  environment: production
+  variables:
+    MIX_ENV: prod
+  only:
+    - master
+  script:
+    - echo "Preparing application deployment..."
+    
