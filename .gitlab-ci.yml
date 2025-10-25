@@ -32,4 +32,10 @@ deploy-job:      # This job runs in the deploy stage.
     - master
   script:
     - echo "Preparing application deployment..."
+    - mix deps.get --only prod && mix compile # && mix assets.deploy
+    - mix release --overwrite
+    
+    - echo "Copying artefact to deployment location..."
+    - rsync -avz --delete _build /opt/stac_api_staging/artefacts/
+    - echo "$CI_JOB_ID" >> /opt/stac_api_staging/artefacts/.updated
     

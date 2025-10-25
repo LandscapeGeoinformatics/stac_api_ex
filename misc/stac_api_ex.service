@@ -3,12 +3,12 @@
 Description=stac_api_ex
 
 [Service]
-User=geokuup_test
-EnvironmentFile=/home/geokuup_test/run/.env
+User=stacapi
+EnvironmentFile=/home/stacapi/run/.env
 Environment=LANG=en_US.utf8
-WorkingDirectory=/home/geokuup_test/run
-ExecStart=/home/geokuup_test/run/_build/prod/rel/stac_api/bin/stac_api start
-ExecStop=/home/geokuup_test/run/_build/prod/rel/stac_api/bin/stac_api stop
+WorkingDirectory=/home/stacapi/run
+ExecStart=/home/stacapi/run/_build/prod/rel/stac_api/bin/stac_api start
+ExecStop=/home/stacapi/run/_build/prod/rel/stac_api/bin/stac_api stop
 KillMode=process
 Restart=on-failure
 LimitNOFILE=65535
