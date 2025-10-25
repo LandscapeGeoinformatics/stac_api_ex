@@ -1,0 +1,18 @@
+[Unit]
+# /etc/systemd/system/stac_api_ex.service
+Description=stac_api_ex
+
+[Service]
+User=geokuup_test
+EnvironmentFile=/home/geokuup_test/run/.env
+Environment=LANG=en_US.utf8
+WorkingDirectory=/home/geokuup_test/run
+ExecStart=/home/geokuup_test/run/_build/prod/rel/stac_api/bin/stac_api start
+ExecStop=/home/geokuup_test/run/_build/prod/rel/stac_api/bin/stac_api stop
+KillMode=process
+Restart=on-failure
+LimitNOFILE=65535
+SyslogIdentifier=stac_api_ex
+
+[Install]
+WantedBy=multi-user.target
