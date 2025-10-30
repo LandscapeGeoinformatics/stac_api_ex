@@ -63,8 +63,9 @@ defmodule StacApi.Data.ItemAsset do
         spatial_resolution: Map.get(band, "spatial_resolution"),
         unit: Map.get(band, "unit"),
         sampling: Map.get(band, "sampling"),
-        raster_scale: Map.get(band, "raster:scale"),
-        raster_offset: Map.get(band, "raster:offset")
+        # Support both "raster:scale" and "scale" for backward compatibility
+        raster_scale: Map.get(band, "raster:scale") || Map.get(band, "scale"),
+        raster_offset: Map.get(band, "raster:offset") || Map.get(band, "offset")
       }
     else
       %{}
@@ -119,6 +120,7 @@ defmodule StacApi.Data.ItemAsset do
       "roles" => asset.roles || []
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
     |> Enum.into(%{})
 
     # Add file size if present
@@ -147,6 +149,7 @@ defmodule StacApi.Data.ItemAsset do
         "raster:offset" => asset.raster_offset
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
       |> Enum.into(%{})
 
       Map.put(asset_data, "raster:bands", [raster_band])
@@ -162,6 +165,7 @@ defmodule StacApi.Data.ItemAsset do
         "transform" => asset.proj_transform
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
       |> Enum.into(%{})
 
       Map.put(asset_data, "proj:epsg", proj_epsg)
@@ -173,4 +177,16 @@ defmodule StacApi.Data.ItemAsset do
     additional_props = asset.additional_properties || %{}
     Map.merge(asset_data, additional_props)
   end
+
+  # Helper to convert Decimal structs to floats/numbers for JSON serialization
+  defp convert_decimal(%Decimal{} = decimal) do
+    Decimal.to_float(decimal)
+  end
+  defp convert_decimal(list) when is_list(list) do
+    Enum.map(list, &convert_decimal/1)
+  end
+  defp convert_decimal(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {k, convert_decimal(v)} end)
+  end
+  defp convert_decimal(value), do: value
 end

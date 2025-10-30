@@ -6,6 +6,46 @@ defmodule StacApiWeb.ItemsCrudController do
   import Ecto.Query
 
   @doc """
+  POST /api/stac/v1/items/import
+  """
+  def bulk_import(conn, params) do
+    features = Map.get(params, "features", [])
+
+    if is_list(features) and length(features) > 0 do
+      results = Enum.map(features, fn feature ->
+        case validate_item_params(feature) do
+          {:ok, item_attrs} ->
+            case upsert_item(item_attrs) do
+              {:ok, item} ->
+                # Normalize assets into separate table
+                normalize_item_assets(item.id, item_attrs["assets"] || %{})
+                {:ok, item.id}
+              {:error, changeset} ->
+                {:error, item_attrs["id"], format_changeset_errors(changeset)}
+            end
+          {:error, reason} ->
+            {:error, Map.get(feature, "id", "unknown"), reason}
+        end
+      end)
+
+      success_count = Enum.count(results, fn r -> match?({:ok, _}, r) end)
+      error_count = Enum.count(results, fn r -> match?({:error, _, _}, r) end)
+
+      json(conn, %{
+        success: true,
+        message: "Bulk import completed",
+        imported: success_count,
+        failed: error_count,
+        total: length(features)
+      })
+    else
+      conn
+      |> put_status(:bad_request)
+      |> json(%{error: "Must provide 'features' array with at least one item"})
+    end
+  end
+
+  @doc """
   POST /api/stac/v1/items
   Create or update an item (upsert based on ID)
   """
@@ -16,14 +56,14 @@ defmodule StacApiWeb.ItemsCrudController do
           {:ok, item} ->
             # Normalize assets into separate table
             normalize_item_assets(item.id, item_attrs["assets"] || %{})
-            
+
             # Generate links dynamically
             custom_links = Map.get(item_attrs, "links", [])
             links = DynamicLinkGenerator.generate_item_links(item, custom_links)
-            
+
             # Reconstruct assets from normalized data
             assets = reconstruct_item_assets(item.id)
-            
+
             item_response = %{
               type: "Feature",
               stac_version: item.stac_version || "1.0.0",
@@ -75,10 +115,10 @@ defmodule StacApiWeb.ItemsCrudController do
         # Generate links dynamically
         custom_links = item.links || []
         links = DynamicLinkGenerator.generate_item_links(item, custom_links)
-        
+
         # Reconstruct assets from normalized data
         assets = reconstruct_item_assets(item.id)
-        
+
         item_response = %{
           type: "Feature",
           stac_version: item.stac_version || "1.0.0",
@@ -114,14 +154,14 @@ defmodule StacApiWeb.ItemsCrudController do
               {:ok, updated_item} ->
                 # Normalize assets into separate table
                 normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
-                
+
                 # Generate links dynamically
                 custom_links = Map.get(item_attrs, "links", [])
                 links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
-                
+
                 # Reconstruct assets from normalized data
                 assets = reconstruct_item_assets(updated_item.id)
-                
+
                 item_response = %{
                   type: "Feature",
                   stac_version: updated_item.stac_version || "1.0.0",
@@ -197,14 +237,14 @@ defmodule StacApiWeb.ItemsCrudController do
     query = from(i in Item, limit: ^limit, offset: ^offset, order_by: [desc: i.datetime])
     items = Repo.all(query)
     total_count = Repo.aggregate(Item, :count, :id)
-    
+
     items_with_links = Enum.map(items, fn item ->
       custom_links = item.links || []
       links = DynamicLinkGenerator.generate_item_links(item, custom_links)
-      
+
       # Reconstruct assets from normalized data
       assets = reconstruct_item_assets(item.id)
-      
+
       %{
         type: "Feature",
         stac_version: item.stac_version || "1.0.0",
@@ -237,33 +277,37 @@ defmodule StacApiWeb.ItemsCrudController do
   # Private helper functions
 
   defp validate_item_params(params) do
-    required_fields = ["id", "collection_id", "geometry"]
+    required_fields = ["id", "geometry"]
     missing_fields = Enum.filter(required_fields, &is_nil(params[&1]))
 
     if length(missing_fields) > 0 do
       {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     else
-      # Validate collection_id exists
-      collection_id = params["collection_id"]
-      if !Repo.get(Collection, collection_id) do
-        {:error, "Referenced collection does not exist"}
+      # Validate collection_id exists (handle both "collection_id" and "collection" fields)
+      collection_id = params["collection_id"] || params["collection"]
+      if is_nil(collection_id) do
+        {:error, "Missing required field: collection_id or collection"}
       else
-        # Parse geometry if provided as GeoJSON string
-        geometry = parse_geometry(params["geometry"])
-        
-        item_attrs = %{
-          "id" => params["id"],
-          "collection_id" => collection_id,
-          "stac_version" => params["stac_version"] || "1.0.0",
-          "stac_extensions" => params["stac_extensions"] || [],
-          "geometry" => geometry,
-          "bbox" => params["bbox"],
-          "datetime" => parse_datetime(params["datetime"]),
-          "properties" => params["properties"] || %{},
-          "assets" => params["assets"] || %{},
-          "links" => params["links"] || []
-        }
-        {:ok, item_attrs}
+        if !Repo.get(Collection, collection_id) do
+          {:error, "Referenced collection does not exist: #{collection_id}"}
+        else
+          # Parse geometry if provided as GeoJSON string
+          geometry = parse_geometry(params["geometry"])
+
+          item_attrs = %{
+            "id" => params["id"],
+            "collection_id" => collection_id,
+            "stac_version" => params["stac_version"] || "1.0.0",
+            "stac_extensions" => params["stac_extensions"] || [],
+            "geometry" => geometry,
+            "bbox" => params["bbox"],
+            "datetime" => parse_datetime(params["datetime"]),
+            "properties" => params["properties"] || %{},
+            "assets" => params["assets"] || %{},
+            "links" => params["links"] || []
+          }
+          {:ok, item_attrs}
+        end
       end
     end
   end
@@ -335,13 +379,13 @@ defmodule StacApiWeb.ItemsCrudController do
   defp normalize_item_assets(item_id, assets) when is_map(assets) do
     # First, delete existing assets for this item
     Repo.delete_all(from a in ItemAsset, where: a.item_id == ^item_id)
-    
+
     # Insert new assets
     Enum.each(assets, fn {asset_key, asset_data} ->
       changeset = ItemAsset.from_stac_asset(item_id, asset_key, asset_data)
       case Repo.insert(changeset) do
         {:ok, _} -> :ok
-        {:error, changeset} -> 
+        {:error, changeset} ->
           IO.puts("Failed to insert asset #{asset_key}: #{inspect(changeset.errors)}")
       end
     end)
@@ -352,7 +396,7 @@ defmodule StacApiWeb.ItemsCrudController do
   """
   defp reconstruct_item_assets(item_id) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
-    
+
     Enum.reduce(assets, %{}, fn asset, acc ->
       asset_data = ItemAsset.to_stac_asset(asset)
       Map.put(acc, asset.asset_key, asset_data)

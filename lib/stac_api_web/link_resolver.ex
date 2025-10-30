@@ -27,6 +27,9 @@ defmodule StacApiWeb.LinkResolver do
         "#{base_url()}#{normalized_url}"
     end
   end
+  
+  # Handle nil links gracefully
+  def resolve_url(nil), do: nil
 
   @doc """
   Resolves a list of links, converting relative hrefs to absolute URLs.

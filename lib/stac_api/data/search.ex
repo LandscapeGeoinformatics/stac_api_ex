@@ -316,6 +316,10 @@ defp convert_coords(other), do: other
   defp deep_serialize_tuples({x, y, z, w}) when is_number(x) and is_number(y) and is_number(z) and is_number(w) do
     [x, y, z, w]
   end
+  # Handle Decimal structs
+  defp deep_serialize_tuples(%Decimal{} = decimal) do
+    Decimal.to_float(decimal)
+  end
   defp deep_serialize_tuples(map) when is_map(map) do
     Map.new(map, fn {k, v} -> {k, deep_serialize_tuples(v)} end)
   end
