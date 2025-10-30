@@ -22,7 +22,7 @@ def search(params \\ %{}) do
       id: i.id,
       stac_version: i.stac_version,
       stac_extensions: i.stac_extensions,
-      geometry: fragment("ST_AsGeoJSON(?) as geometry", i.geometry),
+      geometry: fragment("ST_AsGeoJSON(?::geometry) as geometry", i.geometry),
       bbox: i.bbox,
       datetime: i.datetime,
       properties: i.properties,
@@ -129,7 +129,7 @@ defp convert_geojson_geometry(item), do: item
     bbox_wkt = "POLYGON((#{minx} #{miny}, #{maxx} #{miny}, #{maxx} #{maxy}, #{minx} #{maxy}, #{minx} #{miny}))"
 
     from i in query,
-      where: fragment("ST_Intersects(?, ST_GeomFromText(?, 4326))", i.geometry, ^bbox_wkt)
+      where: fragment("ST_Intersects(?, ST_GeomFromText(?, 4326)::geography)", i.geometry, ^bbox_wkt)
   end
 
   defp filter_by_datetime(query, nil), do: query
@@ -185,7 +185,7 @@ defp convert_geojson_geometry(item), do: item
     case Geo.JSON.decode(geojson) do
       {:ok, geo} ->
         from i in query,
-          where: fragment("ST_Intersects(?, ?)", i.geometry, ^geo)
+          where: fragment("ST_Intersects(?, ?::geography)", i.geometry, ^geo)
       _ -> query
     end
   end
