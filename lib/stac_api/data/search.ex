@@ -22,7 +22,7 @@ def search(params \\ %{}) do
       id: i.id,
       stac_version: i.stac_version,
       stac_extensions: i.stac_extensions,
-      geometry: fragment("ST_AsGeoJSON(?) as geometry", i.geometry),
+      geometry: fragment("ST_AsGeoJSON(?::geometry) as geometry", i.geometry),
       bbox: i.bbox,
       datetime: i.datetime,
       properties: i.properties,
@@ -129,7 +129,7 @@ defp convert_geojson_geometry(item), do: item
     bbox_wkt = "POLYGON((#{minx} #{miny}, #{maxx} #{miny}, #{maxx} #{maxy}, #{minx} #{maxy}, #{minx} #{miny}))"
 
     from i in query,
-      where: fragment("ST_Intersects(?, ST_GeomFromText(?, 4326))", i.geometry, ^bbox_wkt)
+      where: fragment("ST_Intersects(?, ST_GeomFromText(?, 4326)::geography)", i.geometry, ^bbox_wkt)
   end
 
   defp filter_by_datetime(query, nil), do: query
@@ -185,7 +185,7 @@ defp convert_geojson_geometry(item), do: item
     case Geo.JSON.decode(geojson) do
       {:ok, geo} ->
         from i in query,
-          where: fragment("ST_Intersects(?, ?)", i.geometry, ^geo)
+          where: fragment("ST_Intersects(?, ?::geography)", i.geometry, ^geo)
       _ -> query
     end
   end
@@ -235,7 +235,7 @@ defp convert_geojson_geometry(item), do: item
 
   def serialize_item_for_api(%Item{} = item) do
   # Reconstruct assets from normalized data
-  assets = reconstruct_item_assets(item.id)
+  assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
   
   %{
     "type" => "Feature",
@@ -316,6 +316,10 @@ defp convert_coords(other), do: other
   defp deep_serialize_tuples({x, y, z, w}) when is_number(x) and is_number(y) and is_number(z) and is_number(w) do
     [x, y, z, w]
   end
+  # Handle Decimal structs
+  defp deep_serialize_tuples(%Decimal{} = decimal) do
+    Decimal.to_float(decimal)
+  end
   defp deep_serialize_tuples(map) when is_map(map) do
     Map.new(map, fn {k, v} -> {k, deep_serialize_tuples(v)} end)
   end
@@ -341,7 +345,7 @@ defp convert_coords(other), do: other
     Enum.map(items, fn item ->
       item_assets = Map.get(assets_by_item, item.id, [])
       reconstructed_assets = Enum.reduce(item_assets, %{}, fn asset, acc ->
-        asset_data = ItemAsset.to_stac_asset(asset)
+        asset_data = ItemAsset.to_stac_asset(asset, item.stac_extensions || [])
         Map.put(acc, asset.asset_key, asset_data)
       end)
       
@@ -352,11 +356,11 @@ defp convert_coords(other), do: other
   @doc """
   Reconstruct assets from normalized table back to STAC format for a single item
   """
-  defp reconstruct_item_assets(item_id) do
+  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
     
     Enum.reduce(assets, %{}, fn asset, acc ->
-      asset_data = ItemAsset.to_stac_asset(asset)
+      asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
       Map.put(acc, asset.asset_key, asset_data)
     end)
   end

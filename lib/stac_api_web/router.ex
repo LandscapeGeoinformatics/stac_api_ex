@@ -53,6 +53,7 @@ defmodule StacApiWeb.Router do
     # CRUD endpoints for items
     get "/items", ItemsCrudController, :index
     post "/items", ItemsCrudController, :create
+    post "/items/import", ItemsCrudController, :bulk_import
     get "/items/:id", ItemsCrudController, :show
     put "/items/:id", ItemsCrudController, :update
     delete "/items/:id", ItemsCrudController, :delete

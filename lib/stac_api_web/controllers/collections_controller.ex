@@ -74,7 +74,7 @@ defmodule StacApiWeb.CollectionsController do
       sanitized_items = Enum.map(items, fn item ->
         sanitized = sanitize_item(item)
         # Reconstruct assets from normalized data
-        assets = reconstruct_item_assets(item.id)
+        assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
         sanitized = Map.put(sanitized, :assets, assets)
         
         custom_links = item.links || []
@@ -109,7 +109,7 @@ defmodule StacApiWeb.CollectionsController do
         item ->
           sanitized_item = sanitize_item(item)
           # Reconstruct assets from normalized data
-          assets = reconstruct_item_assets(item.id)
+          assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
           sanitized_item = Map.put(sanitized_item, :assets, assets)
           
           custom_links = item.links || []
@@ -161,11 +161,11 @@ defmodule StacApiWeb.CollectionsController do
   @doc """
   Reconstruct assets from normalized table back to STAC format
   """
-  defp reconstruct_item_assets(item_id) do
+  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
     
     Enum.reduce(assets, %{}, fn asset, acc ->
-      asset_data = ItemAsset.to_stac_asset(asset)
+      asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
       Map.put(acc, asset.asset_key, asset_data)
     end)
   end

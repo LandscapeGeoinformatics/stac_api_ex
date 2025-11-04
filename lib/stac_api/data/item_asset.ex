@@ -23,6 +23,8 @@ defmodule StacApi.Data.ItemAsset do
     field :spatial_resolution, :decimal
     field :unit, :string
     field :sampling, :string
+    field :raster_scale, :decimal
+    field :raster_offset, :decimal
     
     # Projection information
     field :epsg_code, :integer
@@ -41,7 +43,7 @@ defmodule StacApi.Data.ItemAsset do
     |> cast(attrs, [
       :item_id, :asset_key, :href, :type, :title, :description, :roles,
       :file_size, :created_at, :nodata_value, :data_type, :spatial_resolution,
-      :unit, :sampling, :epsg_code, :proj_bbox, :proj_transform, :additional_properties
+      :unit, :sampling, :raster_scale, :raster_offset, :epsg_code, :proj_bbox, :proj_transform, :additional_properties
     ])
     |> validate_required([:item_id, :asset_key])
     |> unique_constraint([:item_id, :asset_key])
@@ -55,12 +57,15 @@ defmodule StacApi.Data.ItemAsset do
     raster_bands = Map.get(asset_data, "raster:bands", [])
     raster_data = if length(raster_bands) > 0 do
       band = hd(raster_bands)
+      # Support both v1 (no prefix) and v2 (raster: prefix) field names
       %{
-        nodata_value: Map.get(band, "nodata"),
-        data_type: Map.get(band, "data_type"),
-        spatial_resolution: Map.get(band, "spatial_resolution"),
-        unit: Map.get(band, "unit"),
-        sampling: Map.get(band, "sampling")
+        nodata_value: Map.get(band, "raster:nodata") || Map.get(band, "nodata"),
+        data_type: Map.get(band, "raster:data_type") || Map.get(band, "data_type"),
+        spatial_resolution: Map.get(band, "raster:spatial_resolution") || Map.get(band, "spatial_resolution"),
+        unit: Map.get(band, "raster:unit") || Map.get(band, "unit"),
+        sampling: Map.get(band, "raster:sampling") || Map.get(band, "sampling"),
+        raster_scale: Map.get(band, "raster:scale") || Map.get(band, "scale"),
+        raster_offset: Map.get(band, "raster:offset") || Map.get(band, "offset")
       }
     else
       %{}
@@ -105,8 +110,10 @@ defmodule StacApi.Data.ItemAsset do
 
   @doc """
   Convert ItemAsset back to STAC asset JSON
+  
+  Version-aware serialization: raster v1 uses "scale"/"offset", v2 uses "raster:scale"/"raster:offset"
   """
-  def to_stac_asset(%__MODULE__{} = asset) do
+  def to_stac_asset(%__MODULE__{} = asset, stac_extensions \\ []) do
     asset_data = %{
       "href" => asset.href,
       "type" => asset.type,
@@ -115,6 +122,7 @@ defmodule StacApi.Data.ItemAsset do
       "roles" => asset.roles || []
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
     |> Enum.into(%{})
 
     # Add file size if present
@@ -133,14 +141,34 @@ defmodule StacApi.Data.ItemAsset do
 
     # Add raster bands if present
     asset_data = if asset.data_type do
-      raster_band = %{
-        "nodata" => asset.nodata_value,
-        "data_type" => asset.data_type,
-        "spatial_resolution" => asset.spatial_resolution,
-        "unit" => asset.unit,
-        "sampling" => asset.sampling
-      }
+      # Detect raster extension version to use correct field names
+      # v1: no prefix (nodata, data_type, scale, offset, etc.)
+      # v2: all fields prefixed with "raster:" (raster:nodata, raster:data_type, raster:scale, raster:offset, etc.)
+      use_v2 = is_raster_v2?(stac_extensions)
+      
+      raster_band = if use_v2 do
+        %{
+          "raster:nodata" => asset.nodata_value,
+          "raster:data_type" => asset.data_type,
+          "raster:spatial_resolution" => asset.spatial_resolution,
+          "raster:unit" => asset.unit,
+          "raster:sampling" => asset.sampling,
+          "raster:scale" => asset.raster_scale,
+          "raster:offset" => asset.raster_offset
+        }
+      else
+        %{
+          "nodata" => asset.nodata_value,
+          "data_type" => asset.data_type,
+          "spatial_resolution" => asset.spatial_resolution,
+          "unit" => asset.unit,
+          "sampling" => asset.sampling,
+          "scale" => asset.raster_scale,
+          "offset" => asset.raster_offset
+        }
+      end
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
       |> Enum.into(%{})
 
       Map.put(asset_data, "raster:bands", [raster_band])
@@ -156,6 +184,7 @@ defmodule StacApi.Data.ItemAsset do
         "transform" => asset.proj_transform
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
       |> Enum.into(%{})
 
       Map.put(asset_data, "proj:epsg", proj_epsg)
@@ -167,4 +196,25 @@ defmodule StacApi.Data.ItemAsset do
     additional_props = asset.additional_properties || %{}
     Map.merge(asset_data, additional_props)
   end
+
+  # Helper to detect if raster extension v2 is used based on stac_extensions
+  defp is_raster_v2?(stac_extensions) when is_list(stac_extensions) do
+    Enum.any?(stac_extensions, fn ext ->
+      # Check if the extension URL contains "/raster/v2"
+      String.contains?(ext, "/raster/v2")
+    end)
+  end
+  defp is_raster_v2?(_), do: false
+
+  # Helper to convert Decimal structs to floats/numbers for JSON serialization
+  defp convert_decimal(%Decimal{} = decimal) do
+    Decimal.to_float(decimal)
+  end
+  defp convert_decimal(list) when is_list(list) do
+    Enum.map(list, &convert_decimal/1)
+  end
+  defp convert_decimal(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {k, convert_decimal(v)} end)
+  end
+  defp convert_decimal(value), do: value
 end
