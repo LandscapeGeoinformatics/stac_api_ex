@@ -85,7 +85,7 @@ defmodule StacApiWeb.CatalogsCrudController do
 
   @doc """
   PUT /api/stac/v1/catalogs/:id
-  Update a specific catalog
+  Replace the entire catalog (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
     case Repo.get(Catalog, id) do
@@ -95,9 +95,9 @@ defmodule StacApiWeb.CatalogsCrudController do
         |> json(%{error: "Catalog not found"})
 
       catalog ->
-        case validate_catalog_params(params) do
+        case validate_catalog_params_full(params) do
           {:ok, catalog_attrs} ->
-            case update_catalog(catalog, catalog_attrs) do
+            case replace_catalog(catalog, catalog_attrs) do
               {:ok, updated_catalog} ->
                 # Generate links dynamically
                 custom_links = Map.get(catalog_attrs, "links", [])
@@ -110,6 +110,65 @@ defmodule StacApiWeb.CatalogsCrudController do
                   title: updated_catalog.title,
                   description: updated_catalog.description,
                   extent: updated_catalog.extent,
+                  links: links
+                }
+
+                success_response = %{
+                  success: true,
+                  message: "Catalog replaced successfully",
+                  data: catalog_response
+                }
+
+                json(conn, success_response)
+
+              {:error, changeset} ->
+                conn
+                |> put_status(:unprocessable_entity)
+                |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+            end
+
+          {:error, reason} ->
+            conn
+            |> put_status(:bad_request)
+            |> json(%{error: reason})
+        end
+    end
+  end
+
+  @doc """
+  PATCH /api/stac/v1/catalogs/:id
+  Partially update a catalog (only provided fields are updated)
+  """
+  def patch(conn, %{"id" => id} = params) do
+    case Repo.get(Catalog, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Catalog not found"})
+
+      catalog ->
+        case validate_catalog_params_partial(params) do
+          {:ok, catalog_attrs} ->
+            case update_catalog_partial(catalog, catalog_attrs) do
+              {:ok, updated_catalog} ->
+                # Reload to ensure we have all fields (especially important for partial updates)
+                reloaded_catalog = Repo.get(Catalog, id)
+                
+                # Generate links dynamically (use updated links if provided, otherwise existing)
+                links = if Map.has_key?(params, "links") do
+                  custom_links = Map.get(catalog_attrs, "links", reloaded_catalog.links || [])
+                  DynamicLinkGenerator.generate_catalog_links(reloaded_catalog, custom_links)
+                else
+                  DynamicLinkGenerator.generate_catalog_links(reloaded_catalog, reloaded_catalog.links || [])
+                end
+                
+                catalog_response = %{
+                  stac_version: reloaded_catalog.stac_version || "1.0.0",
+                  type: "Catalog",
+                  id: reloaded_catalog.id,
+                  title: reloaded_catalog.title,
+                  description: reloaded_catalog.description,
+                  extent: reloaded_catalog.extent,
                   links: links
                 }
 
@@ -232,12 +291,12 @@ defmodule StacApiWeb.CatalogsCrudController do
     }
   end
 
-  defp validate_catalog_params(params) do
+  defp validate_catalog_params_full(params) do
     required_fields = ["id"]
     missing_fields = Enum.filter(required_fields, &is_nil(params[&1]))
 
     if length(missing_fields) > 0 do
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+      {:error, "PUT requires all fields. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     else
       catalog_attrs = %{
         "id" => params["id"],
@@ -252,6 +311,37 @@ defmodule StacApiWeb.CatalogsCrudController do
       }
       {:ok, catalog_attrs}
     end
+  end
+
+  defp validate_catalog_params_partial(params) do
+    if is_nil(params["id"]) do
+      {:error, "Missing required field: id"}
+    else
+      depth_value = if params["parent_catalog_id"], do: calculate_depth(params["parent_catalog_id"]), else: nil
+      
+      catalog_attrs = %{}
+      |> Map.put("id", params["id"])
+      |> maybe_put("title", params["title"])
+      |> maybe_put("description", params["description"])
+      |> maybe_put("type", params["type"])
+      |> maybe_put("stac_version", params["stac_version"])
+      |> maybe_put("extent", params["extent"])
+      |> maybe_put("links", params["links"])
+      |> maybe_put("parent_catalog_id", params["parent_catalog_id"])
+      |> maybe_put("depth", depth_value)
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+
+      {:ok, catalog_attrs}
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp validate_catalog_params(params) do
+    # Keep this for backward compatibility with create/upsert
+    validate_catalog_params_full(params)
   end
 
   defp calculate_depth(nil), do: 0
@@ -278,6 +368,18 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   defp update_catalog(catalog, attrs) do
+    catalog
+    |> Catalog.changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp replace_catalog(catalog, attrs) do
+    catalog
+    |> Catalog.changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp update_catalog_partial(catalog, attrs) do
     catalog
     |> Catalog.changeset(attrs)
     |> Repo.update()

@@ -138,7 +138,7 @@ defmodule StacApiWeb.ItemsCrudController do
 
   @doc """
   PUT /api/stac/v1/items/:id
-  Update a specific item
+  Replace the entire item (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
     case Repo.get(Item, id) do
@@ -148,11 +148,12 @@ defmodule StacApiWeb.ItemsCrudController do
         |> json(%{error: "Item not found"})
 
       item ->
-        case validate_item_params(params) do
+        case validate_item_params_full(params) do
           {:ok, item_attrs} ->
-            case update_item(item, item_attrs) do
+            case replace_item(item, item_attrs) do
               {:ok, updated_item} ->
-                # Normalize assets into separate table
+                # Replace all assets (delete old ones and add new ones)
+                Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
                 normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
 
                 # Generate links dynamically
@@ -172,6 +173,77 @@ defmodule StacApiWeb.ItemsCrudController do
                   properties: updated_item.properties || %{},
                   assets: assets,
                   collection: updated_item.collection_id,
+                  links: links
+                }
+
+                success_response = %{
+                  success: true,
+                  message: "Item replaced successfully",
+                  data: item_response
+                }
+
+                json(conn, success_response)
+
+              {:error, changeset} ->
+                conn
+                |> put_status(:unprocessable_entity)
+                |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+            end
+
+          {:error, reason} ->
+            conn
+            |> put_status(:bad_request)
+            |> json(%{error: reason})
+        end
+    end
+  end
+
+  @doc """
+  PATCH /api/stac/v1/items/:id
+  Partially update an item (only provided fields are updated)
+  """
+  def patch(conn, %{"id" => id} = params) do
+    case Repo.get(Item, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Item not found"})
+
+      item ->
+        case validate_item_params_partial(params) do
+          {:ok, item_attrs} ->
+            case update_item_partial(item, item_attrs) do
+              {:ok, updated_item} ->
+                # Reload to ensure we have all fields (especially important for partial updates)
+                reloaded_item = Repo.get(Item, id)
+                
+                # Only update assets if provided
+                if Map.has_key?(params, "assets") do
+                  Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
+                  normalize_item_assets(reloaded_item.id, item_attrs["assets"] || %{})
+                end
+
+                # Generate links dynamically (use updated links if provided, otherwise existing)
+                links = if Map.has_key?(params, "links") do
+                  custom_links = Map.get(item_attrs, "links", reloaded_item.links || [])
+                  DynamicLinkGenerator.generate_item_links(reloaded_item, custom_links)
+                else
+                  DynamicLinkGenerator.generate_item_links(reloaded_item, reloaded_item.links || [])
+                end
+
+                # Reconstruct assets from normalized data
+                assets = reconstruct_item_assets(reloaded_item.id, reloaded_item.stac_extensions || [])
+
+                item_response = %{
+                  type: "Feature",
+                  stac_version: reloaded_item.stac_version || "1.0.0",
+                  stac_extensions: reloaded_item.stac_extensions || [],
+                  id: reloaded_item.id,
+                  geometry: reloaded_item.geometry,
+                  bbox: reloaded_item.bbox,
+                  properties: reloaded_item.properties || %{},
+                  assets: assets,
+                  collection: reloaded_item.collection_id,
                   links: links
                 }
 
@@ -276,6 +348,87 @@ defmodule StacApiWeb.ItemsCrudController do
 
   # Private helper functions
 
+  @doc """
+  Validate item params for PUT (full replacement - all required fields must be present)
+  """
+  defp validate_item_params_full(params) do
+    required_fields = ["id", "geometry", "collection_id"]
+    # Also accept "collection" as alias for "collection_id"
+    collection_id = params["collection_id"] || params["collection"]
+    
+    missing_fields = Enum.filter(required_fields, fn field ->
+      case field do
+        "collection_id" -> is_nil(collection_id)
+        _ -> is_nil(params[field])
+      end
+    end)
+
+    if length(missing_fields) > 0 do
+      {:error, "PUT requires all fields. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+    else
+      if !Repo.get(Collection, collection_id) do
+        {:error, "Referenced collection does not exist: #{collection_id}"}
+      else
+        geometry = parse_geometry(params["geometry"])
+
+        item_attrs = %{
+          "id" => params["id"],
+          "collection_id" => collection_id,
+          "stac_version" => params["stac_version"] || "1.0.0",
+          "stac_extensions" => params["stac_extensions"] || [],
+          "geometry" => geometry,
+          "bbox" => params["bbox"],
+          "datetime" => parse_datetime(params["datetime"]),
+          "properties" => params["properties"] || %{},
+          "assets" => params["assets"] || %{},
+          "links" => params["links"] || []
+        }
+        {:ok, item_attrs}
+      end
+    end
+  end
+
+  @doc """
+  Validate item params for PATCH (partial update - only validate provided fields)
+  """
+  defp validate_item_params_partial(params) do
+    # For PATCH, we validate only what's provided
+    # Must have id, but other fields are optional
+    if is_nil(params["id"]) do
+      {:error, "Missing required field: id"}
+    else
+      collection_id = params["collection_id"] || params["collection"]
+      
+      # If collection_id is provided, validate it exists
+      if collection_id && !Repo.get(Collection, collection_id) do
+        {:error, "Referenced collection does not exist: #{collection_id}"}
+      else
+        # Build attrs map with only provided fields
+        geometry_value = if params["geometry"], do: parse_geometry(params["geometry"]), else: nil
+        datetime_value = if params["datetime"], do: parse_datetime(params["datetime"]), else: nil
+        
+        item_attrs = %{}
+        |> Map.put("id", params["id"])
+        |> maybe_put("collection_id", collection_id)
+        |> maybe_put("stac_version", params["stac_version"])
+        |> maybe_put("stac_extensions", params["stac_extensions"])
+        |> maybe_put("geometry", geometry_value)
+        |> maybe_put("bbox", params["bbox"])
+        |> maybe_put("datetime", datetime_value)
+        |> maybe_put("properties", params["properties"])
+        |> maybe_put("assets", params["assets"])
+        |> maybe_put("links", params["links"])
+        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+        |> Enum.into(%{})
+
+        {:ok, item_attrs}
+      end
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
   defp validate_item_params(params) do
     required_fields = ["id", "geometry"]
     missing_fields = Enum.filter(required_fields, &is_nil(params[&1]))
@@ -360,6 +513,24 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   defp update_item(item, attrs) do
+    item
+    |> Item.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Replace entire item (PUT) - replaces all fields
+  """
+  defp replace_item(item, attrs) do
+    item
+    |> Item.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Partially update item (PATCH) - only updates provided fields
+  """
+  defp update_item_partial(item, attrs) do
     item
     |> Item.changeset(attrs)
     |> Repo.update()

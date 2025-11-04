@@ -23,8 +23,8 @@ defmodule StacApi.Data.ItemAsset do
     field :spatial_resolution, :decimal
     field :unit, :string
     field :sampling, :string
-    field :raster_scale, :decimal
-    field :raster_offset, :decimal
+    field :scale, :decimal
+    field :offset, :decimal
     
     # Projection information
     field :epsg_code, :integer
@@ -43,7 +43,7 @@ defmodule StacApi.Data.ItemAsset do
     |> cast(attrs, [
       :item_id, :asset_key, :href, :type, :title, :description, :roles,
       :file_size, :created_at, :nodata_value, :data_type, :spatial_resolution,
-      :unit, :sampling, :raster_scale, :raster_offset, :epsg_code, :proj_bbox, :proj_transform, :additional_properties
+      :unit, :sampling, :scale, :offset, :epsg_code, :proj_bbox, :proj_transform, :additional_properties
     ])
     |> validate_required([:item_id, :asset_key])
     |> unique_constraint([:item_id, :asset_key])
@@ -64,8 +64,8 @@ defmodule StacApi.Data.ItemAsset do
         spatial_resolution: Map.get(band, "raster:spatial_resolution") || Map.get(band, "spatial_resolution"),
         unit: Map.get(band, "raster:unit") || Map.get(band, "unit"),
         sampling: Map.get(band, "raster:sampling") || Map.get(band, "sampling"),
-        raster_scale: Map.get(band, "raster:scale") || Map.get(band, "scale"),
-        raster_offset: Map.get(band, "raster:offset") || Map.get(band, "offset")
+        scale: Map.get(band, "raster:scale") || Map.get(band, "scale"),
+        offset: Map.get(band, "raster:offset") || Map.get(band, "offset")
       }
     else
       %{}
@@ -153,8 +153,8 @@ defmodule StacApi.Data.ItemAsset do
           "raster:spatial_resolution" => asset.spatial_resolution,
           "raster:unit" => asset.unit,
           "raster:sampling" => asset.sampling,
-          "raster:scale" => asset.raster_scale,
-          "raster:offset" => asset.raster_offset
+          "raster:scale" => asset.scale,
+          "raster:offset" => asset.offset
         }
       else
         %{
@@ -163,8 +163,8 @@ defmodule StacApi.Data.ItemAsset do
           "spatial_resolution" => asset.spatial_resolution,
           "unit" => asset.unit,
           "sampling" => asset.sampling,
-          "scale" => asset.raster_scale,
-          "offset" => asset.raster_offset
+          "scale" => asset.scale,
+          "offset" => asset.offset
         }
       end
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)

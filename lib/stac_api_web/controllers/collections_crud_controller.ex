@@ -91,7 +91,7 @@ defmodule StacApiWeb.CollectionsCrudController do
 
   @doc """
   PUT /api/stac/v1/collections/:id
-  Update a specific collection
+  Replace the entire collection (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
     case Repo.get(Collection, id) do
@@ -101,9 +101,9 @@ defmodule StacApiWeb.CollectionsCrudController do
         |> json(%{error: "Collection not found"})
 
       collection ->
-        case validate_collection_params(params) do
+        case validate_collection_params_full(params) do
           {:ok, collection_attrs} ->
-            case update_collection(collection, collection_attrs) do
+            case replace_collection(collection, collection_attrs) do
               {:ok, updated_collection} ->
                 # Generate links dynamically
                 custom_links = Map.get(collection_attrs, "links", [])
@@ -120,6 +120,69 @@ defmodule StacApiWeb.CollectionsCrudController do
                   summaries: updated_collection.summaries,
                   properties: updated_collection.properties,
                   stac_extensions: updated_collection.stac_extensions || [],
+                  links: links
+                }
+
+                success_response = %{
+                  success: true,
+                  message: "Collection replaced successfully",
+                  data: collection_response
+                }
+
+                json(conn, success_response)
+
+              {:error, changeset} ->
+                conn
+                |> put_status(:unprocessable_entity)
+                |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+            end
+
+          {:error, reason} ->
+            conn
+            |> put_status(:bad_request)
+            |> json(%{error: reason})
+        end
+    end
+  end
+
+  @doc """
+  PATCH /api/stac/v1/collections/:id
+  Partially update a collection (only provided fields are updated)
+  """
+  def patch(conn, %{"id" => id} = params) do
+    case Repo.get(Collection, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Collection not found"})
+
+      collection ->
+        case validate_collection_params_partial(params) do
+          {:ok, collection_attrs} ->
+            case update_collection_partial(collection, collection_attrs) do
+              {:ok, updated_collection} ->
+                # Reload to ensure we have all fields (especially important for partial updates)
+                reloaded_collection = Repo.get(Collection, id)
+                
+                # Generate links dynamically (use updated links if provided, otherwise existing)
+                links = if Map.has_key?(params, "links") do
+                  custom_links = Map.get(collection_attrs, "links", reloaded_collection.links || [])
+                  DynamicLinkGenerator.generate_collection_links(reloaded_collection, custom_links)
+                else
+                  DynamicLinkGenerator.generate_collection_links(reloaded_collection, reloaded_collection.links || [])
+                end
+                
+                collection_response = %{
+                  stac_version: reloaded_collection.stac_version || "1.0.0",
+                  type: "Collection",
+                  id: reloaded_collection.id,
+                  title: reloaded_collection.title,
+                  description: reloaded_collection.description,
+                  license: reloaded_collection.license,
+                  extent: reloaded_collection.extent,
+                  summaries: reloaded_collection.summaries,
+                  properties: reloaded_collection.properties,
+                  stac_extensions: reloaded_collection.stac_extensions || [],
                   links: links
                 }
 
@@ -225,12 +288,12 @@ defmodule StacApiWeb.CollectionsCrudController do
     items_count
   end
 
-  defp validate_collection_params(params) do
+  defp validate_collection_params_full(params) do
     required_fields = ["id"]
     missing_fields = Enum.filter(required_fields, &is_nil(params[&1]))
 
     if length(missing_fields) > 0 do
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+      {:error, "PUT requires all fields. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     else
       # Validate catalog_id if provided
       catalog_id = params["catalog_id"]
@@ -255,6 +318,43 @@ defmodule StacApiWeb.CollectionsCrudController do
     end
   end
 
+  defp validate_collection_params_partial(params) do
+    if is_nil(params["id"]) do
+      {:error, "Missing required field: id"}
+    else
+      catalog_id = params["catalog_id"]
+      
+      if catalog_id && !Repo.get(Catalog, catalog_id) do
+        {:error, "Referenced catalog does not exist"}
+      else
+        collection_attrs = %{}
+        |> Map.put("id", params["id"])
+        |> maybe_put("title", params["title"])
+        |> maybe_put("description", params["description"])
+        |> maybe_put("license", params["license"])
+        |> maybe_put("extent", params["extent"])
+        |> maybe_put("summaries", params["summaries"])
+        |> maybe_put("properties", params["properties"])
+        |> maybe_put("stac_version", params["stac_version"])
+        |> maybe_put("stac_extensions", params["stac_extensions"])
+        |> maybe_put("links", params["links"])
+        |> maybe_put("catalog_id", catalog_id)
+        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+        |> Enum.into(%{})
+
+        {:ok, collection_attrs}
+      end
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp validate_collection_params(params) do
+    # Keep this for backward compatibility with create/upsert
+    validate_collection_params_full(params)
+  end
+
   defp upsert_collection(attrs) do
     case Repo.get(Collection, attrs["id"]) do
       nil ->
@@ -270,6 +370,18 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   defp update_collection(collection, attrs) do
+    collection
+    |> Collection.changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp replace_collection(collection, attrs) do
+    collection
+    |> Collection.changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp update_collection_partial(collection, attrs) do
     collection
     |> Collection.changeset(attrs)
     |> Repo.update()
