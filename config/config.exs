@@ -7,10 +7,6 @@
 # General application configuration
 import Config
 
-config :stac_api,
-  generators: [timestamp_type: :utc_datetime],
-  base_url: "http://localhost:4000"
-
 # Configures the endpoint
 config :stac_api, StacApiWeb.Endpoint,
   url: [host: "localhost"],
@@ -33,21 +29,11 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Database configuration
-config :stac_api, StacApi.Repo,
-  database: "stac_api_#{config_env()}",
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  port: 5433,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10,
-  extensions: [{Geo.PostGIS.Extension, library: Geo}],  # Required for PostGIS
-  queue_target: 5000,  # Optional: Better connection queue handling
-  stacktrace: true     # Optional: For better debugging
+
 
 # Configure Ecto repositories
 config :stac_api, ecto_repos: [StacApi.Repo]
+
 
 # Geo configuration for PostGIS
 config :geo,

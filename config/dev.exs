@@ -2,7 +2,25 @@ import Config
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
-#
+
+config :stac_api,
+  generators: [timestamp_type: :utc_datetime],
+  base_url: "http://localhost:4000"
+
+
+# Database configuration
+config :stac_api, StacApi.Repo,
+  database: "stac_api_#{config_env()}",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  port: System.get_env("DB_PORT") || 5433,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10,
+  extensions: [{Geo.PostGIS.Extension, library: Geo}],  # Required for PostGIS
+  queue_target: 5000,  # Optional: Better connection queue handling
+  stacktrace: true     # Optional: For better debugging
+
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
