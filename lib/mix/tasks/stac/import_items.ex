@@ -32,7 +32,7 @@ defmodule Mix.Tasks.Stac.ImportItems do
     {opts, args, _} = OptionParser.parse(args, switches: @switches)
 
     case args do
-      [items_dir] -> 
+      [items_dir] ->
         Application.ensure_all_started(:stac_api)
         import_items_dir(items_dir, opts)
       _ -> Mix.shell().error("Usage: mix stac.import_items <items_dir> [--collection COLLECTION_ID] [--dry-run] [--base-url URL]"); exit({:shutdown, 1})

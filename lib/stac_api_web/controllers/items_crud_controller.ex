@@ -62,7 +62,7 @@ defmodule StacApiWeb.ItemsCrudController do
             links = DynamicLinkGenerator.generate_item_links(item, custom_links)
 
             # Reconstruct assets from normalized data
-            assets = reconstruct_item_assets(item.id)
+            assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
 
             item_response = %{
               type: "Feature",
@@ -117,7 +117,7 @@ defmodule StacApiWeb.ItemsCrudController do
         links = DynamicLinkGenerator.generate_item_links(item, custom_links)
 
         # Reconstruct assets from normalized data
-        assets = reconstruct_item_assets(item.id)
+        assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
 
         item_response = %{
           type: "Feature",
@@ -160,7 +160,7 @@ defmodule StacApiWeb.ItemsCrudController do
                 links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
 
                 # Reconstruct assets from normalized data
-                assets = reconstruct_item_assets(updated_item.id)
+                assets = reconstruct_item_assets(updated_item.id, updated_item.stac_extensions || [])
 
                 item_response = %{
                   type: "Feature",
@@ -243,7 +243,7 @@ defmodule StacApiWeb.ItemsCrudController do
       links = DynamicLinkGenerator.generate_item_links(item, custom_links)
 
       # Reconstruct assets from normalized data
-      assets = reconstruct_item_assets(item.id)
+      assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
 
       %{
         type: "Feature",
@@ -394,11 +394,11 @@ defmodule StacApiWeb.ItemsCrudController do
   @doc """
   Reconstruct assets from normalized table back to STAC format
   """
-  defp reconstruct_item_assets(item_id) do
+  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
 
     Enum.reduce(assets, %{}, fn asset, acc ->
-      asset_data = ItemAsset.to_stac_asset(asset)
+      asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
       Map.put(acc, asset.asset_key, asset_data)
     end)
   end

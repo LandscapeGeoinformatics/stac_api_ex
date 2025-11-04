@@ -235,7 +235,7 @@ defp convert_geojson_geometry(item), do: item
 
   def serialize_item_for_api(%Item{} = item) do
   # Reconstruct assets from normalized data
-  assets = reconstruct_item_assets(item.id)
+  assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
   
   %{
     "type" => "Feature",
@@ -345,7 +345,7 @@ defp convert_coords(other), do: other
     Enum.map(items, fn item ->
       item_assets = Map.get(assets_by_item, item.id, [])
       reconstructed_assets = Enum.reduce(item_assets, %{}, fn asset, acc ->
-        asset_data = ItemAsset.to_stac_asset(asset)
+        asset_data = ItemAsset.to_stac_asset(asset, item.stac_extensions || [])
         Map.put(acc, asset.asset_key, asset_data)
       end)
       
@@ -356,11 +356,11 @@ defp convert_coords(other), do: other
   @doc """
   Reconstruct assets from normalized table back to STAC format for a single item
   """
-  defp reconstruct_item_assets(item_id) do
+  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
     
     Enum.reduce(assets, %{}, fn asset, acc ->
-      asset_data = ItemAsset.to_stac_asset(asset)
+      asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
       Map.put(acc, asset.asset_key, asset_data)
     end)
   end
