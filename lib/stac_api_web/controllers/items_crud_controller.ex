@@ -148,7 +148,7 @@ defmodule StacApiWeb.ItemsCrudController do
         |> json(%{error: "Item not found"})
 
       item ->
-        case validate_item_params_full(params) do
+        case validate_item_params_full(params, id) do
           {:ok, item_attrs} ->
             case replace_item(item, item_attrs) do
               {:ok, updated_item} ->
@@ -351,39 +351,56 @@ defmodule StacApiWeb.ItemsCrudController do
   @doc """
   Validate item params for PUT (full replacement - all required fields must be present)
   """
-  defp validate_item_params_full(params) do
-    required_fields = ["id", "geometry", "collection_id"]
-    # Also accept "collection" as alias for "collection_id"
-    collection_id = params["collection_id"] || params["collection"]
+  defp validate_item_params_full(params, url_id) do
+    # Use URL ID if body ID is not provided, otherwise validate they match
+    body_id = params["id"]
+    final_id = body_id || url_id
     
-    missing_fields = Enum.filter(required_fields, fn field ->
-      case field do
-        "collection_id" -> is_nil(collection_id)
-        _ -> is_nil(params[field])
-      end
-    end)
-
-    if length(missing_fields) > 0 do
-      {:error, "PUT requires all fields. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+    if body_id && body_id != url_id do
+      {:error, "Item ID in body (#{body_id}) does not match URL path ID (#{url_id})"}
     else
-      if !Repo.get(Collection, collection_id) do
-        {:error, "Referenced collection does not exist: #{collection_id}"}
-      else
-        geometry = parse_geometry(params["geometry"])
+      # Also accept "collection" as alias for "collection_id"
+      collection_id = params["collection_id"] || params["collection"]
+      
+      # Required fields for a complete STAC item (PUT = full replacement)
+      required_fields = [
+        {"type", params["type"]},
+        {"geometry", params["geometry"]},
+        {"properties", params["properties"]},
+        {"collection_id", collection_id},
+        {"stac_version", params["stac_version"]}
+      ]
+      
+      missing_fields = Enum.filter(required_fields, fn {_field, value} -> is_nil(value) end)
+                       |> Enum.map(fn {field, _} -> field end)
 
-        item_attrs = %{
-          "id" => params["id"],
-          "collection_id" => collection_id,
-          "stac_version" => params["stac_version"] || "1.0.0",
-          "stac_extensions" => params["stac_extensions"] || [],
-          "geometry" => geometry,
-          "bbox" => params["bbox"],
-          "datetime" => parse_datetime(params["datetime"]),
-          "properties" => params["properties"] || %{},
-          "assets" => params["assets"] || %{},
-          "links" => params["links"] || []
-        }
-        {:ok, item_attrs}
+      if length(missing_fields) > 0 do
+        {:error, "PUT requires all STAC fields for full replacement. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+      else
+        # Validate type is "Feature"
+        if params["type"] != "Feature" do
+          {:error, "Invalid type. STAC items must have type: 'Feature'"}
+        else
+          if !Repo.get(Collection, collection_id) do
+            {:error, "Referenced collection does not exist: #{collection_id}"}
+          else
+            geometry = parse_geometry(params["geometry"])
+
+            item_attrs = %{
+              "id" => final_id,
+              "collection_id" => collection_id,
+              "stac_version" => params["stac_version"],
+              "stac_extensions" => params["stac_extensions"] || [],
+              "geometry" => geometry,
+              "bbox" => params["bbox"],
+              "datetime" => parse_datetime(params["datetime"]),
+              "properties" => params["properties"],
+              "assets" => params["assets"] || %{},
+              "links" => params["links"] || []
+            }
+            {:ok, item_attrs}
+          end
+        end
       end
     end
   end
