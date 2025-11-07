@@ -12,6 +12,10 @@ defmodule StacApiWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :auth do
+    plug StacApiWeb.Plugs.AuthPlug
+  end
+
   # redirect root to stac api
   scope "/", StacApiWeb do
     pipe_through :browser
@@ -22,7 +26,7 @@ defmodule StacApiWeb.Router do
   scope "/api/stac/v1", StacApiWeb do
     pipe_through :api
 
-    # Root and search endpoints
+    # Root and search endpoints (public read-only)
     get "/", RootController, :index
     get "/search", SearchController, :index
     post "/search", SearchController, :index
@@ -30,31 +34,46 @@ defmodule StacApiWeb.Router do
     get "/openapi.json", RootController, :openapi
     get "/docs", RootController, :docs
 
-    # Legacy collection endpoints (for backward compatibility)
+    # Legacy collection endpoints (for backward compatibility - read-only)
     get "/collections", CollectionsController, :index
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items
     get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
 
-    # CRUD endpoints for catalogs
+    # CRUD endpoints for catalogs (read-only endpoints - public)
     get "/catalogs", CatalogsCrudController, :index
-    post "/catalogs", CatalogsCrudController, :create
     get "/catalogs/:id", CatalogsCrudController, :show
+
+    # CRUD endpoints for collections (read-only endpoints - public)
+    get "/collections", CollectionsCrudController, :index
+    get "/collections/:id", CollectionsCrudController, :show
+
+    # CRUD endpoints for items (read-only endpoints - public)
+    get "/items", ItemsCrudController, :index
+    get "/items/:id", ItemsCrudController, :show
+  end
+
+  # Protected write endpoints (require authentication)
+  scope "/api/stac/v1", StacApiWeb do
+    pipe_through [:api, :auth]
+
+    # Protected write endpoints for catalogs
+    post "/catalogs", CatalogsCrudController, :create
     put "/catalogs/:id", CatalogsCrudController, :update
+    patch "/catalogs/:id", CatalogsCrudController, :patch
     delete "/catalogs/:id", CatalogsCrudController, :delete
 
-    # CRUD endpoints for collections
-    get "/collections", CollectionsCrudController, :index
+    # Protected write endpoints for collections
     post "/collections", CollectionsCrudController, :create
-    get "/collections/:id", CollectionsCrudController, :show
     put "/collections/:id", CollectionsCrudController, :update
+    patch "/collections/:id", CollectionsCrudController, :patch
     delete "/collections/:id", CollectionsCrudController, :delete
 
-    # CRUD endpoints for items
-    get "/items", ItemsCrudController, :index
+    # Protected write endpoints for items
     post "/items", ItemsCrudController, :create
-    get "/items/:id", ItemsCrudController, :show
+    post "/items/import", ItemsCrudController, :bulk_import
     put "/items/:id", ItemsCrudController, :update
+    patch "/items/:id", ItemsCrudController, :patch
     delete "/items/:id", ItemsCrudController, :delete
   end
 

@@ -10,10 +10,9 @@ build-job:
     - echo "Compiling the code..."
     - asdf which mix
     - mix deps.get && mix compile # && mix assets.deploy
-  
 
-unit-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
+unit-test-job: # This job runs in the test stage.
+  stage: test # It only starts when the job in the build stage completes successfully.
   tags: [lgeo4-geokuup]
   environment: staging
   variables:
@@ -22,8 +21,8 @@ unit-test-job:   # This job runs in the test stage.
     - echo "Running unit tests."
     - mix deps.get && mix test
 
-deploy-job:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+deploy-job: # This job runs in the deploy stage.
+  stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
   tags: [lgeo4-geokuup]
   environment: production
   variables:
@@ -38,5 +37,4 @@ deploy-job:      # This job runs in the deploy stage.
     - echo "Copying artefact to deployment location..."
     - rsync -avz --delete _build /opt/stac_api_staging/artefacts/
     - echo "$CI_JOB_ID" >> /opt/stac_api_staging/artefacts/.updated
-#   - sudo -u stacapi /opt/stac_api_staging/bin/deploy_stac_api_staging.sh
-    
+    - sudo -u stacapi /opt/stac_api_staging/bin/deploy_stac_api_staging.sh

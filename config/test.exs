@@ -32,3 +32,8 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Default API key hash for testing (same as dev for convenience)
+config :stac_api, :api_key_hash,
+  System.get_env("STAC_API_KEY_HASH") ||
+    "03391717cfeead3055b92e6502deb53d6a2610eb3021bd9835fb31083e01c423"

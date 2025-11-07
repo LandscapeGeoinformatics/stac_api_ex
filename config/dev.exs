@@ -8,6 +8,11 @@ config :stac_api,
   base_url: "http://localhost:4000"
 
 
+config :stac_api, :api_key_hash,
+  System.get_env("STAC_API_KEY_HASH") ||
+    "03391717cfeead3055b92e6502deb53d6a2610eb3021bd9835fb31083e01c423"
+
+
 # Database configuration
 config :stac_api, StacApi.Repo,
   database: "stac_api_#{config_env()}",
