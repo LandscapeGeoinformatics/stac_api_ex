@@ -30,6 +30,7 @@ defmodule StacApi.Data.ItemAsset do
     field :epsg_code, :integer
     field :proj_bbox, {:array, :decimal}
     field :proj_transform, {:array, :decimal}
+    field :proj_shape, {:array, :integer}
     
     # Additional properties
     field :additional_properties, :map
@@ -43,7 +44,7 @@ defmodule StacApi.Data.ItemAsset do
     |> cast(attrs, [
       :item_id, :asset_key, :href, :type, :title, :description, :roles,
       :file_size, :created_at, :nodata_value, :data_type, :spatial_resolution,
-      :unit, :sampling, :scale, :offset, :epsg_code, :proj_bbox, :proj_transform, :additional_properties
+      :unit, :sampling, :scale, :offset, :epsg_code, :proj_bbox, :proj_transform, :proj_shape, :additional_properties
     ])
     |> validate_required([:item_id, :asset_key])
     |> unique_constraint([:item_id, :asset_key])
@@ -72,11 +73,37 @@ defmodule StacApi.Data.ItemAsset do
     end
 
     # Extract projection info if present
+    # Support both old format (proj:epsg nested) and new format (proj:code, proj:bbox, etc. at top level)
     proj_epsg = Map.get(asset_data, "proj:epsg", %{})
+    
+    # New format: proj:code, proj:bbox, proj:transform, proj:shape at top level
+    proj_code = Map.get(asset_data, "proj:code")
+    proj_bbox_new = Map.get(asset_data, "proj:bbox")
+    proj_transform_new = Map.get(asset_data, "proj:transform")
+    proj_shape_new = Map.get(asset_data, "proj:shape")
+    
+    # Old format: nested in proj:epsg
+    epsg_code_old = Map.get(proj_epsg, "epsg")
+    proj_bbox_old = Map.get(proj_epsg, "bbox")
+    proj_transform_old = Map.get(proj_epsg, "transform")
+    proj_shape_old = Map.get(proj_epsg, "shape")
+    
+    # Extract EPSG code from proj:code if it's in format "EPSG:3301"
+    epsg_code_from_proj_code = if proj_code do
+      case Regex.run(~r/^EPSG:(\d+)$/i, proj_code) do
+        [_, code] -> String.to_integer(code)
+        _ -> nil
+      end
+    else
+      nil
+    end
+    
     proj_data = %{
-      epsg_code: Map.get(proj_epsg, "epsg"),
-      proj_bbox: Map.get(proj_epsg, "bbox"),
-      proj_transform: Map.get(proj_epsg, "transform")
+      # Use new format if available, otherwise fall back to old format
+      epsg_code: epsg_code_from_proj_code || epsg_code_old,
+      proj_bbox: proj_bbox_new || proj_bbox_old,
+      proj_transform: proj_transform_new || proj_transform_old,
+      proj_shape: proj_shape_new || proj_shape_old
     }
 
     # Extract file size if present
@@ -89,7 +116,7 @@ defmodule StacApi.Data.ItemAsset do
     additional_properties = asset_data
     |> Map.drop([
       "href", "type", "title", "description", "roles", "file:size", "created",
-      "raster:bands", "proj:epsg"
+      "raster:bands", "proj:epsg", "proj:code", "proj:bbox", "proj:transform", "proj:shape"
     ])
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Enum.into(%{})
@@ -176,18 +203,41 @@ defmodule StacApi.Data.ItemAsset do
       asset_data
     end
 
-    # Add projection info if present
-    asset_data = if asset.epsg_code do
-      proj_epsg = %{
-        "epsg" => asset.epsg_code,
-        "bbox" => asset.proj_bbox,
-        "transform" => asset.proj_transform
-      }
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> Enum.map(fn {k, v} -> {k, convert_decimal(v)} end)
-      |> Enum.into(%{})
-
-      Map.put(asset_data, "proj:epsg", proj_epsg)
+    # Add projection info if present (using new format: proj:code, proj:bbox, proj:transform, proj:shape)
+    asset_data = if asset.epsg_code || asset.proj_bbox || asset.proj_transform || asset.proj_shape do
+      # Build projection fields in new format
+      proj_fields = %{}
+      
+      # Add proj:code if epsg_code is present
+      proj_fields = if asset.epsg_code do
+        Map.put(proj_fields, "proj:code", "EPSG:#{asset.epsg_code}")
+      else
+        proj_fields
+      end
+      
+      # Add proj:bbox if present
+      proj_fields = if asset.proj_bbox do
+        Map.put(proj_fields, "proj:bbox", convert_decimal(asset.proj_bbox))
+      else
+        proj_fields
+      end
+      
+      # Add proj:transform if present
+      proj_fields = if asset.proj_transform do
+        Map.put(proj_fields, "proj:transform", convert_decimal(asset.proj_transform))
+      else
+        proj_fields
+      end
+      
+      # Add proj:shape if present
+      proj_fields = if asset.proj_shape do
+        Map.put(proj_fields, "proj:shape", asset.proj_shape)
+      else
+        proj_fields
+      end
+      
+      # Merge projection fields into asset_data
+      Map.merge(asset_data, proj_fields)
     else
       asset_data
     end

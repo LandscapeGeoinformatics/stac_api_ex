@@ -73,16 +73,14 @@ config :stac_api,
   generators: [timestamp_type: :utc_datetime],
   base_url: System.get_env("STAC_BASE_URL", "http://localhost:4000")
 
-# API key hash for authentication (SHA256 hash of the actual API key)
-# Generate hash with: echo -n "your-api-key" | shasum -a 256
-# Default production API key hash (hash of "prod-api-key-2024")
-# Override with STAC_API_KEY_HASH environment variable in production
+# API key for authentication (plain text)
+# Default production API key: "prod-api-key-2024"
+# Override with STAC_API_KEY environment variable in production
 if config_env() == :prod do
-  api_key_hash =
-    System.get_env("STAC_API_KEY_HASH") ||
-      "198a8dd9019a33e494cbfdb741e36c01a93d89cade9ec58ff483eb9db5213a2b"
+  api_key =
+    System.get_env("STAC_API_KEY") || "prod-api-key-2024"
   
-  config :stac_api, :api_key_hash, api_key_hash
+  config :stac_api, :api_key, api_key
 end
 
   # ## SSL Support

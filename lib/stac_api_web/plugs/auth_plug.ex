@@ -1,21 +1,20 @@
 defmodule StacApiWeb.Plugs.AuthPlug do
   @moduledoc """
   Authentication plug for protecting create/update/delete endpoints.
-  Requires API key via X-API-Key header. The API key is hashed and compared
-  against the hash stored in environment variable STAC_API_KEY_HASH.
+  Requires API key via X-API-Key header. The API key is compared in plain text
+  against the key stored in environment variable STAC_API_KEY.
   """
   
   import Plug.Conn
 
   @doc """
-  Get the API key hash from application configuration (set from environment variable)
+  Get the API key from application configuration (set from environment variable)
   """
-  defp get_api_key_hash do
-    Application.get_env(:stac_api, :api_key_hash) ||
+  defp get_api_key do
+    Application.get_env(:stac_api, :api_key) ||
       raise """
-      STAC_API_KEY_HASH environment variable is missing.
-      Set it to the SHA256 hash of your API key.
-      You can generate it with: echo -n "your-api-key" | shasum -a 256
+      STAC_API_KEY environment variable is missing.
+      Set it to your API key for authentication.
       """
   end
 
@@ -41,24 +40,15 @@ defmodule StacApiWeb.Plugs.AuthPlug do
     if is_nil(api_key) || api_key == "" do
       {:error, "Missing X-API-Key header"}
     else
-      # Hash the provided API key and compare with stored hash
-      provided_hash = hash_api_key(api_key)
-      stored_hash = get_api_key_hash()
+      # Compare provided API key with stored API key using secure comparison
+      stored_api_key = get_api_key()
       
-      if secure_compare(provided_hash, stored_hash) do
+      if secure_compare(api_key, stored_api_key) do
         :ok
       else
         {:error, "Invalid API key"}
       end
     end
-  end
-
-  @doc """
-  Hash the API key using SHA256
-  """
-  defp hash_api_key(api_key) do
-    :crypto.hash(:sha256, api_key)
-    |> Base.encode16(case: :lower)
   end
 
   @doc """
