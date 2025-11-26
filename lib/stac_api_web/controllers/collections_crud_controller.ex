@@ -7,13 +7,20 @@ defmodule StacApiWeb.CollectionsCrudController do
 
   @doc """
   POST /api/stac/v1/collections
-  Create or update a collection (upsert based on ID)
+  Create a new collection (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
     case validate_collection_params(params) do
       {:ok, collection_attrs} ->
-        case upsert_collection(collection_attrs) do
-          {:ok, collection} ->
+        collection_id = collection_attrs["id"]
+        
+        if Repo.get(Collection, collection_id) do
+          conn
+          |> put_status(:conflict)
+          |> json(%{error: "Collection with ID '#{collection_id}' already exists"})
+        else
+          case create_collection(collection_attrs) do
+            {:ok, collection} ->
             # Generate links dynamically
             custom_links = Map.get(collection_attrs, "links", [])
             links = DynamicLinkGenerator.generate_collection_links(collection, custom_links)
@@ -46,6 +53,7 @@ defmodule StacApiWeb.CollectionsCrudController do
             conn
             |> put_status(:unprocessable_entity)
             |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+          end
         end
 
       {:error, reason} ->
@@ -60,6 +68,8 @@ defmodule StacApiWeb.CollectionsCrudController do
   Get a specific collection
   """
   def show(conn, %{"id" => id}) do
+    authenticated = conn.assigns[:authenticated] || false
+    
     case Repo.get(Collection, id) do
       nil ->
         conn
@@ -67,25 +77,45 @@ defmodule StacApiWeb.CollectionsCrudController do
         |> json(%{error: "Collection not found"})
 
       collection ->
-        # Generate links dynamically
+        catalog_check = if collection.catalog_id do
+          case Repo.get(Catalog, collection.catalog_id) do
+            nil -> :ok
+            catalog ->
+              catalog_private = catalog.private == true
+              if catalog_private && !authenticated do
+                :private
+              else
+                :ok
+              end
+          end
+        else
+          :ok
+        end
+        
+        if catalog_check == :private do
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Collection not found"})
+        else
         custom_links = collection.links || []
         links = DynamicLinkGenerator.generate_collection_links(collection, custom_links)
         
-        collection_response = %{
-          stac_version: collection.stac_version || "1.0.0",
-          type: "Collection",
-          id: collection.id,
-          title: collection.title,
-          description: collection.description,
-          license: collection.license,
-          extent: collection.extent,
-          summaries: collection.summaries,
-          properties: collection.properties,
-          stac_extensions: collection.stac_extensions || [],
-          links: links
-        }
+          collection_response = %{
+            stac_version: collection.stac_version || "1.0.0",
+            type: "Collection",
+            id: collection.id,
+            title: collection.title,
+            description: collection.description,
+            license: collection.license,
+            extent: collection.extent,
+            summaries: collection.summaries,
+            properties: collection.properties,
+            stac_extensions: collection.stac_extensions || [],
+            links: links
+          }
 
-        json(conn, collection_response)
+          json(conn, collection_response)
+        end
     end
   end
 
@@ -161,10 +191,8 @@ defmodule StacApiWeb.CollectionsCrudController do
           {:ok, collection_attrs} ->
             case update_collection_partial(collection, collection_attrs) do
               {:ok, updated_collection} ->
-                # Reload to ensure we have all fields (especially important for partial updates)
                 reloaded_collection = Repo.get(Collection, id)
                 
-                # Generate links dynamically (use updated links if provided, otherwise existing)
                 links = if Map.has_key?(params, "links") do
                   custom_links = Map.get(collection_attrs, "links", reloaded_collection.links || [])
                   DynamicLinkGenerator.generate_collection_links(reloaded_collection, custom_links)
@@ -220,7 +248,6 @@ defmodule StacApiWeb.CollectionsCrudController do
         |> json(%{error: "Collection not found"})
 
       collection ->
-        # Cascade delete: Delete all items in this collection first
         items_deleted = cascade_delete_collection(id)
 
         case Repo.delete(collection) do
@@ -243,10 +270,20 @@ defmodule StacApiWeb.CollectionsCrudController do
 
   @doc """
   GET /api/stac/v1/collections
-  List all collections
+  List all collections (filters out collections in private catalogs if not authenticated)
   """
   def index(conn, _params) do
-    collections = Repo.all(Collection)
+    authenticated = conn.assigns[:authenticated] || false
+    
+    collections_query = if authenticated do
+      from c in Collection
+    else
+      from c in Collection,
+        left_join: cat in Catalog, on: c.catalog_id == cat.id,
+        where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
+    end
+    
+    collections = Repo.all(collections_query)
     
     collections_with_links = Enum.map(collections, fn collection ->
       custom_links = collection.links || []
@@ -353,6 +390,12 @@ defmodule StacApiWeb.CollectionsCrudController do
   defp validate_collection_params(params) do
     # Keep this for backward compatibility with create/upsert
     validate_collection_params_full(params)
+  end
+
+  defp create_collection(attrs) do
+    %Collection{}
+    |> Collection.changeset(attrs)
+    |> Repo.insert()
   end
 
   defp upsert_collection(attrs) do

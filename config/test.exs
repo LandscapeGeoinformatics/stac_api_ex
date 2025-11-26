@@ -33,6 +33,14 @@ config :logger, level: :warning
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Default API key for testing (same as dev for convenience)
-config :stac_api, :api_key,
-  System.get_env("STAC_API_KEY") || "dev-api-key-2024"
+# API Keys: STAC_API_KEY (read-write), STAC_API_KEY_RO (read-only)
+config :stac_api, :api_keys,
+  (fn ->
+    read_write_key = System.get_env("STAC_API_KEY") || "test-api-key-2024"
+    read_only_key = System.get_env("STAC_API_KEY_RO") || "test-read-only-key-2024"
+    
+    %{
+      read_write: [read_write_key],
+      read_only: [read_only_key]
+    }
+  end).()

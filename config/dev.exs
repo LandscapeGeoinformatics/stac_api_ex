@@ -8,8 +8,17 @@ config :stac_api,
   base_url: "http://localhost:4000"
 
 
-config :stac_api, :api_key,
-  System.get_env("STAC_API_KEY") || "dev-api-key-2024"
+# API Keys: STAC_API_KEY (read-write), STAC_API_KEY_RO (read-only)
+config :stac_api, :api_keys,
+  (fn ->
+    read_write_key = System.get_env("STAC_API_KEY") || "dev-api-key-2024"
+    read_only_key = System.get_env("STAC_API_KEY_RO") || "dev-read-only-key-2024"
+    
+    %{
+      read_write: [read_write_key],
+      read_only: [read_only_key]
+    }
+  end).()
 
 
 # Database configuration

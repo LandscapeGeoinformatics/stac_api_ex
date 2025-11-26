@@ -9,14 +9,20 @@ defmodule StacApiWeb.CatalogsCrudController do
 
   @doc """
   POST /api/stac/v1/catalogs
-  Create or update a catalog (upsert based on ID)
+  Create a new catalog (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
     case validate_catalog_params(params) do
       {:ok, catalog_attrs} ->
-        case upsert_catalog(catalog_attrs) do
-          {:ok, catalog} ->
-            # Generate links dynamically
+        catalog_id = catalog_attrs["id"]
+        
+        if Repo.get(Catalog, catalog_id) do
+          conn
+          |> put_status(:conflict)
+          |> json(%{error: "Catalog with ID '#{catalog_id}' already exists"})
+        else
+          case create_catalog(catalog_attrs) do
+            {:ok, catalog} ->
             custom_links = Map.get(catalog_attrs, "links", [])
             links = DynamicLinkGenerator.generate_catalog_links(catalog, custom_links)
             
@@ -44,6 +50,7 @@ defmodule StacApiWeb.CatalogsCrudController do
             conn
             |> put_status(:unprocessable_entity)
             |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+          end
         end
 
       {:error, reason} ->
@@ -55,9 +62,11 @@ defmodule StacApiWeb.CatalogsCrudController do
 
   @doc """
   GET /api/stac/v1/catalogs/:id
-  Get a specific catalog
+  Get a specific catalog (returns 404 if private and not authenticated)
   """
   def show(conn, %{"id" => id}) do
+    authenticated = conn.assigns[:authenticated] || false
+    
     case Repo.get(Catalog, id) do
       nil ->
         conn
@@ -65,21 +74,27 @@ defmodule StacApiWeb.CatalogsCrudController do
         |> json(%{error: "Catalog not found"})
 
       catalog ->
-        # Generate links dynamically
-        custom_links = catalog.links || []
-        links = DynamicLinkGenerator.generate_catalog_links(catalog, custom_links)
-        
-        catalog_response = %{
-          stac_version: catalog.stac_version || "1.0.0",
-          type: "Catalog",
-          id: catalog.id,
-          title: catalog.title,
-          description: catalog.description,
-          extent: catalog.extent,
-          links: links
-        }
+        catalog_private = catalog.private == true
+        if catalog_private && !authenticated do
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Catalog not found"})
+        else
+          custom_links = catalog.links || []
+          links = DynamicLinkGenerator.generate_catalog_links(catalog, custom_links)
+          
+          catalog_response = %{
+            stac_version: catalog.stac_version || "1.0.0",
+            type: "Catalog",
+            id: catalog.id,
+            title: catalog.title,
+            description: catalog.description,
+            extent: catalog.extent,
+            links: links
+          }
 
-        json(conn, catalog_response)
+          json(conn, catalog_response)
+        end
     end
   end
 
@@ -99,7 +114,6 @@ defmodule StacApiWeb.CatalogsCrudController do
           {:ok, catalog_attrs} ->
             case replace_catalog(catalog, catalog_attrs) do
               {:ok, updated_catalog} ->
-                # Generate links dynamically
                 custom_links = Map.get(catalog_attrs, "links", [])
                 links = DynamicLinkGenerator.generate_catalog_links(updated_catalog, custom_links)
                 
@@ -151,10 +165,8 @@ defmodule StacApiWeb.CatalogsCrudController do
           {:ok, catalog_attrs} ->
             case update_catalog_partial(catalog, catalog_attrs) do
               {:ok, updated_catalog} ->
-                # Reload to ensure we have all fields (especially important for partial updates)
                 reloaded_catalog = Repo.get(Catalog, id)
                 
-                # Generate links dynamically (use updated links if provided, otherwise existing)
                 links = if Map.has_key?(params, "links") do
                   custom_links = Map.get(catalog_attrs, "links", reloaded_catalog.links || [])
                   DynamicLinkGenerator.generate_catalog_links(reloaded_catalog, custom_links)
@@ -229,10 +241,18 @@ defmodule StacApiWeb.CatalogsCrudController do
 
   @doc """
   GET /api/stac/v1/catalogs
-  List all catalogs
+  List all catalogs (filters out private catalogs if not authenticated)
   """
   def index(conn, _params) do
-    catalogs = Repo.all(Catalog)
+    authenticated = conn.assigns[:authenticated] || false
+    
+    query = if authenticated do
+      from(c in Catalog)
+    else
+      from(c in Catalog, where: c.private == false or is_nil(c.private))
+    end
+    
+    catalogs = Repo.all(query)
     
     catalogs_with_links = Enum.map(catalogs, fn catalog ->
       custom_links = catalog.links || []
@@ -261,23 +281,18 @@ defmodule StacApiWeb.CatalogsCrudController do
   # Private helper functions
 
   defp cascade_delete_catalog(catalog_id) do
-    # First, get all child collections for this catalog
     child_collections = from(c in Collection, where: c.catalog_id == ^catalog_id) |> Repo.all()
     
-    # Delete items for each child collection
     items_deleted = Enum.reduce(child_collections, 0, fn collection, acc ->
       items_count = from(i in StacApi.Data.Item, where: i.collection_id == ^collection.id) |> Repo.aggregate(:count, :id)
       from(i in StacApi.Data.Item, where: i.collection_id == ^collection.id) |> Repo.delete_all()
       acc + items_count
     end)
     
-    # Delete child collections
     {collections_deleted, _} = from(c in Collection, where: c.catalog_id == ^catalog_id) |> Repo.delete_all()
     
-    # Get child catalogs and recursively delete them
     child_catalogs = from(c in Catalog, where: c.parent_catalog_id == ^catalog_id) |> Repo.all()
     
-    # Recursively cascade delete child catalogs
     catalogs_deleted = Enum.reduce(child_catalogs, 0, fn child_catalog, acc ->
       child_deleted_counts = cascade_delete_catalog(child_catalog.id)
       {_, _} = from(c in Catalog, where: c.id == ^child_catalog.id) |> Repo.delete_all()
@@ -298,6 +313,14 @@ defmodule StacApiWeb.CatalogsCrudController do
     if length(missing_fields) > 0 do
       {:error, "PUT requires all fields. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     else
+      private_value = case params["private"] do
+        true -> true
+        "true" -> true
+        1 -> true
+        "1" -> true
+        _ -> false
+      end
+      
       catalog_attrs = %{
         "id" => params["id"],
         "title" => params["title"],
@@ -307,7 +330,8 @@ defmodule StacApiWeb.CatalogsCrudController do
         "extent" => params["extent"],
         "links" => params["links"] || [],
         "parent_catalog_id" => params["parent_catalog_id"],
-        "depth" => calculate_depth(params["parent_catalog_id"])
+        "depth" => calculate_depth(params["parent_catalog_id"]),
+        "private" => private_value
       }
       {:ok, catalog_attrs}
     end
@@ -319,6 +343,22 @@ defmodule StacApiWeb.CatalogsCrudController do
     else
       depth_value = if params["parent_catalog_id"], do: calculate_depth(params["parent_catalog_id"]), else: nil
       
+      private_value = if Map.has_key?(params, "private") do
+        case params["private"] do
+          true -> true
+          "true" -> true
+          1 -> true
+          "1" -> true
+          false -> false
+          "false" -> false
+          0 -> false
+          "0" -> false
+          _ -> nil
+        end
+      else
+        nil
+      end
+      
       catalog_attrs = %{}
       |> Map.put("id", params["id"])
       |> maybe_put("title", params["title"])
@@ -329,6 +369,7 @@ defmodule StacApiWeb.CatalogsCrudController do
       |> maybe_put("links", params["links"])
       |> maybe_put("parent_catalog_id", params["parent_catalog_id"])
       |> maybe_put("depth", depth_value)
+      |> maybe_put("private", private_value)
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Enum.into(%{})
 
@@ -340,7 +381,6 @@ defmodule StacApiWeb.CatalogsCrudController do
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp validate_catalog_params(params) do
-    # Keep this for backward compatibility with create/upsert
     validate_catalog_params_full(params)
   end
 
@@ -352,6 +392,12 @@ defmodule StacApiWeb.CatalogsCrudController do
     end
   end
   defp calculate_depth(_), do: 0
+
+  defp create_catalog(attrs) do
+    %Catalog{}
+    |> Catalog.changeset(attrs)
+    |> Repo.insert()
+  end
 
   defp upsert_catalog(attrs) do
     case Repo.get(Catalog, attrs["id"]) do

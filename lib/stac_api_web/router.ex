@@ -16,6 +16,10 @@ defmodule StacApiWeb.Router do
     plug StacApiWeb.Plugs.AuthPlug
   end
 
+  pipeline :read_auth do
+    plug StacApiWeb.Plugs.ReadAuthPlug
+  end
+
   # redirect root to stac api
   scope "/", StacApiWeb do
     pipe_through :browser
@@ -23,8 +27,9 @@ defmodule StacApiWeb.Router do
   end
 
   # STAC API (REST) endpoints - versioned API structure
+  # Read endpoints use optional read auth to filter private catalogs
   scope "/api/stac/v1", StacApiWeb do
-    pipe_through :api
+    pipe_through [:api, :read_auth]
 
     # Root and search endpoints (public read-only)
     get "/", RootController, :index

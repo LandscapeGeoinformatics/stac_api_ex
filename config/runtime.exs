@@ -73,14 +73,19 @@ config :stac_api,
   generators: [timestamp_type: :utc_datetime],
   base_url: System.get_env("STAC_BASE_URL", "http://localhost:4000")
 
-# API key for authentication (plain text)
-# Default production API key: "prod-api-key-2024"
-# Override with STAC_API_KEY environment variable in production
+# API Keys: STAC_API_KEY (read-write), STAC_API_KEY_RO (read-only)
 if config_env() == :prod do
-  api_key =
-    System.get_env("STAC_API_KEY") || "prod-api-key-2024"
+  api_keys = (fn ->
+    read_write_key = System.get_env("STAC_API_KEY") || "prod-api-key-2024"
+    read_only_key = System.get_env("STAC_API_KEY_RO") || "prod-read-only-key-2024"
+    
+    %{
+      read_write: [read_write_key],
+      read_only: [read_only_key]
+    }
+  end).()
   
-  config :stac_api, :api_key, api_key
+  config :stac_api, :api_keys, api_keys
 end
 
   # ## SSL Support

@@ -1,4 +1,3 @@
-# lib/stac_api_web/controllers/root_controller.ex
 defmodule StacApiWeb.RootController do
   use StacApiWeb, :controller
   alias StacApi.Repo
@@ -11,24 +10,31 @@ defmodule StacApiWeb.RootController do
   end
 
   def index(conn, _params) do
-    sub_catalogs = Repo.all(from c in Catalog,
-      where: c.depth == 0 and c.id != "pygeoapi-stac",
-      order_by: [asc: c.id]
-    )
+    authenticated = conn.assigns[:authenticated] || false
+    
+    sub_catalogs_query = if authenticated do
+      from c in Catalog,
+        where: c.depth == 0 and c.id != "pygeoapi-stac",
+        order_by: [asc: c.id]
+    else
+      from c in Catalog,
+        where: c.depth == 0 and c.id != "pygeoapi-stac" and (c.private == false or is_nil(c.private)),
+        order_by: [asc: c.id]
+    end
+    
+    sub_catalogs = Repo.all(sub_catalogs_query)
 
     root_collections = Repo.all(from c in Collection,
       where: is_nil(c.catalog_id),
       order_by: [asc: c.id]
     )
 
-    # Build child links from sub-catalogs
     sub_catalog_child_links = Enum.map(sub_catalogs, fn catalog ->
       LinkResolver.create_link("child", "/api/stac/v1/catalog/#{catalog.id}",
         title: catalog.title || catalog.id
       )
     end)
 
-    # Build child links ONLY from direct root collections
     root_collection_child_links = Enum.map(root_collections, fn collection ->
       LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
         title: collection.title || collection.id
@@ -71,7 +77,6 @@ defmodule StacApiWeb.RootController do
           title: "STAC search",
           method: "POST"
         ),
-        # Custom web interface link
         LinkResolver.create_link("browser", "/web/browse",
           type: "text/html",
           title: "Web Browser Interface"
@@ -82,6 +87,8 @@ defmodule StacApiWeb.RootController do
   end
 
   def catalog(conn, %{"id" => catalog_id}) do
+    authenticated = conn.assigns[:authenticated] || false
+    
     case Repo.get(Catalog, catalog_id) do
       nil ->
         conn
@@ -89,26 +96,43 @@ defmodule StacApiWeb.RootController do
         |> json(%{error: "Catalog not found"})
 
       catalog ->
-        # Get child catalogs
-        child_catalogs = Repo.all(from c in Catalog,
-          where: c.parent_catalog_id == ^catalog_id,
-          order_by: [asc: c.id]
-        )
+        catalog_private = catalog.private == true
+        if catalog_private && !authenticated do
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Catalog not found"})
+        else
+          child_catalogs_query = if authenticated do
+            from c in Catalog,
+              where: c.parent_catalog_id == ^catalog_id,
+              order_by: [asc: c.id]
+          else
+            from c in Catalog,
+              where: c.parent_catalog_id == ^catalog_id and (c.private == false or is_nil(c.private)),
+              order_by: [asc: c.id]
+          end
+          
+          child_catalogs = Repo.all(child_catalogs_query)
 
-        # Get collections in this catalog
-        collections = Repo.all(from c in Collection,
-          where: c.catalog_id == ^catalog_id,
-          order_by: [asc: c.id]
-        )
+          collections_query = if authenticated do
+            from c in Collection,
+              where: c.catalog_id == ^catalog_id,
+              order_by: [asc: c.id]
+          else
+            from c in Collection,
+              left_join: cat in Catalog, on: c.catalog_id == cat.id,
+              where: c.catalog_id == ^catalog_id and (is_nil(cat.private) or cat.private != true),
+              order_by: [asc: c.id]
+          end
+          
+          collections = Repo.all(collections_query)
 
-        # Build child links from sub-catalogs
         catalog_child_links = Enum.map(child_catalogs, fn child ->
           LinkResolver.create_link("child", "/api/stac/v1/catalog/#{child.id}",
             title: child.title || child.id
           )
         end)
 
-        # Build child links from collections
         collection_child_links = Enum.map(collections, fn collection ->
           LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
             title: collection.title || collection.id
@@ -148,7 +172,8 @@ defmodule StacApiWeb.RootController do
           catalog_response
         end
 
-        json(conn, catalog_response)
+          json(conn, catalog_response)
+        end
     end
   end
 

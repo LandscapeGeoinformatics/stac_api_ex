@@ -18,11 +18,13 @@ defmodule StacApiWeb.SearchController do
         normalize_params(params)
     end
 
+  authenticated = conn.assigns[:authenticated] || false
+  
   items =
-    Search.search(search_params)
+    Search.search(search_params, authenticated)
     |> Enum.map(&ensure_item_struct/1)
 
-  total_count = Search.count_search_results(search_params)
+  total_count = Search.count_search_results(search_params, authenticated)
 
   features = Enum.map(items, fn item ->
     serialized = Search.serialize_item_for_api(item)

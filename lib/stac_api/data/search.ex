@@ -1,18 +1,16 @@
-# lib/stac_api/data/search.ex
 defmodule StacApi.Data.Search do
   @moduledoc """
-  Database-powered STAC search functionality
+  Database-powered STAC search functionality.
   """
 
   import Ecto.Query
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection, ItemAsset}
+  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog}
 
-  # Add this to your search.ex - modify the search function
-def search(params \\ %{}) do
+  def search(params \\ %{}, authenticated \\ false) do
   query =
     Item
-    |> build_search_query(params)
+    |> build_search_query(params, authenticated)
     |> apply_pagination(params)
 
   # First get the raw results with geometry as GeoJSON
@@ -85,20 +83,29 @@ defp convert_geojson_geometry(item), do: item
 
 
 
-  def count_search_results(params \\ %{}) do
+  def count_search_results(params \\ %{}, authenticated \\ false) do
     Item
-    |> build_search_query(params)
+    |> build_search_query(params, authenticated)
     |> Repo.aggregate(:count, :id)
   end
 
-  defp build_search_query(query, params) do
+  defp build_search_query(query, params, authenticated) do
     query
+    |> filter_by_private_catalogs(authenticated)
     |> filter_by_collections(params[:collections] || params["collections"])
     |> filter_by_bbox(params[:bbox] || params["bbox"])
     |> filter_by_datetime(params[:datetime] || params["datetime"])
     |> filter_by_ids(params[:ids] || params["ids"])
     |> filter_by_intersects(params[:intersects] || params["intersects"])
     |> order_by([i], desc: i.datetime)
+  end
+
+  defp filter_by_private_catalogs(query, true), do: query
+  defp filter_by_private_catalogs(query, false) do
+    from i in query,
+      left_join: c in Collection, on: i.collection_id == c.id,
+      left_join: cat in Catalog, on: c.catalog_id == cat.id,
+      where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
   end
 
   defp filter_by_collections(query, nil), do: query

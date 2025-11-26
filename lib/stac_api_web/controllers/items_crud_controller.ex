@@ -1,7 +1,7 @@
 defmodule StacApiWeb.ItemsCrudController do
   use StacApiWeb, :controller
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection, ItemAsset}
+  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog}
   alias StacApiWeb.DynamicLinkGenerator
   import Ecto.Query
 
@@ -47,17 +47,22 @@ defmodule StacApiWeb.ItemsCrudController do
 
   @doc """
   POST /api/stac/v1/items
-  Create or update an item (upsert based on ID)
+  Create a new item (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
     case validate_item_params(params) do
       {:ok, item_attrs} ->
-        case upsert_item(item_attrs) do
-          {:ok, item} ->
-            # Normalize assets into separate table
+        item_id = item_attrs["id"]
+        
+        if Repo.get(Item, item_id) do
+          conn
+          |> put_status(:conflict)
+          |> json(%{error: "Item with ID '#{item_id}' already exists"})
+        else
+          case create_item(item_attrs) do
+            {:ok, item} ->
             normalize_item_assets(item.id, item_attrs["assets"] || %{})
 
-            # Generate links dynamically
             custom_links = Map.get(item_attrs, "links", [])
             links = DynamicLinkGenerator.generate_item_links(item, custom_links)
 
@@ -91,6 +96,7 @@ defmodule StacApiWeb.ItemsCrudController do
             conn
             |> put_status(:unprocessable_entity)
             |> json(%{error: "Validation failed", details: format_changeset_errors(changeset)})
+          end
         end
 
       {:error, reason} ->
@@ -102,9 +108,11 @@ defmodule StacApiWeb.ItemsCrudController do
 
   @doc """
   GET /api/stac/v1/items/:id
-  Get a specific item
+  Get a specific item (returns 404 if in private catalog and not authenticated)
   """
   def show(conn, %{"id" => id}) do
+    authenticated = conn.assigns[:authenticated] || false
+    
     case Repo.get(Item, id) do
       nil ->
         conn
@@ -112,27 +120,50 @@ defmodule StacApiWeb.ItemsCrudController do
         |> json(%{error: "Item not found"})
 
       item ->
-        # Generate links dynamically
+        catalog_check = if item.collection_id do
+          collection = Repo.get(Collection, item.collection_id)
+          if collection && collection.catalog_id do
+            case Repo.get(Catalog, collection.catalog_id) do
+              nil -> :ok
+              catalog ->
+                catalog_private = catalog.private == true
+                if catalog_private && !authenticated do
+                  :private
+                else
+                  :ok
+                end
+            end
+          else
+            :ok
+          end
+        else
+          :ok
+        end
+        
+        if catalog_check == :private do
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Item not found"})
+        else
         custom_links = item.links || []
         links = DynamicLinkGenerator.generate_item_links(item, custom_links)
-
-        # Reconstruct assets from normalized data
         assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
 
-        item_response = %{
-          type: "Feature",
-          stac_version: item.stac_version || "1.0.0",
-          stac_extensions: item.stac_extensions || [],
-          id: item.id,
-          geometry: item.geometry,
-          bbox: item.bbox,
-          properties: item.properties || %{},
-          assets: assets,
-          collection: item.collection_id,
-          links: links
-        }
+          item_response = %{
+            type: "Feature",
+            stac_version: item.stac_version || "1.0.0",
+            stac_extensions: item.stac_extensions || [],
+            id: item.id,
+            geometry: item.geometry,
+            bbox: item.bbox,
+            properties: item.properties || %{},
+            assets: assets,
+            collection: item.collection_id,
+            links: links
+          }
 
-        json(conn, item_response)
+          json(conn, item_response)
+        end
     end
   end
 
@@ -152,16 +183,12 @@ defmodule StacApiWeb.ItemsCrudController do
           {:ok, item_attrs} ->
             case replace_item(item, item_attrs) do
               {:ok, updated_item} ->
-                # Replace all assets (delete old ones and add new ones)
-                Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
-                normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
+            Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
+            normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
 
-                # Generate links dynamically
-                custom_links = Map.get(item_attrs, "links", [])
-                links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
-
-                # Reconstruct assets from normalized data
-                assets = reconstruct_item_assets(updated_item.id, updated_item.stac_extensions || [])
+            custom_links = Map.get(item_attrs, "links", [])
+            links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
+            assets = reconstruct_item_assets(updated_item.id, updated_item.stac_extensions || [])
 
                 item_response = %{
                   type: "Feature",
@@ -214,16 +241,13 @@ defmodule StacApiWeb.ItemsCrudController do
           {:ok, item_attrs} ->
             case update_item_partial(item, item_attrs) do
               {:ok, updated_item} ->
-                # Reload to ensure we have all fields (especially important for partial updates)
                 reloaded_item = Repo.get(Item, id)
                 
-                # Only update assets if provided
                 if Map.has_key?(params, "assets") do
                   Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
                   normalize_item_assets(reloaded_item.id, item_attrs["assets"] || %{})
                 end
 
-                # Generate links dynamically (use updated links if provided, otherwise existing)
                 links = if Map.has_key?(params, "links") do
                   custom_links = Map.get(item_attrs, "links", reloaded_item.links || [])
                   DynamicLinkGenerator.generate_item_links(reloaded_item, custom_links)
@@ -231,7 +255,6 @@ defmodule StacApiWeb.ItemsCrudController do
                   DynamicLinkGenerator.generate_item_links(reloaded_item, reloaded_item.links || [])
                 end
 
-                # Reconstruct assets from normalized data
                 assets = reconstruct_item_assets(reloaded_item.id, reloaded_item.stac_extensions || [])
 
                 item_response = %{
@@ -300,15 +323,34 @@ defmodule StacApiWeb.ItemsCrudController do
 
   @doc """
   GET /api/stac/v1/items
-  List all items (with pagination)
+  List all items (filters out items from private catalogs if not authenticated)
   """
   def index(conn, params) do
+    authenticated = conn.assigns[:authenticated] || false
     limit = min(parse_int(params["limit"] || "10"), 100)
     offset = parse_int(params["offset"] || "0")
 
-    query = from(i in Item, limit: ^limit, offset: ^offset, order_by: [desc: i.datetime])
+    base_query = if authenticated do
+      from i in Item
+    else
+      from i in Item,
+        left_join: c in Collection, on: i.collection_id == c.id,
+        left_join: cat in Catalog, on: c.catalog_id == cat.id,
+        where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
+    end
+    
+    query = from(i in base_query, limit: ^limit, offset: ^offset, order_by: [desc: i.datetime])
     items = Repo.all(query)
-    total_count = Repo.aggregate(Item, :count, :id)
+    
+    count_query = if authenticated do
+      from i in Item
+    else
+      from i in Item,
+        left_join: c in Collection, on: i.collection_id == c.id,
+        left_join: cat in Catalog, on: c.catalog_id == cat.id,
+        where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
+    end
+    total_count = Repo.aggregate(count_query, :count, :id)
 
     items_with_links = Enum.map(items, fn item ->
       custom_links = item.links || []
@@ -359,10 +401,8 @@ defmodule StacApiWeb.ItemsCrudController do
     if body_id && body_id != url_id do
       {:error, "Item ID in body (#{body_id}) does not match URL path ID (#{url_id})"}
     else
-      # Also accept "collection" as alias for "collection_id"
       collection_id = params["collection_id"] || params["collection"]
       
-      # Required fields for a complete STAC item (PUT = full replacement)
       required_fields = [
         {"type", params["type"]},
         {"geometry", params["geometry"]},
@@ -377,7 +417,6 @@ defmodule StacApiWeb.ItemsCrudController do
       if length(missing_fields) > 0 do
         {:error, "PUT requires all STAC fields for full replacement. Missing required fields: #{Enum.join(missing_fields, ", ")}"}
       else
-        # Validate type is "Feature"
         if params["type"] != "Feature" do
           {:error, "Invalid type. STAC items must have type: 'Feature'"}
         else
@@ -420,7 +459,6 @@ defmodule StacApiWeb.ItemsCrudController do
       if collection_id && !Repo.get(Collection, collection_id) do
         {:error, "Referenced collection does not exist: #{collection_id}"}
       else
-        # Build attrs map with only provided fields
         geometry_value = if params["geometry"], do: parse_geometry(params["geometry"]), else: nil
         datetime_value = if params["datetime"], do: parse_datetime(params["datetime"]), else: nil
         
@@ -515,6 +553,12 @@ defmodule StacApiWeb.ItemsCrudController do
   defp parse_int(num) when is_integer(num), do: num
   defp parse_int(_), do: 0
 
+  defp create_item(attrs) do
+    %Item{}
+    |> Item.changeset(attrs)
+    |> Repo.insert()
+  end
+
   defp upsert_item(attrs) do
     case Repo.get(Item, attrs["id"]) do
       nil ->
@@ -565,7 +609,6 @@ defmodule StacApiWeb.ItemsCrudController do
   Normalize assets from STAC format into separate table
   """
   defp normalize_item_assets(item_id, assets) when is_map(assets) do
-    # First, delete existing assets for this item
     Repo.delete_all(from a in ItemAsset, where: a.item_id == ^item_id)
 
     # Insert new assets

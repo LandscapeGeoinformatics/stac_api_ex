@@ -1,13 +1,23 @@
 defmodule StacApiWeb.CollectionsController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{Collection, ItemAsset}
+  alias StacApi.Data.{Collection, ItemAsset, Catalog}
   alias StacApi.Repo
   alias StacApiWeb.LinkResolver
   import Ecto.Query
 
   def index(conn, _params) do
     try do
-      collections = Repo.all(Collection)
+      authenticated = conn.assigns[:authenticated] || false
+      
+      collections_query = if authenticated do
+        from c in Collection
+      else
+        from c in Collection,
+          left_join: cat in Catalog, on: c.catalog_id == cat.id,
+          where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
+      end
+      
+      collections = Repo.all(collections_query)
 
      # data sanitization and link resolution
       safe_collections = Enum.map(collections, fn collection ->
@@ -37,6 +47,8 @@ defmodule StacApiWeb.CollectionsController do
 
   def show(conn, %{"id" => id}) do
     try do
+      authenticated = conn.assigns[:authenticated] || false
+      
       case Repo.get(Collection, id) do
         nil ->
           conn
@@ -44,18 +56,39 @@ defmodule StacApiWeb.CollectionsController do
           |> json(%{error: "Collection not found"})
 
         collection ->
-          safe_collection = sanitize_collection(collection)
-          # Generate links dynamically
-          custom_links = collection.links || []
-          resolved_links = StacApiWeb.DynamicLinkGenerator.generate_collection_links(collection, custom_links)
+          # Check if collection is in a private catalog
+          catalog_check = if collection.catalog_id do
+            case Repo.get(Catalog, collection.catalog_id) do
+              nil -> :ok
+              catalog ->
+                catalog_private = catalog.private == true
+                if catalog_private && !authenticated do
+                  :private
+                else
+                  :ok
+                end
+            end
+          else
+            :ok
+          end
           
-          # Return as proper STAC Collection object
-          stac_collection = Map.merge(safe_collection, %{
-            type: "Collection",
-            links: resolved_links
-          })
-          
-          json(conn, stac_collection)
+          if catalog_check == :private do
+            conn
+            |> put_status(:not_found)
+            |> json(%{error: "Collection not found"})
+          else
+            safe_collection = sanitize_collection(collection)
+            custom_links = collection.links || []
+            resolved_links = StacApiWeb.DynamicLinkGenerator.generate_collection_links(collection, custom_links)
+            
+            # Return as proper STAC Collection object
+            stac_collection = Map.merge(safe_collection, %{
+              type: "Collection",
+              links: resolved_links
+            })
+            
+            json(conn, stac_collection)
+          end
       end
     rescue
       error ->
@@ -67,26 +100,57 @@ defmodule StacApiWeb.CollectionsController do
 
   def items(conn, %{"id" => collection_id}) do
     try do
-      query = from i in StacApi.Data.Item,
-        where: i.collection_id == ^collection_id
-
-      items = Repo.all(query)
-      sanitized_items = Enum.map(items, fn item ->
-        sanitized = sanitize_item(item)
-        # Reconstruct assets from normalized data
-        assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
-        sanitized = Map.put(sanitized, :assets, assets)
+      authenticated = conn.assigns[:authenticated] || false
+      
+      case Repo.get(Collection, collection_id) do
+        nil ->
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Collection not found"})
         
-        custom_links = item.links || []
-        links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
-        Map.put(sanitized, :links, links)
-      end)
+        collection ->
+          # Check if collection is in a private catalog
+          catalog_check = if collection.catalog_id do
+            case Repo.get(Catalog, collection.catalog_id) do
+              nil -> :ok
+              catalog ->
+                catalog_private = catalog.private == true
+                if catalog_private && !authenticated do
+                  :private
+                else
+                  :ok
+                end
+            end
+          else
+            :ok
+          end
+          
+          if catalog_check == :private do
+            conn
+            |> put_status(:not_found)
+            |> json(%{error: "Collection not found"})
+          else
+            query = from i in StacApi.Data.Item,
+              where: i.collection_id == ^collection_id
 
-      json(conn, %{
-        type: "FeatureCollection",
-        features: sanitized_items,
-        links: LinkResolver.create_item_links(collection_id)
-      })
+            items = Repo.all(query)
+            sanitized_items = Enum.map(items, fn item ->
+              sanitized = sanitize_item(item)
+              assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+              sanitized = Map.put(sanitized, :assets, assets)
+              
+              custom_links = item.links || []
+              links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
+              Map.put(sanitized, :links, links)
+            end)
+
+            json(conn, %{
+              type: "FeatureCollection",
+              features: sanitized_items,
+              links: LinkResolver.create_item_links(collection_id)
+            })
+          end
+      end
     rescue
       error ->
         conn

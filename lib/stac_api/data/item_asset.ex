@@ -54,7 +54,6 @@ defmodule StacApi.Data.ItemAsset do
   Convert a STAC asset JSON to ItemAsset changeset
   """
   def from_stac_asset(item_id, asset_key, asset_data) do
-    # Extract raster bands if present
     raster_bands = Map.get(asset_data, "raster:bands", [])
     raster_data = if length(raster_bands) > 0 do
       band = hd(raster_bands)
@@ -72,8 +71,6 @@ defmodule StacApi.Data.ItemAsset do
       %{}
     end
 
-    # Extract projection info if present
-    # Support both old format (proj:epsg nested) and new format (proj:code, proj:bbox, etc. at top level)
     proj_epsg = Map.get(asset_data, "proj:epsg", %{})
     
     # New format: proj:code, proj:bbox, proj:transform, proj:shape at top level
@@ -88,7 +85,6 @@ defmodule StacApi.Data.ItemAsset do
     proj_transform_old = Map.get(proj_epsg, "transform")
     proj_shape_old = Map.get(proj_epsg, "shape")
     
-    # Extract EPSG code from proj:code if it's in format "EPSG:3301"
     epsg_code_from_proj_code = if proj_code do
       case Regex.run(~r/^EPSG:(\d+)$/i, proj_code) do
         [_, code] -> String.to_integer(code)
@@ -99,17 +95,13 @@ defmodule StacApi.Data.ItemAsset do
     end
     
     proj_data = %{
-      # Use new format if available, otherwise fall back to old format
       epsg_code: epsg_code_from_proj_code || epsg_code_old,
       proj_bbox: proj_bbox_new || proj_bbox_old,
       proj_transform: proj_transform_new || proj_transform_old,
       proj_shape: proj_shape_new || proj_shape_old
     }
 
-    # Extract file size if present
     file_size = Map.get(asset_data, "file:size")
-
-    # Extract created_at if present
     created_at = Map.get(asset_data, "created")
 
     # Everything else goes into additional_properties
@@ -250,7 +242,6 @@ defmodule StacApi.Data.ItemAsset do
   # Helper to detect if raster extension v2 is used based on stac_extensions
   defp is_raster_v2?(stac_extensions) when is_list(stac_extensions) do
     Enum.any?(stac_extensions, fn ext ->
-      # Check if the extension URL contains "/raster/v2"
       String.contains?(ext, "/raster/v2")
     end)
   end
