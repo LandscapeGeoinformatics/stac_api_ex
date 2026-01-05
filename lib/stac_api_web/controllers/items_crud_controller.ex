@@ -19,7 +19,7 @@ defmodule StacApiWeb.ItemsCrudController do
               {:ok, item} ->
                 # Normalize assets into separate table
                 normalize_item_assets(item.id, item_attrs["assets"] || %{})
-                {:ok, item.id}
+                {:ok, item}
               {:error, changeset} ->
                 {:error, item_attrs["id"], format_changeset_errors(changeset)}
             end
@@ -27,6 +27,15 @@ defmodule StacApiWeb.ItemsCrudController do
             {:error, Map.get(feature, "id", "unknown"), reason}
         end
       end)
+
+      # Update collection extents for all affected collections
+      updated_collections = results
+        |> Enum.filter(fn r -> match?({:ok, %Item{}}, r) end)
+        |> Enum.map(fn {:ok, item} -> item.collection_id end)
+        |> Enum.filter(& &1)
+        |> Enum.uniq()
+
+      Enum.each(updated_collections, &update_collection_extent/1)
 
       success_count = Enum.count(results, fn r -> match?({:ok, _}, r) end)
       error_count = Enum.count(results, fn r -> match?({:error, _, _}, r) end)
@@ -62,6 +71,11 @@ defmodule StacApiWeb.ItemsCrudController do
           case create_item(item_attrs) do
             {:ok, item} ->
             normalize_item_assets(item.id, item_attrs["assets"] || %{})
+            
+            # Update collection extent after item creation
+            if item.collection_id do
+              update_collection_extent(item.collection_id)
+            end
 
             custom_links = Map.get(item_attrs, "links", [])
             links = DynamicLinkGenerator.generate_item_links(item, custom_links)
@@ -185,6 +199,11 @@ defmodule StacApiWeb.ItemsCrudController do
               {:ok, updated_item} ->
             Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
             normalize_item_assets(updated_item.id, item_attrs["assets"] || %{})
+            
+            # Update collection extent after item update
+            if updated_item.collection_id do
+              update_collection_extent(updated_item.collection_id)
+            end
 
             custom_links = Map.get(item_attrs, "links", [])
             links = DynamicLinkGenerator.generate_item_links(updated_item, custom_links)
@@ -247,6 +266,11 @@ defmodule StacApiWeb.ItemsCrudController do
                   Repo.delete_all(from a in ItemAsset, where: a.item_id == ^id)
                   normalize_item_assets(reloaded_item.id, item_attrs["assets"] || %{})
                 end
+                
+                # Update collection extent after item partial update
+                if reloaded_item.collection_id do
+                  update_collection_extent(reloaded_item.collection_id)
+                end
 
                 links = if Map.has_key?(params, "links") do
                   custom_links = Map.get(item_attrs, "links", reloaded_item.links || [])
@@ -304,8 +328,14 @@ defmodule StacApiWeb.ItemsCrudController do
         |> json(%{error: "Item not found"})
 
       item ->
+        collection_id = item.collection_id
         case Repo.delete(item) do
             {:ok, _} ->
+              # Update collection extent after item deletion
+              if collection_id do
+                update_collection_extent(collection_id)
+              end
+              
               conn
               |> put_status(:ok)
               |> json(%{
@@ -632,5 +662,147 @@ defmodule StacApiWeb.ItemsCrudController do
       asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
       Map.put(acc, asset.asset_key, asset_data)
     end)
+  end
+
+  @doc """
+  Update collection extent based on items' geometries and datetime values.
+  Calculates spatial extent using PostGIS: Box2D(ST_Envelope(st_extent(i.geometry::geometry)))
+  and temporal extent from min/max datetime values.
+  """
+  defp update_collection_extent(collection_id) when is_binary(collection_id) do
+    # Calculate spatial extent using PostGIS
+    spatial_bbox_sql = """
+    SELECT Box2D(ST_Envelope(st_extent(i.geometry::geometry)))::text as bbox
+    FROM items i
+    WHERE i.collection_id = $1
+    AND i.geometry IS NOT NULL
+    """
+
+    # Calculate temporal extent
+    temporal_sql = """
+    SELECT 
+      MIN(i.datetime) as min_datetime,
+      MAX(i.datetime) as max_datetime
+    FROM items i
+    WHERE i.collection_id = $1
+    AND i.datetime IS NOT NULL
+    """
+
+    case Repo.query(spatial_bbox_sql, [collection_id]) do
+      {:ok, %{rows: [[bbox_string] | _]}} when is_binary(bbox_string) ->
+        # Parse Box2D output: "BOX(minx miny, maxx maxy)"
+        bbox_coords = parse_box2d(bbox_string)
+        
+        case Repo.query(temporal_sql, [collection_id]) do
+          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
+            temporal_interval = build_temporal_interval(min_dt, max_dt)
+            extent = build_extent(bbox_coords, temporal_interval)
+            update_collection_extent_field(collection_id, extent)
+          
+          {:ok, %{rows: []}} ->
+            # No temporal data, only spatial
+            extent = build_extent(bbox_coords, nil)
+            update_collection_extent_field(collection_id, extent)
+          
+          _ ->
+            # Error or no temporal data, use spatial only
+            extent = build_extent(bbox_coords, nil)
+            update_collection_extent_field(collection_id, extent)
+        end
+
+      {:ok, %{rows: []}} ->
+        # No items with geometry, check if we have temporal data only
+        case Repo.query(temporal_sql, [collection_id]) do
+          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
+            temporal_interval = build_temporal_interval(min_dt, max_dt)
+            extent = build_extent(nil, temporal_interval)
+            update_collection_extent_field(collection_id, extent)
+          
+          _ ->
+            # No items at all, set extent to nil or empty
+            update_collection_extent_field(collection_id, nil)
+        end
+
+      _ ->
+        # Error in spatial query, try temporal only
+        case Repo.query(temporal_sql, [collection_id]) do
+          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
+            temporal_interval = build_temporal_interval(min_dt, max_dt)
+            extent = build_extent(nil, temporal_interval)
+            update_collection_extent_field(collection_id, extent)
+          
+          _ ->
+            :ok  # Silently fail if no data
+        end
+    end
+  end
+
+  defp update_collection_extent(_), do: :ok
+
+  defp parse_box2d(box_string) when is_binary(box_string) do
+    # Parse "BOX(minx miny, maxx maxy)" format
+    case Regex.run(~r/BOX\(([\d\.\-]+)\s+([\d\.\-]+),\s+([\d\.\-]+)\s+([\d\.\-]+)\)/, box_string) do
+      [_, minx, miny, maxx, maxy] ->
+        try do
+          [
+            String.to_float(minx),
+            String.to_float(miny),
+            String.to_float(maxx),
+            String.to_float(maxy)
+          ]
+        rescue
+          _ -> nil
+        end
+      _ -> nil
+    end
+  end
+
+  defp parse_box2d(_), do: nil
+
+  defp build_temporal_interval(min_dt, max_dt) when not is_nil(min_dt) and not is_nil(max_dt) do
+    min_str = DateTime.to_iso8601(min_dt)
+    max_str = DateTime.to_iso8601(max_dt)
+    [[min_str, max_str]]
+  end
+
+  defp build_temporal_interval(min_dt, _) when not is_nil(min_dt) do
+    min_str = DateTime.to_iso8601(min_dt)
+    [[min_str, nil]]
+  end
+
+  defp build_temporal_interval(_, max_dt) when not is_nil(max_dt) do
+    max_str = DateTime.to_iso8601(max_dt)
+    [[nil, max_str]]
+  end
+
+  defp build_temporal_interval(_, _), do: nil
+
+  defp build_extent(nil, nil), do: nil
+  defp build_extent(bbox_coords, nil) when is_list(bbox_coords) do
+    %{"spatial" => %{"bbox" => [bbox_coords]}}
+  end
+  defp build_extent(nil, temporal_interval) when is_list(temporal_interval) do
+    %{"temporal" => %{"interval" => temporal_interval}}
+  end
+  defp build_extent(bbox_coords, temporal_interval) when is_list(bbox_coords) and is_list(temporal_interval) do
+    %{
+      "spatial" => %{"bbox" => [bbox_coords]},
+      "temporal" => %{"interval" => temporal_interval}
+    }
+  end
+  defp build_extent(_, _), do: nil
+
+  defp update_collection_extent_field(collection_id, extent) do
+    case Repo.get(Collection, collection_id) do
+      nil ->
+        :ok  # Collection doesn't exist, skip
+
+      collection ->
+        changeset = Collection.changeset(collection, %{"extent" => extent})
+        case Repo.update(changeset) do
+          {:ok, _} -> :ok
+          {:error, _} -> :ok  # Silently fail on update error
+        end
+    end
   end
 end
