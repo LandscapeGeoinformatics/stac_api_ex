@@ -11,7 +11,7 @@ from pystac_client.exceptions import APIError
 import json
 
 # Configuration
-API_BASE_URL = "http://localhost:4000/api/stac/v1"
+API_BASE_URL = "http://localhost:4000/stac/api/v1"
 TEST_RESULTS = []
 
 def log_test(test_name, status, message=""):

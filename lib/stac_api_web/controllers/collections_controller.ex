@@ -30,9 +30,9 @@ defmodule StacApiWeb.CollectionsController do
       json(conn, %{
         collections: safe_collections,
         links: [
-          LinkResolver.create_link("root", "/api/stac/v1/"),
-          LinkResolver.create_link("self", "/api/stac/v1/collections"),
-          LinkResolver.create_link("search", "/api/stac/v1/search",
+          LinkResolver.create_link("root", "/stac/api/v1/"),
+          LinkResolver.create_link("self", "/stac/api/v1/collections"),
+          LinkResolver.create_link("search", "/stac/api/v1/search",
             type: "application/geo+json"
           )
         ]

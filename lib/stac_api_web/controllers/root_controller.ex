@@ -6,7 +6,7 @@ defmodule StacApiWeb.RootController do
   import Ecto.Query
 
   def redirect_to_api(conn, _params) do
-    redirect(conn, to: "/api/stac/v1/")
+    redirect(conn, to: "/stac/api/v1/")
   end
 
   def index(conn, _params) do
@@ -30,13 +30,13 @@ defmodule StacApiWeb.RootController do
     )
 
     sub_catalog_child_links = Enum.map(sub_catalogs, fn catalog ->
-      LinkResolver.create_link("child", "/api/stac/v1/catalog/#{catalog.id}",
+      LinkResolver.create_link("child", "/stac/api/v1/catalog/#{catalog.id}",
         title: catalog.title || catalog.id
       )
     end)
 
     root_collection_child_links = Enum.map(root_collections, fn collection ->
-      LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
+      LinkResolver.create_link("child", "/stac/api/v1/collections/#{collection.id}",
         title: collection.title || collection.id
       )
     end)
@@ -54,25 +54,25 @@ defmodule StacApiWeb.RootController do
       ],
       links: [
         # Required STAC Core links
-        LinkResolver.create_link("self", "/api/stac/v1/"),
-        LinkResolver.create_link("root", "/api/stac/v1/"),
-        LinkResolver.create_link("service-desc", "/api/stac/v1/openapi.json",
+        LinkResolver.create_link("self", "/stac/api/v1/"),
+        LinkResolver.create_link("root", "/stac/api/v1/"),
+        LinkResolver.create_link("service-desc", "/stac/api/v1/openapi.json",
           type: "application/vnd.oai.openapi+json;version=3.0",
           title: "OpenAPI service description"
         ),
-        LinkResolver.create_link("service-doc", "/api/stac/v1/docs",
+        LinkResolver.create_link("service-doc", "/stac/api/v1/docs",
           type: "text/html",
           title: "OpenAPI service documentation"
         ),
-        LinkResolver.create_link("data", "/api/stac/v1/collections",
+        LinkResolver.create_link("data", "/stac/api/v1/collections",
           title: "Collections"
         ),
-        LinkResolver.create_link("search", "/api/stac/v1/search",
+        LinkResolver.create_link("search", "/stac/api/v1/search",
           type: "application/geo+json",
           title: "STAC search",
           method: "GET"
         ),
-        LinkResolver.create_link("search", "/api/stac/v1/search",
+        LinkResolver.create_link("search", "/stac/api/v1/search",
           type: "application/geo+json",
           title: "STAC search",
           method: "POST"
@@ -128,13 +128,13 @@ defmodule StacApiWeb.RootController do
           collections = Repo.all(collections_query)
 
         catalog_child_links = Enum.map(child_catalogs, fn child ->
-          LinkResolver.create_link("child", "/api/stac/v1/catalog/#{child.id}",
+          LinkResolver.create_link("child", "/stac/api/v1/catalog/#{child.id}",
             title: child.title || child.id
           )
         end)
 
         collection_child_links = Enum.map(collections, fn collection ->
-          LinkResolver.create_link("child", "/api/stac/v1/collections/#{collection.id}",
+          LinkResolver.create_link("child", "/stac/api/v1/collections/#{collection.id}",
             title: collection.title || collection.id
           )
         end)
@@ -148,8 +148,8 @@ defmodule StacApiWeb.RootController do
           description: catalog.description,
           extent: catalog.extent,
           links: [
-            LinkResolver.create_link("root", "/api/stac/v1/"),
-            LinkResolver.create_link("self", "/api/stac/v1/catalog/#{catalog.id}")
+            LinkResolver.create_link("root", "/stac/api/v1/"),
+            LinkResolver.create_link("self", "/stac/api/v1/catalog/#{catalog.id}")
           ] ++ catalog_child_links ++ collection_child_links
         }
 
@@ -158,10 +158,10 @@ defmodule StacApiWeb.RootController do
         parent_link = case catalog.parent_catalog_id do
           nil when catalog.id != "pygeoapi-stac" ->
             # Top-level sub-catalog links to root
-            LinkResolver.create_link("parent", "/api/stac/v1/")
+            LinkResolver.create_link("parent", "/stac/api/v1/")
           parent_id when is_binary(parent_id) ->
             # Sub-catalog links to parent catalog
-            LinkResolver.create_link("parent", "/api/stac/v1/catalog/#{parent_id}")
+            LinkResolver.create_link("parent", "/stac/api/v1/catalog/#{parent_id}")
           _ ->
             nil
         end
@@ -190,7 +190,7 @@ defmodule StacApiWeb.RootController do
       },
       servers: [
         %{
-          url: "/api/stac/v1",
+          url: "/stac/api/v1",
           description: "STAC API v1"
         }
       ],
@@ -365,25 +365,25 @@ defmodule StacApiWeb.RootController do
 
         <div class="endpoint">
             <div class="method">GET</div>
-            <div class="path">/api/stac/v1/</div>
+            <div class="path">/stac/api/v1/</div>
             <p><strong>Landing Page</strong> - Provides links to API capabilities and collections</p>
         </div>
 
         <div class="endpoint">
             <div class="method">GET</div>
-            <div class="path">/api/stac/v1/collections</div>
+            <div class="path">/stac/api/v1/collections</div>
             <p><strong>List Collections</strong> - Returns all available collections</p>
         </div>
 
         <div class="endpoint">
             <div class="method">GET</div>
-            <div class="path">/api/stac/v1/collections/{collection_id}</div>
+            <div class="path">/stac/api/v1/collections/{collection_id}</div>
             <p><strong>Get Collection</strong> - Returns details for a specific collection</p>
         </div>
 
         <div class="endpoint">
             <div class="method">GET</div>
-            <div class="path">/api/stac/v1/search</div>
+            <div class="path">/stac/api/v1/search</div>
             <p><strong>Search Items</strong> - Search for STAC items with various filters</p>
         </div>
 
@@ -397,7 +397,7 @@ defmodule StacApiWeb.RootController do
         <p>This API implements the <a href="https://api.stacspec.org/v1.0.0/core">STAC API - Core</a> specification.</p>
 
         <h2>OpenAPI Specification</h2>
-        <p><a href="/api/stac/v1/openapi.json">Download OpenAPI 3.0 specification</a></p>
+        <p><a href="/stac/api/v1/openapi.json">Download OpenAPI 3.0 specification</a></p>
     </body>
     </html>
     """

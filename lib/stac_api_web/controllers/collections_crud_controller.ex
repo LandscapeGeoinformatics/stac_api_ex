@@ -6,7 +6,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   import Ecto.Query
 
   @doc """
-  POST /api/stac/v1/collections
+  POST /stac/api/v1/collections
   Create a new collection (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
@@ -64,7 +64,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/collections/:id
+  GET /stac/api/v1/collections/:id
   Get a specific collection
   """
   def show(conn, %{"id" => id}) do
@@ -120,7 +120,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   @doc """
-  PUT /api/stac/v1/collections/:id
+  PUT /stac/api/v1/collections/:id
   Replace the entire collection (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
@@ -176,7 +176,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   @doc """
-  PATCH /api/stac/v1/collections/:id
+  PATCH /stac/api/v1/collections/:id
   Partially update a collection (only provided fields are updated)
   """
   def patch(conn, %{"id" => id} = params) do
@@ -237,7 +237,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   @doc """
-  DELETE /api/stac/v1/collections/:id
+  DELETE /stac/api/v1/collections/:id
   Delete a specific collection
   """
   def delete(conn, %{"id" => id}) do
@@ -269,7 +269,7 @@ defmodule StacApiWeb.CollectionsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/collections
+  GET /stac/api/v1/collections
   List all collections (filters out collections in private catalogs if not authenticated)
   """
   def index(conn, _params) do
@@ -307,8 +307,8 @@ defmodule StacApiWeb.CollectionsCrudController do
     json(conn, %{
       collections: collections_with_links,
       links: [
-        %{"rel" => "self", "href" => "/api/stac/v1/collections", "type" => "application/json"},
-        %{"rel" => "root", "href" => "/api/stac/v1/", "type" => "application/json"}
+        %{"rel" => "self", "href" => "/stac/api/v1/collections", "type" => "application/json"},
+        %{"rel" => "root", "href" => "/stac/api/v1/", "type" => "application/json"}
       ]
     })
   end

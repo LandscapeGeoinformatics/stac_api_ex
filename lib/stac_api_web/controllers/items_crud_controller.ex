@@ -6,7 +6,7 @@ defmodule StacApiWeb.ItemsCrudController do
   import Ecto.Query
 
   @doc """
-  POST /api/stac/v1/items/import
+  POST /stac/api/v1/items/import
   """
   def bulk_import(conn, params) do
     features = Map.get(params, "features", [])
@@ -55,7 +55,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  POST /api/stac/v1/items
+  POST /stac/api/v1/items
   Create a new item (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
@@ -121,7 +121,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/items/:id
+  GET /stac/api/v1/items/:id
   Get a specific item (returns 404 if in private catalog and not authenticated)
   """
   def show(conn, %{"id" => id}) do
@@ -182,7 +182,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  PUT /api/stac/v1/items/:id
+  PUT /stac/api/v1/items/:id
   Replace the entire item (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
@@ -245,7 +245,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  PATCH /api/stac/v1/items/:id
+  PATCH /stac/api/v1/items/:id
   Partially update an item (only provided fields are updated)
   """
   def patch(conn, %{"id" => id} = params) do
@@ -317,7 +317,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  DELETE /api/stac/v1/items/:id
+  DELETE /stac/api/v1/items/:id
   Delete a specific item
   """
   def delete(conn, %{"id" => id}) do
@@ -352,7 +352,7 @@ defmodule StacApiWeb.ItemsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/items
+  GET /stac/api/v1/items
   List all items (filters out items from private catalogs if not authenticated)
   """
   def index(conn, params) do
@@ -407,8 +407,8 @@ defmodule StacApiWeb.ItemsCrudController do
       type: "FeatureCollection",
       features: items_with_links,
       links: [
-        %{"rel" => "self", "href" => "/api/stac/v1/items", "type" => "application/geo+json"},
-        %{"rel" => "root", "href" => "/api/stac/v1/", "type" => "application/json"}
+        %{"rel" => "self", "href" => "/stac/api/v1/items", "type" => "application/geo+json"},
+        %{"rel" => "root", "href" => "/stac/api/v1/", "type" => "application/json"}
       ],
       context: %{
         returned: length(items_with_links),

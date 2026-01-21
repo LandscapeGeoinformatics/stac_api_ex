@@ -8,7 +8,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   import Ecto.Query
 
   @doc """
-  POST /api/stac/v1/catalogs
+  POST /stac/api/v1/catalogs
   Create a new catalog (returns 409 Conflict if ID already exists)
   """
   def create(conn, params) do
@@ -61,7 +61,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/catalogs/:id
+  GET /stac/api/v1/catalogs/:id
   Get a specific catalog (returns 404 if private and not authenticated)
   """
   def show(conn, %{"id" => id}) do
@@ -99,7 +99,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   @doc """
-  PUT /api/stac/v1/catalogs/:id
+  PUT /stac/api/v1/catalogs/:id
   Replace the entire catalog (full replacement - all fields required)
   """
   def update(conn, %{"id" => id} = params) do
@@ -150,7 +150,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   @doc """
-  PATCH /api/stac/v1/catalogs/:id
+  PATCH /stac/api/v1/catalogs/:id
   Partially update a catalog (only provided fields are updated)
   """
   def patch(conn, %{"id" => id} = params) do
@@ -207,7 +207,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   @doc """
-  DELETE /api/stac/v1/catalogs/:id
+  DELETE /stac/api/v1/catalogs/:id
   Delete a specific catalog
   """
   def delete(conn, %{"id" => id}) do
@@ -240,7 +240,7 @@ defmodule StacApiWeb.CatalogsCrudController do
   end
 
   @doc """
-  GET /api/stac/v1/catalogs
+  GET /stac/api/v1/catalogs
   List all catalogs (filters out private catalogs if not authenticated)
   """
   def index(conn, _params) do
@@ -272,8 +272,8 @@ defmodule StacApiWeb.CatalogsCrudController do
     json(conn, %{
       catalogs: catalogs_with_links,
       links: [
-        %{"rel" => "self", "href" => "/api/stac/v1/catalogs", "type" => "application/json"},
-        %{"rel" => "root", "href" => "/api/stac/v1/", "type" => "application/json"}
+        %{"rel" => "self", "href" => "/stac/api/v1/catalogs", "type" => "application/json"},
+        %{"rel" => "root", "href" => "/stac/api/v1/", "type" => "application/json"}
       ]
     })
   end

@@ -12,8 +12,8 @@ defmodule StacApiWeb.LinkResolver do
   
   ## Examples
   
-      iex> resolve_url("/api/stac/v1/collections/test")
-      "http://localhost:4000/api/stac/v1/collections/test"
+      iex> resolve_url("/stac/api/v1/collections/test")
+      "http://localhost:4000/stac/api/v1/collections/test"
       
       iex> resolve_url("http://example.com/absolute")
       "http://example.com/absolute"
@@ -36,8 +36,8 @@ defmodule StacApiWeb.LinkResolver do
   
   ## Examples
   
-      iex> resolve_links([%{"rel" => "self", "href" => "/api/stac/v1/"}])
-      [%{"rel" => "self", "href" => "http://localhost:4000/api/stac/v1/"}]
+      iex> resolve_links([%{"rel" => "self", "href" => "/stac/api/v1/"}])
+      [%{"rel" => "self", "href" => "http://localhost:4000/stac/api/v1/"}]
   """
   def resolve_links(links) when is_list(links) do
     Enum.map(links, fn link ->
@@ -116,9 +116,9 @@ defmodule StacApiWeb.LinkResolver do
   """
   def create_collection_links(collection_id) do
     [
-      create_link("self", "/api/stac/v1/collections/#{collection_id}"),
-      create_link("root", "/api/stac/v1/"),
-      create_link("items", "/api/stac/v1/collections/#{collection_id}/items", 
+      create_link("self", "/stac/api/v1/collections/#{collection_id}"),
+      create_link("root", "/stac/api/v1/"),
+      create_link("items", "/stac/api/v1/collections/#{collection_id}/items", 
                   type: "application/geo+json")
     ]
   end
@@ -128,9 +128,9 @@ defmodule StacApiWeb.LinkResolver do
   """
   def create_item_links(collection_id) do
     [
-      create_link("collection", "/api/stac/v1/collections/#{collection_id}"),
-      create_link("root", "/api/stac/v1/"),
-      create_link("self", "/api/stac/v1/collections/#{collection_id}/items",
+      create_link("collection", "/stac/api/v1/collections/#{collection_id}"),
+      create_link("root", "/stac/api/v1/"),
+      create_link("self", "/stac/api/v1/collections/#{collection_id}/items",
                   type: "application/geo+json")
     ]
   end
@@ -144,15 +144,15 @@ defmodule StacApiWeb.LinkResolver do
     current_offset = parse_int(params["offset"] || "0")
 
     links = [
-      create_link("self", "/api/stac/v1/search?#{build_query_string(params)}",
+      create_link("self", "/stac/api/v1/search?#{build_query_string(params)}",
                   type: "application/geo+json"),
-      create_link("root", "/api/stac/v1/")
+      create_link("root", "/stac/api/v1/")
     ]
 
     links =
       if current_offset > 0 do
         prev_params = Map.put(params, "offset", to_string(max(0, current_offset - current_limit)))
-        prev_link = create_link("prev", "/api/stac/v1/search?#{build_query_string(prev_params)}",
+        prev_link = create_link("prev", "/stac/api/v1/search?#{build_query_string(prev_params)}",
                                type: "application/geo+json")
         [prev_link | links]
       else
@@ -161,7 +161,7 @@ defmodule StacApiWeb.LinkResolver do
 
     if current_offset + current_limit < total_count do
       next_params = Map.put(params, "offset", to_string(current_offset + current_limit))
-      next_link = create_link("next", "/api/stac/v1/search?#{build_query_string(next_params)}",
+      next_link = create_link("next", "/stac/api/v1/search?#{build_query_string(next_params)}",
                              type: "application/geo+json")
       [next_link | links]
     else
@@ -187,15 +187,15 @@ defmodule StacApiWeb.LinkResolver do
   defp normalize_relative_url(url) do
     cond do
       # Handle malformed root links
-      String.contains?(url, "../../../catalog.json") -> "/api/stac/v1/"
-      String.contains?(url, "../catalog.json") -> "/api/stac/v1/"
-      String.contains?(url, "catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "../../../catalog.json") -> "/stac/api/v1/"
+      String.contains?(url, "../catalog.json") -> "/stac/api/v1/"
+      String.contains?(url, "catalog.json") -> "/stac/api/v1/"
       
       # Handle malformed collection self links
-      String.contains?(url, "collection.json") -> "/api/stac/v1/collections"
+      String.contains?(url, "collection.json") -> "/stac/api/v1/collections"
       
       # Handle malformed items links
-      url == "items" -> "/api/stac/v1/collections/items"
+      url == "items" -> "/stac/api/v1/collections/items"
       
       # Ensure proper leading slash for other relative URLs
       String.starts_with?(url, "/") -> url
@@ -208,21 +208,21 @@ defmodule StacApiWeb.LinkResolver do
     
     cond do
       # Handle malformed root links
-      String.contains?(url, "../../../catalog.json") -> "/api/stac/v1/"
-      String.contains?(url, "../catalog.json") -> "/api/stac/v1/"
-      String.contains?(url, "catalog.json") -> "/api/stac/v1/"
+      String.contains?(url, "../../../catalog.json") -> "/stac/api/v1/"
+      String.contains?(url, "../catalog.json") -> "/stac/api/v1/"
+      String.contains?(url, "catalog.json") -> "/stac/api/v1/"
       
       # Handle malformed collection self links
       String.contains?(url, "collection.json") and collection_id ->
-        "/api/stac/v1/collections/#{collection_id}"
+        "/stac/api/v1/collections/#{collection_id}"
       String.contains?(url, "collection.json") ->
-        "/api/stac/v1/collections"
+        "/stac/api/v1/collections"
       
       # Handle malformed items links
       url == "items" and collection_id ->
-        "/api/stac/v1/collections/#{collection_id}/items"
+        "/stac/api/v1/collections/#{collection_id}/items"
       url == "items" ->
-        "/api/stac/v1/collections/items"
+        "/stac/api/v1/collections/items"
       
       # Ensure proper leading slash for other relative URLs
       String.starts_with?(url, "/") -> url

@@ -28,7 +28,7 @@ defmodule StacApiWeb.Router do
 
   # STAC API (REST) endpoints - versioned API structure
   # Read endpoints use optional read auth to filter private catalogs
-  scope "/api/stac/v1", StacApiWeb do
+  scope "/stac/api/v1", StacApiWeb do
     pipe_through [:api, :read_auth]
 
     # Root and search endpoints (public read-only)
@@ -59,7 +59,7 @@ defmodule StacApiWeb.Router do
   end
 
   # Protected write endpoints (require authentication)
-  scope "/api/stac/v1", StacApiWeb do
+  scope "/stac/api/v1", StacApiWeb do
     pipe_through [:api, :auth]
 
     # Protected write endpoints for catalogs

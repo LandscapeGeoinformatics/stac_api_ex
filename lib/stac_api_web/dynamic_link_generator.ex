@@ -42,17 +42,17 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   defp generate_catalog_runtime_links(catalog) do
     links = [
       # Self link
-      create_link("self", "/api/stac/v1/catalog/#{catalog.id}"),
+      create_link("self", "/stac/api/v1/catalog/#{catalog.id}"),
       # Root link
-      create_link("root", "/api/stac/v1/")
+      create_link("root", "/stac/api/v1/")
     ]
 
     # Parent link (if not root catalog)
     parent_links = case catalog.parent_catalog_id do
       nil when catalog.id != "pygeoapi-stac" ->
-        [create_link("parent", "/api/stac/v1/")]
+        [create_link("parent", "/stac/api/v1/")]
       parent_id when is_binary(parent_id) ->
-        [create_link("parent", "/api/stac/v1/catalog/#{parent_id}")]
+        [create_link("parent", "/stac/api/v1/catalog/#{parent_id}")]
       _ ->
         []
     end
@@ -60,14 +60,14 @@ defmodule StacApiWeb.DynamicLinkGenerator do
     # Child catalogs
     child_catalogs = get_child_catalogs(catalog.id)
     catalog_child_links = Enum.map(child_catalogs, fn child ->
-      create_link("child", "/api/stac/v1/catalog/#{child.id}", 
+      create_link("child", "/stac/api/v1/catalog/#{child.id}", 
                   title: child.title || child.id)
     end)
 
     # Child collections
     child_collections = get_collections_in_catalog(catalog.id)
     collection_child_links = Enum.map(child_collections, fn collection ->
-      create_link("child", "/api/stac/v1/collections/#{collection.id}",
+      create_link("child", "/stac/api/v1/collections/#{collection.id}",
                   title: collection.title || collection.id)
     end)
 
@@ -77,20 +77,20 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   defp generate_collection_runtime_links(collection) do
     links = [
       # Self link
-      create_link("self", "/api/stac/v1/collections/#{collection.id}"),
+      create_link("self", "/stac/api/v1/collections/#{collection.id}"),
       # Root link
-      create_link("root", "/api/stac/v1/"),
+      create_link("root", "/stac/api/v1/"),
       # Items link
-      create_link("items", "/api/stac/v1/collections/#{collection.id}/items",
+      create_link("items", "/stac/api/v1/collections/#{collection.id}/items",
                   type: "application/geo+json")
     ]
 
     # Parent catalog link
     parent_links = case collection.catalog_id do
       nil ->
-        [create_link("parent", "/api/stac/v1/")]
+        [create_link("parent", "/stac/api/v1/")]
       catalog_id ->
-        [create_link("parent", "/api/stac/v1/catalog/#{catalog_id}")]
+        [create_link("parent", "/stac/api/v1/catalog/#{catalog_id}")]
     end
 
     links ++ parent_links
@@ -99,17 +99,17 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   defp generate_item_runtime_links(item) do
     links = [
       # Self link
-      create_link("self", "/api/stac/v1/collections/#{item.collection_id}/items/#{item.id}"),
+      create_link("self", "/stac/api/v1/collections/#{item.collection_id}/items/#{item.id}"),
       # Root link
-      create_link("root", "/api/stac/v1/"),
+      create_link("root", "/stac/api/v1/"),
       # Collection link
-      create_link("collection", "/api/stac/v1/collections/#{item.collection_id}")
+      create_link("collection", "/stac/api/v1/collections/#{item.collection_id}")
     ]
 
     # Parent catalog link (if collection has a catalog)
     parent_links = case get_collection_catalog_id(item.collection_id) do
       nil -> []
-      catalog_id -> [create_link("parent", "/api/stac/v1/catalog/#{catalog_id}")]
+      catalog_id -> [create_link("parent", "/stac/api/v1/catalog/#{catalog_id}")]
     end
 
     links ++ parent_links
