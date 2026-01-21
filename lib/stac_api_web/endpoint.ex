@@ -25,6 +25,10 @@ defmodule StacApiWeb.Endpoint do
     gzip: false,
     only: StacApiWeb.static_paths()
 
+  # Enable Tidewave in development for live reloading of static assets
+  if Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
