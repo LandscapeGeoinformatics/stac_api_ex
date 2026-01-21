@@ -83,7 +83,7 @@ defmodule StacApiWeb.Router do
   end
 
   # Web/GUI interface endpoints
-  scope "/web", StacApiWeb do
+  scope "/stac/web", StacApiWeb do
     pipe_through :browser
     get "/browse", StacBrowserController, :index
     get "/browse/*path", StacBrowserController, :show
@@ -91,7 +91,7 @@ defmodule StacApiWeb.Router do
   end
 
   # Web API endpoints (for AJAX calls from web interface)
-  scope "/web", StacApiWeb do
+  scope "/stac/web", StacApiWeb do
     pipe_through :api
     get "/search/api", StacBrowserController, :search_api
   end

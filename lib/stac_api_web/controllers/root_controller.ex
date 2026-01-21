@@ -77,7 +77,7 @@ defmodule StacApiWeb.RootController do
           title: "STAC search",
           method: "POST"
         ),
-        LinkResolver.create_link("browser", "/web/browse",
+        LinkResolver.create_link("browser", "/stac/web/browse",
           type: "text/html",
           title: "Web Browser Interface"
         )
@@ -389,7 +389,7 @@ defmodule StacApiWeb.RootController do
 
         <div class="endpoint">
             <div class="method">GET</div>
-            <div class="path">/web/browse</div>
+            <div class="path">/stac/web/browse</div>
             <p><strong>Web Interface</strong> - HTML browser interface for exploring data</p>
         </div>
 

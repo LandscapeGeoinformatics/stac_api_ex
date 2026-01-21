@@ -113,7 +113,7 @@ defmodule StacApiWeb.StacBrowserController do
             Logger.error("Failed to read directory #{full_path}: #{reason}")
             conn
             |> put_flash(:error, "Unable to read directory")
-            |> redirect(to: ~p"/stac/browse")
+            |> redirect(to: ~p"/stac/web/browse")
         end
 
       false ->
