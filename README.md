@@ -274,12 +274,12 @@ extensions: [{Geo.PostGIS.Extension, library:  Geo}]
 
 ```elixir
 
-scope  "/stac", YourAppWeb  do
+scope  "/stac/api/v1", YourAppWeb  do
 pipe_through  :api
 get  "/", StacController, :root
 get  "/search", StacController, :search
 end
-scope  "/stac", YourAppWeb  do
+scope  "/stac/web", YourAppWeb  do
 pipe_through  :browser
 get  "/browse", StacBrowserController, :index
 get  "/browse/*path", StacBrowserController, :show
@@ -453,19 +453,19 @@ stac_data_path:  System.get_env("STAC_DATA_PATH") || "priv/stac_data"
 
 ### REST API
 
--  `GET /` - STAC root catalog
+-  `GET /stac/api/v1/` - STAC root catalog
 
--  `GET /search` - Search STAC items with filters
+-  `GET /stac/api/v1/search` - Search STAC items with filters
 
   
 
 ### Browser Interface
 
--  `GET /stac/browse` - HTML directory browser
+-  `GET /stac/web/browse` - HTML directory browser
 
--  `GET /stac/browse/*path` - Browse specific paths
+-  `GET /stac/web/browse/*path` - Browse specific paths
 
--  `GET /stac/search` - HTML search interface
+-  `GET /stac/web/search` - HTML search interface
 
   
 

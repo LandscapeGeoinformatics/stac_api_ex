@@ -129,7 +129,7 @@ Catalog (Root Level)
 
 ## API Endpoints
 
-The API is versioned at `/api/stac/v1` and organized into three main categories:
+The API is versioned at `/stac/api/v1` and organized into three main categories:
 
 ### 1. Public Read Endpoints (No Authentication Required)
 
@@ -137,35 +137,35 @@ These endpoints are publicly accessible but respect private catalog filtering wh
 
 #### Root & Discovery
 
-- `GET /api/stac/v1/` - Root catalog landing page
-- `GET /api/stac/v1/openapi.json` - OpenAPI specification
-- `GET /api/stac/v1/docs` - API documentation
-- `GET /api/stac/v1/catalog/:id` - Get specific catalog
+- `GET /stac/api/v1/` - Root catalog landing page
+- `GET /stac/api/v1/openapi.json` - OpenAPI specification
+- `GET /stac/api/v1/docs` - API documentation
+- `GET /stac/api/v1/catalog/:id` - Get specific catalog
 
 #### Search
 
-- `GET /api/stac/v1/search` - Search STAC items (GET)
-- `POST /api/stac/v1/search` - Search STAC items (POST with complex queries)
+- `GET /stac/api/v1/search` - Search STAC items (GET)
+- `POST /stac/api/v1/search` - Search STAC items (POST with complex queries)
 
 #### Catalogs (Read)
 
-- `GET /api/stac/v1/catalogs` - List all catalogs
-- `GET /api/stac/v1/catalogs/:id` - Get specific catalog
+- `GET /stac/api/v1/catalogs` - List all catalogs
+- `GET /stac/api/v1/catalogs/:id` - Get specific catalog
 
 #### Collections (Read)
 
-- `GET /api/stac/v1/collections` - List all collections
-- `GET /api/stac/v1/collections/:id` - Get specific collection
+- `GET /stac/api/v1/collections` - List all collections
+- `GET /stac/api/v1/collections/:id` - Get specific collection
 
 #### Items (Read)
 
-- `GET /api/stac/v1/items` - List all items
-- `GET /api/stac/v1/items/:id` - Get specific item
+- `GET /stac/api/v1/items` - List all items
+- `GET /stac/api/v1/items/:id` - Get specific item
 
 #### Legacy Collection Endpoints (Backward Compatibility)
 
-- `GET /api/stac/v1/collections/:id/items` - Get items in a collection
-- `GET /api/stac/v1/collections/:collection_id/items/:item_id` - Get specific item in collection
+- `GET /stac/api/v1/collections/:id/items` - Get items in a collection
+- `GET /stac/api/v1/collections/:collection_id/items/:item_id` - Get specific item in collection
 
 ### 2. Protected Write Endpoints (Requires Authentication)
 
@@ -173,32 +173,32 @@ These endpoints require the `X-API-Key` header with a read-write API key.
 
 #### Catalogs (Write)
 
-- `POST /api/stac/v1/catalogs` - Create a new catalog
-- `PUT /api/stac/v1/catalogs/:id` - Full update of a catalog
-- `PATCH /api/stac/v1/catalogs/:id` - Partial update of a catalog
-- `DELETE /api/stac/v1/catalogs/:id` - Delete catalog (cascade delete)
+- `POST /stac/api/v1/catalogs` - Create a new catalog
+- `PUT /stac/api/v1/catalogs/:id` - Full update of a catalog
+- `PATCH /stac/api/v1/catalogs/:id` - Partial update of a catalog
+- `DELETE /stac/api/v1/catalogs/:id` - Delete catalog (cascade delete)
 
 #### Collections (Write)
 
-- `POST /api/stac/v1/collections` - Create a new collection
-- `PUT /api/stac/v1/collections/:id` - Full update of a collection
-- `PATCH /api/stac/v1/collections/:id` - Partial update of a collection
-- `DELETE /api/stac/v1/collections/:id` - Delete collection (cascade delete)
+- `POST /stac/api/v1/collections` - Create a new collection
+- `PUT /stac/api/v1/collections/:id` - Full update of a collection
+- `PATCH /stac/api/v1/collections/:id` - Partial update of a collection
+- `DELETE /stac/api/v1/collections/:id` - Delete collection (cascade delete)
 
 #### Items (Write)
 
-- `POST /api/stac/v1/items` - Create a new item
-- `POST /api/stac/v1/items/import` - Bulk import items
-- `PUT /api/stac/v1/items/:id` - Full update of an item
-- `PATCH /api/stac/v1/items/:id` - Partial update of an item
-- `DELETE /api/stac/v1/items/:id` - Delete an item
+- `POST /stac/api/v1/items` - Create a new item
+- `POST /stac/api/v1/items/import` - Bulk import items
+- `PUT /stac/api/v1/items/:id` - Full update of an item
+- `PATCH /stac/api/v1/items/:id` - Partial update of an item
+- `DELETE /stac/api/v1/items/:id` - Delete an item
 
 ### 3. Web Interface Endpoints
 
-- `GET /web/browse` - HTML directory browser
-- `GET /web/browse/*path` - Browse specific paths
-- `GET /web/search` - HTML search interface
-- `GET /web/search/api` - JSON search API for AJAX calls
+- `GET /stac/web/browse` - HTML directory browser
+- `GET /stac/web/browse/*path` - Browse specific paths
+- `GET /stac/web/search` - HTML search interface
+- `GET /stac/web/search/api` - JSON search API for AJAX calls
 
 ---
 
@@ -539,8 +539,8 @@ Located in `config/dev.exs`:
 ```
 ┌─────────────┐
 │   Client    │
-│  POST /api/ │
-│  stac/v1/   │
+│  POST /stac/│
+│  api/v1/    │
 │  catalogs   │
 │  + Body     │
 └──────┬──────┘
@@ -702,7 +702,7 @@ Located in `config/dev.exs`:
 **Request:**
 
 ```http
-POST /api/stac/v1/catalogs
+POST /stac/api/v1/catalogs
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -742,7 +742,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /api/stac/v1/catalogs
+POST /stac/api/v1/catalogs
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -761,7 +761,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /api/stac/v1/collections
+POST /stac/api/v1/collections
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -788,7 +788,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /api/stac/v1/items
+POST /stac/api/v1/items
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -826,7 +826,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-GET /api/stac/v1/search?bbox=0,0,1,1&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
+GET /stac/api/v1/search?bbox=0,0,1,1&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
 ```
 
 **Response:**
@@ -844,7 +844,7 @@ GET /api/stac/v1/search?bbox=0,0,1,1&datetime=2024-01-01T00:00:00Z/2024-12-31T23
 **Request:**
 
 ```http
-GET /api/stac/v1/search?bbox=0,0,1,1
+GET /stac/api/v1/search?bbox=0,0,1,1
 X-API-Key: dev-read-only-key-2024
 ```
 
@@ -853,7 +853,7 @@ X-API-Key: dev-read-only-key-2024
 **Request:**
 
 ```http
-PATCH /api/stac/v1/catalogs/satellite-imagery
+PATCH /stac/api/v1/catalogs/satellite-imagery
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -868,7 +868,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-DELETE /api/stac/v1/catalogs/satellite-imagery
+DELETE /stac/api/v1/catalogs/satellite-imagery
 X-API-Key: dev-api-key-2024
 ```
 

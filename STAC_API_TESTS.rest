@@ -13,7 +13,7 @@
 ### ========================================
 
 # Get STAC root catalog
-GET http://localhost:4000/
+GET http://localhost:4000/stac/api/v1/
 Accept: application/json
 
 ### ========================================
@@ -21,19 +21,19 @@ Accept: application/json
 ### ========================================
 
 # Get all collections
-GET http://localhost:4000/collections
+GET http://localhost:4000/stac/api/v1/collections
 Accept: application/json
 
 # Get specific collection by ID
-GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin
+GET http://localhost:4000/stac/api/v1/collections/world_clim-wc2_1_30s_tmin
 Accept: application/json
 
 # Get items in a specific collection
-GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin/items
+GET http://localhost:4000/stac/api/v1/collections/world_clim-wc2_1_30s_tmin/items
 Accept: application/geo+json
 
 # Get items in another collection
-GET http://localhost:4000/collections/est-topo-mtr-dem_5m_pzone/items
+GET http://localhost:4000/stac/api/v1/collections/est-topo-mtr-dem_5m_pzone/items
 Accept: application/geo+json
 
 ### ========================================
@@ -41,15 +41,15 @@ Accept: application/geo+json
 ### ========================================
 
 # Basic search (default limit 10)
-GET http://localhost:4000/search
+GET http://localhost:4000/stac/api/v1/search
 Accept: application/geo+json
 
 # Search with custom limit
-GET http://localhost:4000/search?limit=5
+GET http://localhost:4000/stac/api/v1/search?limit=5
 Accept: application/geo+json
 
 # Search with pagination
-GET http://localhost:4000/search?limit=5&offset=10
+GET http://localhost:4000/stac/api/v1/search?limit=5&offset=10
 Accept: application/geo+json
 
 ### ========================================
@@ -57,19 +57,19 @@ Accept: application/geo+json
 ### ========================================
 
 # Search by bounding box (Estonia area)
-GET http://localhost:4000/search?bbox=21,57,28,60
+GET http://localhost:4000/stac/api/v1/search?bbox=21,57,28,60
 Accept: application/geo+json
 
 # Search by bounding box (global area)
-GET http://localhost:4000/search?bbox=0,0,10,10
+GET http://localhost:4000/stac/api/v1/search?bbox=0,0,10,10
 Accept: application/geo+json
 
 # Search by bounding box (Europe area)
-GET http://localhost:4000/search?bbox=-10,35,40,70
+GET http://localhost:4000/stac/api/v1/search?bbox=-10,35,40,70
 Accept: application/geo+json
 
 # Search by bounding box (small area)
-GET http://localhost:4000/search?bbox=24,58,26,60
+GET http://localhost:4000/stac/api/v1/search?bbox=24,58,26,60
 Accept: application/geo+json
 
 ### ========================================
@@ -77,15 +77,15 @@ Accept: application/geo+json
 ### ========================================
 
 # Search by datetime range (2024)
-GET http://localhost:4000/search?datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
+GET http://localhost:4000/stac/api/v1/search?datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
 Accept: application/geo+json
 
 # Search by datetime range (2025)
-GET http://localhost:4000/search?datetime=2025-01-01T00:00:00Z/2025-12-31T23:59:59Z
+GET http://localhost:4000/stac/api/v1/search?datetime=2025-01-01T00:00:00Z/2025-12-31T23:59:59Z
 Accept: application/geo+json
 
 # Search by specific date
-GET http://localhost:4000/search?datetime=2024-02-13T12:00:00Z
+GET http://localhost:4000/stac/api/v1/search?datetime=2024-02-13T12:00:00Z
 Accept: application/geo+json
 
 ### ========================================
@@ -93,19 +93,19 @@ Accept: application/geo+json
 ### ========================================
 
 # Search by single collection
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin
 Accept: application/geo+json
 
 # Search by another collection
-GET http://localhost:4000/search?collections=est-topo-mtr-dem_5m_pzone
+GET http://localhost:4000/stac/api/v1/search?collections=est-topo-mtr-dem_5m_pzone
 Accept: application/geo+json
 
 # Search by multiple collections
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin,est-topo-mtr-dem_5m_pzone
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin,est-topo-mtr-dem_5m_pzone
 Accept: application/geo+json
 
 # Search by collection with limit
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&limit=20
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&limit=20
 Accept: application/geo+json
 
 ### ========================================
@@ -113,23 +113,23 @@ Accept: application/geo+json
 ### ========================================
 
 # Collection + Bounding Box
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90
 Accept: application/geo+json
 
 # Collection + Bounding Box + Limit
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=5
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=5
 Accept: application/geo+json
 
 # Collection + Datetime + Limit
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
 Accept: application/geo+json
 
 # Bounding Box + Datetime
-GET http://localhost:4000/search?bbox=21,57,28,60&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
+GET http://localhost:4000/stac/api/v1/search?bbox=21,57,28,60&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z
 Accept: application/geo+json
 
 # Full combination
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&datetime=2024-01-01T00:00:00Z/2024-12-31T23:59:59Z&limit=10
 Accept: application/geo+json
 
 ### ========================================
@@ -137,15 +137,15 @@ Accept: application/geo+json
 ### ========================================
 
 # Search by intersects with Polygon (Estonia)
-GET http://localhost:4000/search?intersects={"type":"Polygon","coordinates":[[[21,57],[21,60],[28,60],[28,57],[21,57]]]}&limit=5
+GET http://localhost:4000/stac/api/v1/search?intersects={"type":"Polygon","coordinates":[[[21,57],[21,60],[28,60],[28,57],[21,57]]]}&limit=5
 Accept: application/geo+json
 
 # Search by intersects with Point (Tallinn)
-GET http://localhost:4000/search?intersects={"type":"Point","coordinates":[24.7536,59.4370]}&limit=5
+GET http://localhost:4000/stac/api/v1/search?intersects={"type":"Point","coordinates":[24.7536,59.4370]}&limit=5
 Accept: application/geo+json
 
 # Search by intersects with larger area
-GET http://localhost:4000/search?intersects={"type":"Polygon","coordinates":[[[0,0],[0,90],[180,90],[180,0],[0,0]]]}&limit=10
+GET http://localhost:4000/stac/api/v1/search?intersects={"type":"Polygon","coordinates":[[[0,0],[0,90],[180,90],[180,0],[0,0]]]}&limit=10
 Accept: application/geo+json
 
 ### ========================================
@@ -153,11 +153,11 @@ Accept: application/geo+json
 ### ========================================
 
 # Search by specific item ID
-GET http://localhost:4000/search?ids=w2_1_30s_tmin_01_cog.tif
+GET http://localhost:4000/stac/api/v1/search?ids=w2_1_30s_tmin_01_cog.tif
 Accept: application/geo+json
 
 # Search by multiple item IDs
-GET http://localhost:4000/search?ids=w2_1_30s_tmin_01_cog.tif,w2_1_30s_tmin_02_cog.tif
+GET http://localhost:4000/stac/api/v1/search?ids=w2_1_30s_tmin_01_cog.tif,w2_1_30s_tmin_02_cog.tif
 Accept: application/geo+json
 
 ### ========================================
@@ -165,23 +165,23 @@ Accept: application/geo+json
 ### ========================================
 
 # First page
-GET http://localhost:4000/search?limit=5&offset=0
+GET http://localhost:4000/stac/api/v1/search?limit=5&offset=0
 Accept: application/geo+json
 
 # Second page
-GET http://localhost:4000/search?limit=5&offset=5
+GET http://localhost:4000/stac/api/v1/search?limit=5&offset=5
 Accept: application/geo+json
 
 # Third page
-GET http://localhost:4000/search?limit=5&offset=10
+GET http://localhost:4000/stac/api/v1/search?limit=5&offset=10
 Accept: application/geo+json
 
 # Large limit test
-GET http://localhost:4000/search?limit=100
+GET http://localhost:4000/stac/api/v1/search?limit=100
 Accept: application/geo+json
 
 # Maximum limit test
-GET http://localhost:4000/search?limit=1000
+GET http://localhost:4000/stac/api/v1/search?limit=1000
 Accept: application/geo+json
 
 ### ========================================
@@ -189,15 +189,15 @@ Accept: application/geo+json
 ### ========================================
 
 # STAC Browser interface
-GET http://localhost:4000/stac/browse
+GET http://localhost:4000/stac/web/browse
 Accept: text/html
 
 # STAC Search interface
-GET http://localhost:4000/stac/search
+GET http://localhost:4000/stac/web/search
 Accept: text/html
 
 # STAC Browser API search
-GET http://localhost:4000/stac/search/api?limit=5
+GET http://localhost:4000/stac/web/search/api?limit=5
 Accept: application/json
 
 ### ========================================
@@ -205,19 +205,19 @@ Accept: application/json
 ### ========================================
 
 # Invalid collection ID
-GET http://localhost:4000/collections/nonexistent-collection
+GET http://localhost:4000/stac/api/v1/collections/nonexistent-collection
 Accept: application/json
 
 # Invalid search parameters
-GET http://localhost:4000/search?bbox=invalid,bbox,format
+GET http://localhost:4000/stac/api/v1/search?bbox=invalid,bbox,format
 Accept: application/geo+json
 
 # Invalid datetime format
-GET http://localhost:4000/search?datetime=invalid-date
+GET http://localhost:4000/stac/api/v1/search?datetime=invalid-date
 Accept: application/geo+json
 
 # Invalid intersects geometry
-GET http://localhost:4000/search?intersects={"type":"Invalid","coordinates":[]}
+GET http://localhost:4000/stac/api/v1/search?intersects={"type":"Invalid","coordinates":[]}
 Accept: application/geo+json
 
 ### ========================================
@@ -225,11 +225,11 @@ Accept: application/geo+json
 ### ========================================
 
 # Large result set
-GET http://localhost:4000/search?limit=500
+GET http://localhost:4000/stac/api/v1/search?limit=500
 Accept: application/geo+json
 
 # Complex query with large result
-GET http://localhost:4000/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=200
+GET http://localhost:4000/stac/api/v1/search?collections=world_clim-wc2_1_30s_tmin&bbox=0,0,180,90&limit=200
 Accept: application/geo+json
 
 ### ========================================
@@ -237,15 +237,15 @@ Accept: application/geo+json
 ### ========================================
 
 # Check if response includes required STAC fields
-GET http://localhost:4000/search?limit=1
+GET http://localhost:4000/stac/api/v1/search?limit=1
 Accept: application/geo+json
 
 # Check collections response format
-GET http://localhost:4000/collections
+GET http://localhost:4000/stac/api/v1/collections
 Accept: application/json
 
 # Check single collection format
-GET http://localhost:4000/collections/world_clim-wc2_1_30s_tmin
+GET http://localhost:4000/stac/api/v1/collections/world_clim-wc2_1_30s_tmin
 Accept: application/json
 
 ### ========================================
@@ -253,13 +253,13 @@ Accept: application/json
 ### ========================================
 
 # Test with different Accept headers
-GET http://localhost:4000/search?limit=5
+GET http://localhost:4000/stac/api/v1/search?limit=5
 Accept: application/json
 
-GET http://localhost:4000/search?limit=5
+GET http://localhost:4000/stac/api/v1/search?limit=5
 Accept: application/geo+json
 
-GET http://localhost:4000/search?limit=5
+GET http://localhost:4000/stac/api/v1/search?limit=5
 Accept: */*
 
 ### ========================================

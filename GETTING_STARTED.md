@@ -58,12 +58,12 @@ mix phx.server
 
 ## API Endpoints
 
-- `GET /` - Root catalog
-- `GET /search` - Search STAC items
-- `GET /collections` - List all collections
-- `GET /collections/:id` - Get specific collection
-- `GET /collections/:id/items` - Get items in collection
-- `GET /stac/browse` - HTML browser interface
+- `GET /stac/api/v1/` - Root catalog
+- `GET /stac/api/v1/search` - Search STAC items
+- `GET /stac/api/v1/collections` - List all collections
+- `GET /stac/api/v1/collections/:id` - Get specific collection
+- `GET /stac/api/v1/collections/:id/items` - Get items in collection
+- `GET /stac/web/browse` - HTML browser interface
 
 ## STAC Data Structure
 
