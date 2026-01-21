@@ -5,13 +5,13 @@ defmodule StacApiWeb.RootController do
   alias StacApiWeb.LinkResolver
   import Ecto.Query
 
-  def redirect_to_api(conn, _params) do
-    redirect(conn, to: "/stac/api/v1/")
+  def redirect_to_landing(conn, _params) do
+    redirect(conn, to: "/stac/web/")
   end
 
   def index(conn, _params) do
     authenticated = conn.assigns[:authenticated] || false
-    
+
     sub_catalogs_query = if authenticated do
       from c in Catalog,
         where: c.depth == 0 and c.id != "pygeoapi-stac",
@@ -21,7 +21,7 @@ defmodule StacApiWeb.RootController do
         where: c.depth == 0 and c.id != "pygeoapi-stac" and (c.private == false or is_nil(c.private)),
         order_by: [asc: c.id]
     end
-    
+
     sub_catalogs = Repo.all(sub_catalogs_query)
 
     root_collections = Repo.all(from c in Collection,
@@ -88,7 +88,7 @@ defmodule StacApiWeb.RootController do
 
   def catalog(conn, %{"id" => catalog_id}) do
     authenticated = conn.assigns[:authenticated] || false
-    
+
     case Repo.get(Catalog, catalog_id) do
       nil ->
         conn
@@ -111,7 +111,7 @@ defmodule StacApiWeb.RootController do
               where: c.parent_catalog_id == ^catalog_id and (c.private == false or is_nil(c.private)),
               order_by: [asc: c.id]
           end
-          
+
           child_catalogs = Repo.all(child_catalogs_query)
 
           collections_query = if authenticated do
@@ -124,7 +124,7 @@ defmodule StacApiWeb.RootController do
               where: c.catalog_id == ^catalog_id and (is_nil(cat.private) or cat.private != true),
               order_by: [asc: c.id]
           end
-          
+
           collections = Repo.all(collections_query)
 
         catalog_child_links = Enum.map(child_catalogs, fn child ->

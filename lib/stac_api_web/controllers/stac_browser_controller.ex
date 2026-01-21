@@ -5,6 +5,12 @@ defmodule StacApiWeb.StacBrowserController do
 
   @stac_data_path "priv/stac_data"
 
+  def landing(conn, _params) do
+    conn
+    |> put_layout(false)
+    |> render(:landing)
+  end
+
   def index(conn, params) do
     path = get_path_from_params(params)
     conn

@@ -23,7 +23,8 @@ defmodule StacApiWeb.Router do
   # redirect root to stac api
   scope "/", StacApiWeb do
     pipe_through :browser
-    get "/", RootController, :redirect_to_api
+    get "/", RootController, :redirect_to_landing
+    get "/stac", RootController, :redirect_to_landing
   end
 
   # STAC API (REST) endpoints - versioned API structure
@@ -85,6 +86,7 @@ defmodule StacApiWeb.Router do
   # Web/GUI interface endpoints
   scope "/stac/web", StacApiWeb do
     pipe_through :browser
+    get "/", StacBrowserController, :landing
     get "/browse", StacBrowserController, :index
     get "/browse/*path", StacBrowserController, :show
     get "/search", StacBrowserController, :search
