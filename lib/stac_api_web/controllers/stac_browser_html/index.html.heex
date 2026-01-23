@@ -109,7 +109,7 @@
               <%= if Map.has_key?(item, :item_count) do %>
                 <%= item.item_count %> items
               <% else %>
-                <%= if item.datetime do %>
+                <%= if Map.has_key?(item, :datetime) && item.datetime do %>
                   <%= Calendar.strftime(item.datetime, "%Y-%m-%d %H:%M") %>
                 <% end %>
               <% end %>

@@ -1,0 +1,1024 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# STAC API Examples with Req
+
+```elixir
+Mix.install([
+  {:req, "~> 0.5"}
+])
+```
+
+## Setup
+
+Configure your STAC API base URL and API key:
+
+```elixir
+base_url = "http://localhost:4000"
+api_version = "/stac/api/v1"
+
+read_write_api_key = System.get_env("STAC_API_KEY") || "dev-api-key-2024"
+read_only_api_key = System.get_env("STAC_API_KEY_RO") || "dev-read-only-key-2024"
+
+# Create a base Req client
+req = Req.new(base_url: base_url <> api_version)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Req.Request{
+  method: :get,
+  url: URI.parse(""),
+  headers: %{},
+  body: nil,
+  options: %{base_url: "http://localhost:4000/stac/api/v1"},
+  halted: false,
+  adapter: &Req.Steps.run_finch/1,
+  request_steps: [
+    put_user_agent: &Req.Steps.put_user_agent/1,
+    compressed: &Req.Steps.compressed/1,
+    encode_body: &Req.Steps.encode_body/1,
+    put_base_url: &Req.Steps.put_base_url/1,
+    auth: &Req.Steps.auth/1,
+    put_params: &Req.Steps.put_params/1,
+    put_path_params: &Req.Steps.put_path_params/1,
+    put_range: &Req.Steps.put_range/1,
+    cache: &Req.Steps.cache/1,
+    put_plug: &Req.Steps.put_plug/1,
+    compress_body: &Req.Steps.compress_body/1,
+    checksum: &Req.Steps.checksum/1,
+    put_aws_sigv4: &Req.Steps.put_aws_sigv4/1
+  ],
+  response_steps: [
+    retry: &Req.Steps.retry/1,
+    handle_http_errors: &Req.Steps.handle_http_errors/1,
+    redirect: &Req.Steps.redirect/1,
+    http_digest: &Req.Steps.handle_http_digest/1,
+    decompress_body: &Req.Steps.decompress_body/1,
+    verify_checksum: &Req.Steps.verify_checksum/1,
+    decode_body: &Req.Steps.decode_body/1,
+    output: &Req.Steps.output/1
+  ],
+  error_steps: [retry: &Req.Steps.retry/1],
+  private: %{}
+}
+```
+
+```elixir
+read_only_api_key
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"dev-read-only-key-2024"
+```
+
+## Example 1: Exploring Catalogs (No Auth)
+
+Reading catalogs doesn't require authentication. Let's explore what's available:
+
+```elixir
+# Get all catalogs
+{:ok, response} = Req.get(req, url: "/catalogs")
+
+IO.puts("Status: #{response.status}")
+IO.puts("\nCatalogs:")
+IO.inspect(response.body["catalogs"], pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+
+Catalogs:
+[]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[]
+```
+
+```elixir
+# Get a specific catalog by ID
+{:ok, response} = Req.get(req, url: "/catalogs/my-test-catalog")
+
+IO.puts("Catalog Details:")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Catalog Details:
+%{
+  "description" => "A catalog for testing purposes",
+  "extent" => nil,
+  "id" => "my-test-catalog",
+  "links" => [
+    %{
+      "href" => "/stac/api/v1/catalog/my-test-catalog",
+      "rel" => "self",
+      "type" => "application/json"
+    },
+    %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+    %{
+      "href" => "/stac/api/v1/",
+      "rel" => "parent",
+      "type" => "application/json"
+    },
+    %{
+      "href" => "https://creativecommons.org/licenses/by/4.0/",
+      "rel" => "license",
+      "title" => "CC BY 4.0"
+    }
+  ],
+  "stac_version" => "1.0.0",
+  "title" => "My Test Catalog",
+  "type" => "Catalog"
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "description" => "A catalog for testing purposes",
+  "extent" => nil,
+  "id" => "my-test-catalog",
+  "links" => [
+    %{
+      "href" => "/stac/api/v1/catalog/my-test-catalog",
+      "rel" => "self",
+      "type" => "application/json"
+    },
+    %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+    %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
+    %{
+      "href" => "https://creativecommons.org/licenses/by/4.0/",
+      "rel" => "license",
+      "title" => "CC BY 4.0"
+    }
+  ],
+  "stac_version" => "1.0.0",
+  "title" => "My Test Catalog",
+  "type" => "Catalog"
+}
+```
+
+```elixir
+# Get the root API landing page
+{:ok, response} = Req.get(req, url: "/")
+
+IO.puts("Root API:")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Root API:
+%{
+  "conformsTo" => ["https://api.stacspec.org/v1.0.0/core",
+   "https://api.stacspec.org/v1.0.0/item-search"],
+  "description" => "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
+  "id" => "geokuup-stac-api",
+  "links" => [
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/",
+      "rel" => "self",
+      "type" => "application/json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/",
+      "rel" => "root",
+      "type" => "application/json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/openapi.json",
+      "rel" => "service-desc",
+      "title" => "OpenAPI service description",
+      "type" => "application/vnd.oai.openapi+json;version=3.0"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/docs",
+      "rel" => "service-doc",
+      "title" => "OpenAPI service documentation",
+      "type" => "text/html"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/collections",
+      "rel" => "data",
+      "title" => "Collections",
+      "type" => "application/json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/search",
+      "method" => "GET",
+      "rel" => "search",
+      "title" => "STAC search",
+      "type" => "application/geo+json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/search",
+      "method" => "POST",
+      "rel" => "search",
+      "title" => "STAC search",
+      "type" => "application/geo+json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/web/browse",
+      "rel" => "browser",
+      "title" => "Web Browser Interface",
+      "type" => "text/html"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/catalog/my-test-catalog",
+      "rel" => "child",
+      "title" => "My Test Catalog",
+      "type" => "application/json"
+    }
+  ],
+  "stac_extensions" => [],
+  "stac_version" => "1.0.0",
+  "title" => "Geokuup STAC API",
+  "type" => "Catalog"
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "conformsTo" => ["https://api.stacspec.org/v1.0.0/core",
+   "https://api.stacspec.org/v1.0.0/item-search"],
+  "description" => "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
+  "id" => "geokuup-stac-api",
+  "links" => [
+    %{"href" => "http://localhost:4000/stac/api/v1/", "rel" => "self", "type" => "application/json"},
+    %{"href" => "http://localhost:4000/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/openapi.json",
+      "rel" => "service-desc",
+      "title" => "OpenAPI service description",
+      "type" => "application/vnd.oai.openapi+json;version=3.0"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/docs",
+      "rel" => "service-doc",
+      "title" => "OpenAPI service documentation",
+      "type" => "text/html"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/collections",
+      "rel" => "data",
+      "title" => "Collections",
+      "type" => "application/json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/search",
+      "method" => "GET",
+      "rel" => "search",
+      "title" => "STAC search",
+      "type" => "application/geo+json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/search",
+      "method" => "POST",
+      "rel" => "search",
+      "title" => "STAC search",
+      "type" => "application/geo+json"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/web/browse",
+      "rel" => "browser",
+      "title" => "Web Browser Interface",
+      "type" => "text/html"
+    },
+    %{
+      "href" => "http://localhost:4000/stac/api/v1/catalog/my-test-catalog",
+      "rel" => "child",
+      "title" => "My Test Catalog",
+      "type" => "application/json"
+    }
+  ],
+  "stac_extensions" => [],
+  "stac_version" => "1.0.0",
+  "title" => "Geokuup STAC API",
+  "type" => "Catalog"
+}
+```
+
+## Example 2: Creating Resources (With Auth)
+
+Creating, updating, and deleting require authentication via `x-api-key` header:
+
+```elixir
+# Create a base authenticated request client
+rw_auth_req = Req.new(
+  base_url: base_url <> api_version,
+  headers: [{"x-api-key", read_write_api_key}]
+)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Req.Request{
+  method: :get,
+  url: URI.parse(""),
+  headers: %{"x-api-key" => ["dev-api-key-2024"]},
+  body: nil,
+  options: %{base_url: "http://localhost:4000/stac/api/v1"},
+  halted: false,
+  adapter: &Req.Steps.run_finch/1,
+  request_steps: [
+    put_user_agent: &Req.Steps.put_user_agent/1,
+    compressed: &Req.Steps.compressed/1,
+    encode_body: &Req.Steps.encode_body/1,
+    put_base_url: &Req.Steps.put_base_url/1,
+    auth: &Req.Steps.auth/1,
+    put_params: &Req.Steps.put_params/1,
+    put_path_params: &Req.Steps.put_path_params/1,
+    put_range: &Req.Steps.put_range/1,
+    cache: &Req.Steps.cache/1,
+    put_plug: &Req.Steps.put_plug/1,
+    compress_body: &Req.Steps.compress_body/1,
+    checksum: &Req.Steps.checksum/1,
+    put_aws_sigv4: &Req.Steps.put_aws_sigv4/1
+  ],
+  response_steps: [
+    retry: &Req.Steps.retry/1,
+    handle_http_errors: &Req.Steps.handle_http_errors/1,
+    redirect: &Req.Steps.redirect/1,
+    http_digest: &Req.Steps.handle_http_digest/1,
+    decompress_body: &Req.Steps.decompress_body/1,
+    verify_checksum: &Req.Steps.verify_checksum/1,
+    decode_body: &Req.Steps.decode_body/1,
+    output: &Req.Steps.output/1
+  ],
+  error_steps: [retry: &Req.Steps.retry/1],
+  private: %{}
+}
+```
+
+### Create a Root Catalog
+
+```elixir
+catalog_data = %{
+  "id" => "my-test-catalog",
+  "title" => "My Test Catalog",
+  "description" => "A catalog for testing purposes",
+  "type" => "Catalog",
+  "stac_version" => "1.0.0",
+  "links" => [
+    %{
+      "rel" => "license",
+      "href" => "https://creativecommons.org/licenses/by/4.0/",
+      "title" => "CC BY 4.0"
+    }
+  ]
+}
+
+{:ok, response} = Req.post(rw_auth_req, url: "/catalogs", json: catalog_data)
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 409
+%{"error" => "Catalog with ID 'my-test-catalog' already exists"}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{"error" => "Catalog with ID 'my-test-catalog' already exists"}
+```
+
+### Create a Nested Catalog
+
+```elixir
+nested_catalog_data = %{
+  "id" => "my-nested-catalog",
+  "title" => "My Nested Catalog",
+  "description" => "A nested catalog under my-test-catalog",
+  "type" => "Catalog",
+  "stac_version" => "1.0.0",
+  "parent_catalog_id" => "my-test-catalog"
+}
+
+{:ok, response} = Req.post(rw_auth_req, url: "/catalogs", json: nested_catalog_data)
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 201
+%{
+  "data" => %{
+    "description" => "A nested catalog under my-test-catalog",
+    "extent" => nil,
+    "id" => "my-nested-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "parent",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "My Nested Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog created successfully",
+  "success" => true
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "data" => %{
+    "description" => "A nested catalog under my-test-catalog",
+    "extent" => nil,
+    "id" => "my-nested-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "parent",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "My Nested Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog created successfully",
+  "success" => true
+}
+```
+
+### Create a Collection
+
+```elixir
+collection_data = %{
+  "id" => "my-test-collection",
+  "title" => "My Test Collection",
+  "description" => "A collection for testing",
+  "license" => "CC-BY-4.0",
+  "catalog_id" => "my-test-catalog",
+  "stac_version" => "1.0.0",
+  "extent" => %{
+    "spatial" => %{
+      "bbox" => [[-180, -90, 180, 90]]
+    },
+    "temporal" => %{
+      "interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]
+    }
+  }
+}
+
+{:ok, response} = Req.post(rw_auth_req, url: "/collections", json: collection_data)
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 201
+%{
+  "data" => %{
+    "description" => "A collection for testing",
+    "extent" => %{
+      "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
+      "temporal" => %{
+        "interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]
+      }
+    },
+    "id" => "my-test-collection",
+    "license" => "CC-BY-4.0",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/collections/my-test-collection",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/collections/my-test-collection/items",
+        "rel" => "items",
+        "type" => "application/geo+json"
+      },
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "parent",
+        "type" => "application/json"
+      }
+    ],
+    "properties" => %{},
+    "stac_extensions" => [],
+    "stac_version" => "1.0.0",
+    "summaries" => nil,
+    "title" => "My Test Collection",
+    "type" => "Collection"
+  },
+  "message" => "Collection created successfully",
+  "success" => true
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "data" => %{
+    "description" => "A collection for testing",
+    "extent" => %{
+      "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
+      "temporal" => %{"interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
+    },
+    "id" => "my-test-collection",
+    "license" => "CC-BY-4.0",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/collections/my-test-collection",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+      %{
+        "href" => "/stac/api/v1/collections/my-test-collection/items",
+        "rel" => "items",
+        "type" => "application/geo+json"
+      },
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "parent",
+        "type" => "application/json"
+      }
+    ],
+    "properties" => %{},
+    "stac_extensions" => [],
+    "stac_version" => "1.0.0",
+    "summaries" => nil,
+    "title" => "My Test Collection",
+    "type" => "Collection"
+  },
+  "message" => "Collection created successfully",
+  "success" => true
+}
+```
+
+## Example 3: Updating Resources (With Auth)
+
+### Full Update (PUT)
+
+```elixir
+updated_catalog_data = %{
+  "id" => "my-test-catalog",
+  "title" => "My Updated Test Catalog",
+  "description" => "This catalog has been updated with new information",
+  "type" => "Catalog",
+  "stac_version" => "1.0.0"
+}
+
+{:ok, response} = Req.put(rw_auth_req, 
+  url: "/catalogs/my-test-catalog", 
+  json: updated_catalog_data
+)
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+%{
+  "data" => %{
+    "description" => "This catalog has been updated with new information",
+    "extent" => nil,
+    "id" => "my-test-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "parent",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "child",
+        "title" => "My Nested Catalog",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "My Updated Test Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog replaced successfully",
+  "success" => true
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "data" => %{
+    "description" => "This catalog has been updated with new information",
+    "extent" => nil,
+    "id" => "my-test-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+      %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "child",
+        "title" => "My Nested Catalog",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "My Updated Test Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog replaced successfully",
+  "success" => true
+}
+```
+
+### Partial Update (PATCH)
+
+```elixir
+# Only update the title, keep everything else
+patch_data = %{
+  "id" => "my-test-catalog",
+  "title" => "Partially Updated Catalog"
+}
+
+{:ok, response} = Req.patch(rw_auth_req, 
+  url: "/catalogs/my-test-catalog", 
+  json: patch_data
+)
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+%{
+  "data" => %{
+    "description" => "This catalog has been updated with new information",
+    "extent" => nil,
+    "id" => "my-test-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/",
+        "rel" => "parent",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "child",
+        "title" => "My Nested Catalog",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "Partially Updated Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog updated successfully",
+  "success" => true
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "data" => %{
+    "description" => "This catalog has been updated with new information",
+    "extent" => nil,
+    "id" => "my-test-catalog",
+    "links" => [
+      %{
+        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
+      %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
+      %{
+        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "rel" => "child",
+        "title" => "My Nested Catalog",
+        "type" => "application/json"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "Partially Updated Catalog",
+    "type" => "Catalog"
+  },
+  "message" => "Catalog updated successfully",
+  "success" => true
+}
+```
+
+## Example 4: Deleting Resources (With Auth)
+
+⚠️ **Warning**: Deleting a catalog will CASCADE delete all its children (nested catalogs, collections, and items)!
+
+### Delete a Specific Catalog
+
+```elixir
+# Delete the nested catalog first (safer)
+{:ok, response} = Req.delete(rw_auth_req, url: "/catalogs/my-nested-catalog")
+
+IO.puts("Status: #{response.status}")
+IO.inspect(response.body, pretty: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+%{
+  "cascade_deleted" => %{"catalogs" => 0, "collections" => 0, "items" => 0},
+  "message" => "Catalog deleted successfully",
+  "success" => true
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "cascade_deleted" => %{"catalogs" => 0, "collections" => 0, "items" => 0},
+  "message" => "Catalog deleted successfully",
+  "success" => true
+}
+```
+
+### Delete with Cascade
+
+```elixir
+# This will delete the catalog AND all its children
+{:ok, response} = Req.delete(auth_req, url: "/catalogs/my-test-catalog")
+
+IO.puts("Status: #{response.status}")
+IO.puts("\nCascade Delete Summary:")
+IO.inspect(response.body["cascade_deleted"], pretty: true)
+```
+
+## Complete Workflow Example
+
+Here's a complete example showing the full lifecycle:
+
+```elixir
+# 1. Create a demo hierarchy
+IO.puts("1. Creating demo catalog...")
+demo_catalog = %{
+  "id" => "demo-catalog-#{:rand.uniform(10000)}",
+  "title" => "Demo Catalog",
+  "description" => "Temporary demo catalog"
+}
+
+{:ok, catalog_response} = Req.post(auth_req, url: "/catalogs", json: demo_catalog)
+catalog_id = catalog_response.body["data"]["id"]
+IO.puts("   Created catalog: #{catalog_id}")
+
+# 2. Create a collection under it
+IO.puts("\n2. Creating demo collection...")
+demo_collection = %{
+  "id" => "demo-collection-#{:rand.uniform(10000)}",
+  "title" => "Demo Collection",
+  "description" => "Collection under demo catalog",
+  "license" => "CC-BY-4.0",
+  "catalog_id" => catalog_id,
+  "extent" => %{
+    "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
+    "temporal" => %{"interval" => [["2024-01-01T00:00:00Z", nil]]}
+  }
+}
+
+{:ok, collection_response} = Req.post(auth_req, url: "/collections", json: demo_collection)
+collection_id = collection_response.body["data"]["id"]
+IO.puts("   Created collection: #{collection_id}")
+
+# 3. Verify everything exists (no auth needed)
+IO.puts("\n3. Verifying resources...")
+{:ok, verify_response} = Req.get(req, url: "/catalogs/#{catalog_id}")
+IO.puts("   Catalog exists: #{verify_response.body["id"]}")
+
+{:ok, collection_verify} = Req.get(req, url: "/collections/#{collection_id}")
+IO.puts("   Collection exists: #{collection_verify.body["id"]}")
+
+# 4. Update the catalog
+IO.puts("\n4. Updating catalog title...")
+{:ok, update_response} = Req.patch(auth_req, 
+  url: "/catalogs/#{catalog_id}",
+  json: %{"id" => catalog_id, "title" => "Updated Demo Catalog"}
+)
+IO.puts("   New title: #{update_response.body["data"]["title"]}")
+
+# 5. Clean up - cascade delete everything
+IO.puts("\n5. Cleaning up (cascade delete)...")
+{:ok, delete_response} = Req.delete(auth_req, url: "/catalogs/#{catalog_id}")
+IO.puts("   Deleted successfully!")
+IO.puts("   Cascade summary:")
+IO.inspect(delete_response.body["cascade_deleted"], pretty: true)
+
+# 6. Verify deletion
+IO.puts("\n6. Verifying deletion...")
+case Req.get(req, url: "/catalogs/#{catalog_id}") do
+  {:ok, %{status: 404}} -> IO.puts("   ✓ Catalog successfully deleted")
+  {:ok, _} -> IO.puts("   ✗ Catalog still exists!")
+end
+```
+
+## Error Handling Examples
+
+```elixir
+# Try to create a catalog without authentication (should fail)
+no_auth_req = Req.new(base_url: base_url <> api_version)
+
+case Req.post(no_auth_req, url: "/catalogs", json: %{"id" => "test"}) do
+  {:ok, %{status: 401} = response} -> 
+    IO.puts("Expected 401 Unauthorized:")
+    IO.inspect(response.body)
+  {:ok, %{status: 403} = response} -> 
+    IO.puts("Expected 403 Forbidden:")
+    IO.inspect(response.body)
+  other -> 
+    IO.puts("Unexpected response:")
+    IO.inspect(other)
+end
+```
+
+```elixir
+# Try to get a non-existent catalog
+case Req.get(req, url: "/catalogs/definitely-does-not-exist") do
+  {:ok, %{status: 404} = response} -> 
+    IO.puts("Expected 404 Not Found:")
+    IO.inspect(response.body)
+  other -> 
+    IO.puts("Unexpected response:")
+    IO.inspect(other)
+end
+```
+
+```elixir
+# Try to create a catalog with missing required fields
+invalid_catalog = %{
+  "title" => "No ID Catalog",
+  "description" => "This is missing the required 'id' field"
+}
+
+case Req.post(auth_req, url: "/catalogs", json: invalid_catalog) do
+  {:ok, %{status: 400} = response} -> 
+    IO.puts("Expected 400 Bad Request:")
+    IO.inspect(response.body)
+  other -> 
+    IO.puts("Unexpected response:")
+    IO.inspect(other)
+end
+```
+
+## Helper Functions
+
+Here are some reusable helper functions for your STAC API interactions:
+
+```elixir
+defmodule STACHelpers do
+  @doc "List all catalogs"
+  def list_catalogs(req) do
+    case Req.get(req, url: "/catalogs") do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["catalogs"]}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Get a specific catalog"
+  def get_catalog(req, id) do
+    case Req.get(req, url: "/catalogs/#{id}") do
+      {:ok, %{status: 200, body: body}} -> {:ok, body}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Create a catalog with authentication"
+  def create_catalog(auth_req, catalog_data) do
+    case Req.post(auth_req, url: "/catalogs", json: catalog_data) do
+      {:ok, %{status: 201, body: body}} -> {:ok, body["data"]}
+      {:ok, %{status: 409}} -> {:error, :already_exists}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Update a catalog (full replacement)"
+  def update_catalog(auth_req, id, catalog_data) do
+    case Req.put(auth_req, url: "/catalogs/#{id}", json: catalog_data) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["data"]}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Delete a catalog (cascade)"
+  def delete_catalog(auth_req, id) do
+    case Req.delete(auth_req, url: "/catalogs/#{id}") do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["cascade_deleted"]}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+end
+```
+
+```elixir
+# Use the helper functions
+{:ok, catalogs} = STACHelpers.list_catalogs(req)
+IO.puts("Found #{length(catalogs)} catalogs")
+
+# Create a catalog using helper
+new_catalog = %{
+  "id" => "helper-test-#{:rand.uniform(10000)}",
+  "title" => "Created via Helper",
+  "description" => "Test catalog"
+}
+
+case STACHelpers.create_catalog(auth_req, new_catalog) do
+  {:ok, catalog} -> IO.puts("Created: #{catalog["id"]}")
+  {:error, reason} -> IO.puts("Error: #{inspect(reason)}")
+end
+```
