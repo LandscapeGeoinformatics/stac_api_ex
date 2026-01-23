@@ -64,7 +64,8 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    check_origin: ["https://metadata.geokuup.ee"]
   # config/runtime.exs
 
 config :stac_api, stac_data_path: System.get_env("STAC_DATA_PATH", "priv/stac_data")
@@ -78,13 +79,13 @@ if config_env() == :prod do
   api_keys = (fn ->
     read_write_key = System.get_env("STAC_API_KEY") || "prod-api-key-2024"
     read_only_key = System.get_env("STAC_API_KEY_RO") || "prod-read-only-key-2024"
-    
+
     %{
       read_write: [read_write_key],
       read_only: [read_only_key]
     }
   end).()
-  
+
   config :stac_api, :api_keys, api_keys
 end
 
