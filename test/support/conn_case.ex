@@ -19,19 +19,39 @@ defmodule StacApiWeb.ConnCase do
 
   using do
     quote do
-      # The default endpoint for testing
       @endpoint StacApiWeb.Endpoint
 
       use StacApiWeb, :verified_routes
 
-      # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
       import StacApiWeb.ConnCase
+
+      alias StacApi.Repo
     end
   end
 
-  setup _tags do
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+  setup tags do
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(StacApi.Repo, shared: not tags[:async])
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    
+    conn = Phoenix.ConnTest.build_conn()
+    {:ok, conn: conn}
+  end
+
+  @doc """
+  Setup helper that adds authentication headers to the connection.
+  """
+  def authenticated_conn(conn) do
+    api_key = Application.get_env(:stac_api, :api_keys)[:read_write] |> List.first()
+    Plug.Conn.put_req_header(conn, "x-api-key", api_key)
+  end
+
+  @doc """
+  Setup helper that adds read-only authentication headers to the connection.
+  """
+  def read_only_conn(conn) do
+    api_key = Application.get_env(:stac_api, :api_keys)[:read_only] |> List.first()
+    Plug.Conn.put_req_header(conn, "x-api-key", api_key)
   end
 end

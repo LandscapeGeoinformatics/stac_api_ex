@@ -760,22 +760,30 @@ defmodule StacApiWeb.ItemsCrudController do
   defp parse_box2d(_), do: nil
 
   defp build_temporal_interval(min_dt, max_dt) when not is_nil(min_dt) and not is_nil(max_dt) do
-    min_str = DateTime.to_iso8601(min_dt)
-    max_str = DateTime.to_iso8601(max_dt)
+    min_str = to_iso8601_safe(min_dt)
+    max_str = to_iso8601_safe(max_dt)
     [[min_str, max_str]]
   end
 
   defp build_temporal_interval(min_dt, _) when not is_nil(min_dt) do
-    min_str = DateTime.to_iso8601(min_dt)
+    min_str = to_iso8601_safe(min_dt)
     [[min_str, nil]]
   end
 
   defp build_temporal_interval(_, max_dt) when not is_nil(max_dt) do
-    max_str = DateTime.to_iso8601(max_dt)
+    max_str = to_iso8601_safe(max_dt)
     [[nil, max_str]]
   end
 
   defp build_temporal_interval(_, _), do: nil
+
+  defp to_iso8601_safe(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  defp to_iso8601_safe(%NaiveDateTime{} = ndt) do
+    ndt
+    |> DateTime.from_naive!("Etc/UTC")
+    |> DateTime.to_iso8601()
+  end
+  defp to_iso8601_safe(_), do: nil
 
   defp build_extent(nil, nil), do: nil
   defp build_extent(bbox_coords, nil) when is_list(bbox_coords) do

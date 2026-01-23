@@ -192,6 +192,7 @@ defmodule StacApiWeb.CollectionsController do
  # data sanitization
   defp sanitize_collection(collection) do
     %{
+      type: "Collection",
       id: collection.id || "",
       title: collection.title || "",
       description: collection.description || "",
