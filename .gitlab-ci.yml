@@ -17,6 +17,7 @@ unit-test-job: # This job runs in the test stage.
   environment: staging
   variables:
     MIX_ENV: test
+    DATABASE_URL: ${TEST_DATABASE_URL}
   script:
     - echo "Running unit tests."
     - mix deps.get && mix test
