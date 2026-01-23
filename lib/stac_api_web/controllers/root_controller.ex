@@ -44,8 +44,8 @@ defmodule StacApiWeb.RootController do
     # STAC Core compliant landing page
     json(conn, %{
       stac_version: "1.0.0",
-      id: "aoraki-stac-api",
-      title: "Aoraki STAC API",
+      id: "geokuup-stac-api",
+      title: "Geokuup STAC API",
       description: "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
       type: "Catalog",
       conformsTo: [
@@ -181,11 +181,11 @@ defmodule StacApiWeb.RootController do
     openapi_spec = %{
       openapi: "3.0.3",
       info: %{
-        title: "Aoraki STAC API",
+        title: "Geokuup STAC API",
         description: "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
         version: "1.0.0",
         contact: %{
-          name: "Aoraki Portal Team"
+          name: "Landscape Geoinformatics Lab"
         }
       },
       servers: [
@@ -344,7 +344,7 @@ defmodule StacApiWeb.RootController do
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Aoraki STAC API Documentation</title>
+        <title>Geokuup STAC API Documentation</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
@@ -357,7 +357,7 @@ defmodule StacApiWeb.RootController do
     </head>
     <body>
         <div class="header">
-            <h1>Aoraki STAC API Documentation</h1>
+            <h1>Geokuup STAC API Documentation</h1>
             <p>SpatioTemporal Asset Catalog API for geospatial data discovery and access</p>
         </div>
 

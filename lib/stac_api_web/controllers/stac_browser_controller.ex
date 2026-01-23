@@ -1,40 +1,77 @@
 defmodule StacApiWeb.StacBrowserController do
   use StacApiWeb, :controller
   require Logger
-  alias StacApi.Data.Search
-
-  @stac_data_path "priv/stac_data"
+  alias StacApi.Repo
+  alias StacApi.Data.{Catalog, Collection, Item, Search}
+  import Ecto.Query
 
   def landing(conn, _params) do
-    conn
-    |> put_layout(false)
-    |> render(:landing)
+    render(conn, :landing)
   end
 
-  def index(conn, params) do
-    path = get_path_from_params(params)
+  def index(conn, _params) do
+    catalogs = Repo.all(from c in Catalog, where: c.depth == 0, order_by: [asc: c.id])
+    
+    root_collections = Repo.all(
+      from c in Collection,
+      where: is_nil(c.catalog_id),
+      order_by: [asc: c.id]
+    )
+    
+    items = catalogs
+    |> Enum.map(fn catalog ->
+      %{
+        id: catalog.id,
+        title: catalog.title || catalog.id,
+        description: catalog.description,
+        type: "Catalog",
+        path: "catalog/#{catalog.id}",
+        is_directory: true
+      }
+    end)
+    
+    collection_items = root_collections
+    |> Enum.map(fn collection ->
+      item_count = Repo.aggregate(
+        from(i in Item, where: i.collection_id == ^collection.id),
+        :count,
+        :id
+      )
+      
+      %{
+        id: collection.id,
+        title: collection.title || collection.id,
+        description: collection.description,
+        type: "Collection",
+        path: "collection/#{collection.id}",
+        is_directory: true,
+        item_count: item_count
+      }
+    end)
+    
+    all_items = items ++ collection_items
+    
     conn
-    |> put_layout(false)
-    |> browse_directory(path)
+    |> assign(:items, all_items)
+    |> assign(:current_path, "")
+    |> assign(:breadcrumbs, [%{name: "Home", path: ""}])
+    |> assign(:collection_path, nil)
+    |> assign(:current_type, :root)
+    |> assign(:current_entity, nil)
+    |> render(:index)
   end
 
-  def show(conn, %{"path" => path_segments} = _params) when is_list(path_segments) do
+  def show(conn, %{"path" => path_segments}) when is_list(path_segments) do
     path = Enum.join(path_segments, "/")
-    conn
-    |> put_layout(false)
-    |> browse_directory(path)
+    browse_path(conn, path)
   end
 
-  def show(conn, %{"path" => path} = _params) when is_binary(path) do
-    conn
-    |> put_layout(false)
-    |> browse_directory(path)
+  def show(conn, %{"path" => path}) when is_binary(path) do
+    browse_path(conn, path)
   end
 
   def show(conn, _params) do
-    conn
-    |> put_layout(false)
-    |> browse_directory("")
+    redirect(conn, to: ~p"/stac/web/browse")
   end
 
   def search(conn, params) do
@@ -42,21 +79,17 @@ defmodule StacApiWeb.StacBrowserController do
 
     case search_params do
       %{} when map_size(search_params) == 0 ->
-        # No search parameters, show search form
         conn
-        |> put_layout(false)
         |> assign(:search_results, [])
         |> assign(:search_params, %{})
         |> assign(:total_count, 0)
         |> render(:search)
 
       _ ->
-        # Perform search
         items = Search.search(search_params)
         total_count = Search.count_search_results(search_params)
 
         conn
-        |> put_layout(false)
         |> assign(:search_results, items)
         |> assign(:search_params, search_params)
         |> assign(:total_count, total_count)
@@ -87,140 +120,263 @@ defmodule StacApiWeb.StacBrowserController do
     |> json(response)
   end
 
-  defp get_path_from_params(params) do
-    case params do
-      %{"path" => path_segments} when is_list(path_segments) ->
-        Enum.join(path_segments, "/")
-      %{"path" => path} when is_binary(path) ->
-        path
-      _ ->
-        ""
+  defp browse_path(conn, path) do
+    case parse_path(path) do
+      {:catalog, catalog_id} ->
+        show_catalog(conn, catalog_id, path)
+      
+      {:collection, collection_id} ->
+        show_collection(conn, collection_id, path)
+      
+      {:item, collection_id, item_id} ->
+        show_item(conn, collection_id, item_id, path)
+      
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Invalid path")
+        |> redirect(to: ~p"/stac/web/browse")
     end
   end
 
-  defp browse_directory(conn, relative_path) do
-    full_path = Path.join(@stac_data_path, relative_path)
-
-    case File.exists?(full_path) and File.dir?(full_path) do
-      true ->
-        case File.ls(full_path) do
-          {:ok, entries} ->
-            items = build_directory_items(full_path, entries, relative_path)
-            breadcrumbs = build_breadcrumbs(relative_path)
-
-            conn
-            |> assign(:items, items)
-            |> assign(:current_path, relative_path)
-            |> assign(:breadcrumbs, breadcrumbs)
-            |> assign(:collection_path, get_collection_path(relative_path))
-            |> render(:index)
-
-          {:error, reason} ->
-            Logger.error("Failed to read directory #{full_path}: #{reason}")
-            conn
-            |> put_flash(:error, "Unable to read directory")
-            |> redirect(to: ~p"/stac/web/browse")
-        end
-
-      false ->
-        if File.exists?(full_path) and not File.dir?(full_path) do
-          serve_file(conn, full_path, relative_path)
-        else
-          conn
-          |> put_flash(:error, "Directory not found")
-          |> redirect(to: ~p"/stac/browse")
-        end
-    end
-  end
-
-  defp build_directory_items(full_path, entries, current_path) do
-    entries
-    |> Enum.map(fn entry ->
-      entry_path = Path.join(full_path, entry)
-      relative_entry_path = if current_path == "", do: entry, else: Path.join(current_path, entry)
-
-      stat = File.stat!(entry_path)
-
-      %{
-        name: entry,
-        type: get_item_type(entry_path, entry),
-        path: relative_entry_path,
-        size: format_size(stat.size),
-        modified: format_date(stat.mtime),
-        is_directory: File.dir?(entry_path)
-      }
-    end)
-    |> Enum.sort_by(&{!&1.is_directory, &1.name})
-  end
-
-  defp get_item_type(path, name) do
-    cond do
-      File.dir?(path) -> "Collection"
-      String.ends_with?(name, ".json") -> "Item"
-      String.ends_with?(name, ".tif") or String.ends_with?(name, ".tiff") -> "Asset"
-      true -> "File"
-    end
-  end
-
-  defp format_size(size) when size < 1024, do: "#{size} B"
-  defp format_size(size) when size < 1024 * 1024, do: "#{Float.round(size / 1024, 1)} KB"
-  defp format_size(size) when size < 1024 * 1024 * 1024, do: "#{Float.round(size / (1024 * 1024), 1)} MB"
-  defp format_size(size), do: "#{Float.round(size / (1024 * 1024 * 1024), 1)} GB"
-
-  defp format_date({{year, month, day}, {hour, minute, second}}) do
-    "#{year}-#{pad_zero(month)}-#{pad_zero(day)} #{pad_zero(hour)}:#{pad_zero(minute)}:#{pad_zero(second)}"
-  end
-
-  defp pad_zero(num) when num < 10, do: "0#{num}"
-  defp pad_zero(num), do: "#{num}"
-
-  defp build_breadcrumbs(""), do: [%{name: "Home", path: ""}]
-  defp build_breadcrumbs(path) do
-    parts = String.split(path, "/", trim: true)
-
-    [%{name: "Home", path: ""}] ++
-      (parts
-       |> Enum.with_index()
-       |> Enum.map(fn {part, index} ->
-         breadcrumb_path = parts |> Enum.take(index + 1) |> Enum.join("/")
-         %{name: part, path: breadcrumb_path}
-       end))
-  end
-
-  defp get_collection_path(path) do
+  defp parse_path(path) do
     case String.split(path, "/", trim: true) do
-      [] -> nil
-      [collection] -> collection
-      [collection | _] -> collection
+      ["catalog", catalog_id] ->
+        {:catalog, catalog_id}
+      
+      ["catalog", catalog_id, "collection", collection_id] ->
+        {:collection, collection_id}
+      
+      ["collection", collection_id] ->
+        {:collection, collection_id}
+      
+      ["catalog", _catalog_id, "collection", collection_id, "item", item_id] ->
+        {:item, collection_id, item_id}
+      
+      ["collection", collection_id, "item", item_id] ->
+        {:item, collection_id, item_id}
+      
+      _ ->
+        {:error, :invalid_path}
     end
   end
 
-  defp serve_file(conn, file_path, relative_path) do
-    case File.read(file_path) do
-      {:ok, content} ->
-        content_type = get_content_type(file_path)
-
+  defp show_catalog(conn, catalog_id, path) do
+    case Repo.get(Catalog, catalog_id) do
+      nil ->
         conn
-        |> put_resp_content_type(content_type)
-        |> put_resp_header("content-disposition", "inline; filename=\"#{Path.basename(file_path)}\"")
-        |> send_resp(200, content)
-
-      {:error, reason} ->
-        Logger.error("Failed to read file #{file_path}: #{reason}")
+        |> put_flash(:error, "Catalog not found")
+        |> redirect(to: ~p"/stac/web/browse")
+      
+      catalog ->
+        child_catalogs = Repo.all(
+          from c in Catalog,
+          where: c.parent_catalog_id == ^catalog_id,
+          order_by: [asc: c.id]
+        )
+        
+        collections = Repo.all(
+          from c in Collection,
+          where: c.catalog_id == ^catalog_id,
+          order_by: [asc: c.id]
+        )
+        
+        catalog_items = child_catalogs
+        |> Enum.map(fn child_catalog ->
+          %{
+            id: child_catalog.id,
+            title: child_catalog.title || child_catalog.id,
+            description: child_catalog.description,
+            type: "Catalog",
+            path: "#{path}/catalog/#{child_catalog.id}",
+            is_directory: true
+          }
+        end)
+        
+        collection_items = collections
+        |> Enum.map(fn collection ->
+          item_count = Repo.aggregate(
+            from(i in Item, where: i.collection_id == ^collection.id),
+            :count,
+            :id
+          )
+          
+          %{
+            id: collection.id,
+            title: collection.title || collection.id,
+            description: collection.description,
+            type: "Collection",
+            path: "#{path}/collection/#{collection.id}",
+            is_directory: true,
+            item_count: item_count
+          }
+        end)
+        
+        all_items = catalog_items ++ collection_items
+        breadcrumbs = build_breadcrumbs_from_catalog(catalog)
+        
         conn
-        |> put_status(404)
-        |> json(%{error: "File not found"})
+        |> assign(:items, all_items)
+        |> assign(:current_path, path)
+        |> assign(:breadcrumbs, breadcrumbs)
+        |> assign(:collection_path, nil)
+        |> assign(:current_type, :catalog)
+        |> assign(:current_entity, catalog)
+        |> render(:index)
     end
   end
 
-  defp get_content_type(file_path) do
-    case Path.extname(file_path) do
-      ".json" -> "application/json"
-      ".tif" -> "image/tiff"
-      ".tiff" -> "image/tiff"
-      ".geojson" -> "application/geo+json"
-      _ -> "application/octet-stream"
+  defp show_collection(conn, collection_id, path) do
+    case Repo.get(Collection, collection_id) do
+      nil ->
+        conn
+        |> put_flash(:error, "Collection not found")
+        |> redirect(to: ~p"/stac/web/browse")
+      
+      collection ->
+        items_query = from i in Item,
+          where: i.collection_id == ^collection_id,
+          order_by: [desc: i.datetime],
+          limit: 100
+        
+        items = Repo.all(items_query)
+        
+        item_entries = items
+        |> Enum.map(fn item ->
+          %{
+            id: item.id,
+            title: get_in(item.properties, ["title"]) || item.id,
+            description: get_in(item.properties, ["description"]),
+            type: "Item",
+            path: "#{path}/item/#{item.id}",
+            is_directory: false,
+            datetime: item.datetime,
+            properties: item.properties
+          }
+        end)
+        
+        breadcrumbs = build_breadcrumbs_from_collection(collection)
+        
+        conn
+        |> assign(:items, item_entries)
+        |> assign(:current_path, path)
+        |> assign(:breadcrumbs, breadcrumbs)
+        |> assign(:collection_path, collection_id)
+        |> assign(:current_type, :collection)
+        |> assign(:current_entity, collection)
+        |> render(:index)
     end
+  end
+
+  defp show_item(conn, collection_id, item_id, path) do
+    case Repo.get(Item, item_id) do
+      nil ->
+        conn
+        |> put_flash(:error, "Item not found")
+        |> redirect(to: ~p"/stac/web/browse")
+      
+      item ->
+        if item.collection_id != collection_id do
+          conn
+          |> put_flash(:error, "Item not found in this collection")
+          |> redirect(to: ~p"/stac/web/browse")
+        else
+          collection = Repo.get(Collection, collection_id)
+          
+          assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+          
+          item_data = %{
+            type: "Feature",
+            stac_version: item.stac_version || "1.0.0",
+            stac_extensions: item.stac_extensions || [],
+            id: item.id,
+            geometry: item.geometry,
+            bbox: item.bbox,
+            properties: item.properties || %{},
+            assets: assets,
+            collection: item.collection_id
+          }
+          
+          breadcrumbs = build_breadcrumbs_from_item(item, collection)
+          
+          conn
+          |> assign(:item, item_data)
+          |> assign(:current_path, path)
+          |> assign(:breadcrumbs, breadcrumbs)
+          |> assign(:collection_path, collection_id)
+          |> assign(:current_type, :item)
+          |> assign(:current_entity, item)
+          |> render(:item)
+        end
+    end
+  end
+
+  defp build_breadcrumbs_from_catalog(catalog) do
+    breadcrumbs = [%{name: "Home", path: ""}]
+    
+    if catalog.parent_catalog_id do
+      case Repo.get(Catalog, catalog.parent_catalog_id) do
+        nil -> breadcrumbs
+        parent ->
+          breadcrumbs ++ [
+            %{name: parent.title || parent.id, path: "catalog/#{parent.id}"},
+            %{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}
+          ]
+      end
+    else
+      breadcrumbs ++ [%{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}]
+    end
+  end
+
+  defp build_breadcrumbs_from_collection(collection) do
+    breadcrumbs = [%{name: "Home", path: ""}]
+    
+    if collection.catalog_id do
+      case Repo.get(Catalog, collection.catalog_id) do
+        nil -> 
+          breadcrumbs ++ [%{name: collection.title || collection.id, path: "collection/#{collection.id}"}]
+        
+        catalog ->
+          catalog_breadcrumbs = if catalog.parent_catalog_id do
+            case Repo.get(Catalog, catalog.parent_catalog_id) do
+              nil -> []
+              parent -> [%{name: parent.title || parent.id, path: "catalog/#{parent.id}"}]
+            end
+          else
+            []
+          end
+          
+          breadcrumbs ++ 
+          catalog_breadcrumbs ++ 
+          [
+            %{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"},
+            %{name: collection.title || collection.id, path: "catalog/#{catalog.id}/collection/#{collection.id}"}
+          ]
+      end
+    else
+      breadcrumbs ++ [%{name: collection.title || collection.id, path: "collection/#{collection.id}"}]
+    end
+  end
+
+  defp build_breadcrumbs_from_item(item, collection) do
+    collection_breadcrumbs = build_breadcrumbs_from_collection(collection)
+    item_title = get_in(item.properties, ["title"]) || item.id
+    
+    if collection.catalog_id do
+      collection_path = "catalog/#{collection.catalog_id}/collection/#{collection.id}"
+      collection_breadcrumbs ++ [%{name: item_title, path: "#{collection_path}/item/#{item.id}"}]
+    else
+      collection_path = "collection/#{collection.id}"
+      collection_breadcrumbs ++ [%{name: item_title, path: "#{collection_path}/item/#{item.id}"}]
+    end
+  end
+
+  defp reconstruct_item_assets(item_id, stac_extensions) do
+    assets = Repo.all(from a in StacApi.Data.ItemAsset, where: a.item_id == ^item_id)
+    
+    Enum.reduce(assets, %{}, fn asset, acc ->
+      asset_data = StacApi.Data.ItemAsset.to_stac_asset(asset, stac_extensions)
+      Map.put(acc, asset.asset_key, asset_data)
+    end)
   end
 
   defp normalize_search_params(params) do

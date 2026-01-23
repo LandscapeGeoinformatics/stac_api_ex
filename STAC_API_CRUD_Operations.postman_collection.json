@@ -17,7 +17,7 @@
     },
     {
       "key": "api_version",
-      "value": "/api/stac/v1",
+      "value": "/stac/api/v1",
       "type": "string"
     }
   ],
@@ -704,7 +704,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"stac_version\": \"1.0.0\",\n  \"id\": \"aoraki-stac-api\",\n  \"title\": \"Aoraki STAC API\",\n  \"description\": \"SpatioTemporal Asset Catalog API for geospatial data discovery and access\",\n  \"type\": \"Catalog\",\n  \"conformsTo\": [\n    \"https://api.stacspec.org/v1.0.0/core\",\n    \"https://api.stacspec.org/v1.0.0/item-search\"\n  ],\n  \"links\": [\n    {\n      \"rel\": \"self\",\n      \"href\": \"/api/stac/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"root\",\n      \"href\": \"/api/stac/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"child\",\n      \"href\": \"/api/stac/v1/catalogs/satellite-imagery\",\n      \"type\": \"application/json\",\n      \"title\": \"Satellite Imagery Catalog\"\n    }\n  ],\n  \"stac_extensions\": []\n}"
+              "body": "{\n  \"stac_version\": \"1.0.0\",\n  \"id\": \"aoraki-stac-api\",\n  \"title\": \"Aoraki STAC API\",\n  \"description\": \"SpatioTemporal Asset Catalog API for geospatial data discovery and access\",\n  \"type\": \"Catalog\",\n  \"conformsTo\": [\n    \"https://api.stacspec.org/v1.0.0/core\",\n    \"https://api.stacspec.org/v1.0.0/item-search\"\n  ],\n  \"links\": [\n    {\n      \"rel\": \"self\",\n      \"href\": \"/stac/api/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"root\",\n      \"href\": \"/stac/api/v1/\",\n      \"type\": \"application/json\"\n    },\n    {\n      \"rel\": \"child\",\n      \"href\": \"/stac/api/v1/catalogs/satellite-imagery\",\n      \"type\": \"application/json\",\n      \"title\": \"Satellite Imagery Catalog\"\n    }\n  ],\n  \"stac_extensions\": []\n}"
             }
           ]
         },

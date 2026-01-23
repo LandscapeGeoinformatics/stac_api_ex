@@ -1,0 +1,198 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-900">STAC Item Details</h1>
+      <a href="/stac/web/search" 
+         class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+        🔍 Search Items
+      </a>
+    </div>
+  </div>
+
+  <nav class="mb-6">
+    <ol class="flex items-center space-x-2 text-sm">
+      <%= for {breadcrumb, index} <- Enum.with_index(@breadcrumbs) do %>
+        <%= if index > 0 do %>
+          <li class="text-gray-400">/</li>
+        <% end %>
+        <li>
+          <%= if index == length(@breadcrumbs) - 1 do %>
+            <span class="text-gray-600 font-medium"><%= breadcrumb.name %></span>
+          <% else %>
+            <a href={"/stac/web/browse/#{breadcrumb.path}"} 
+               class="text-blue-600 hover:text-blue-800 hover:underline">
+              <%= breadcrumb.name %>
+            </a>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  </nav>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+      <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Item Information</h2>
+        
+        <dl class="grid grid-cols-1 gap-4">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">ID</dt>
+            <dd class="mt-1 text-sm text-gray-900 font-mono"><%= @item.id %></dd>
+          </div>
+
+          <div>
+            <dt class="text-sm font-medium text-gray-500">STAC Version</dt>
+            <dd class="mt-1 text-sm text-gray-900"><%= @item.stac_version %></dd>
+          </div>
+
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Collection</dt>
+            <dd class="mt-1 text-sm text-gray-900">
+              <a href={"/stac/web/browse/collection/#{@item.collection}"} 
+                 class="text-blue-600 hover:underline">
+                <%= @item.collection %>
+              </a>
+            </dd>
+          </div>
+
+          <%= if @item.stac_extensions && length(@item.stac_extensions) > 0 do %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">STAC Extensions</dt>
+              <dd class="mt-1">
+                <%= for ext <- @item.stac_extensions do %>
+                  <span class="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded mr-2 mb-1">
+                    <%= ext %>
+                  </span>
+                <% end %>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+
+      <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Properties</h2>
+        <%= if @item.properties && map_size(@item.properties) > 0 do %>
+          <dl class="grid grid-cols-1 gap-3">
+            <%= for {key, value} <- @item.properties do %>
+              <div class="border-b border-gray-100 pb-2">
+                <dt class="text-sm font-medium text-gray-500"><%= key %></dt>
+                <dd class="mt-1 text-sm text-gray-900 break-all">
+                  <%= cond do %>
+                    <% is_binary(value) -> %><%= value %>
+                    <% is_number(value) -> %><%= value %>
+                    <% is_boolean(value) -> %><%= to_string(value) %>
+                    <% is_list(value) or is_map(value) -> %>
+                      <pre class="text-xs bg-gray-50 p-2 rounded mt-1 overflow-x-auto"><%= Jason.encode!(value, pretty: true) %></pre>
+                    <% true -> %><%= inspect(value) %>
+                  <% end %>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="text-sm text-gray-500">No properties available</p>
+        <% end %>
+      </div>
+
+      <%= if @item.assets && map_size(@item.assets) > 0 do %>
+        <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Assets (<%= map_size(@item.assets) %>)</h2>
+          <div class="space-y-4">
+            <%= for {key, asset} <- @item.assets do %>
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start justify-between mb-2">
+                  <h3 class="font-medium text-gray-900"><%= key %></h3>
+                  <%= if asset["type"] do %>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                      <%= asset["type"] %>
+                    </span>
+                  <% end %>
+                </div>
+                
+                <%= if asset["title"] do %>
+                  <p class="text-sm text-gray-600 mb-2"><%= asset["title"] %></p>
+                <% end %>
+                
+                <%= if asset["href"] do %>
+                  <div class="text-sm mb-2">
+                    <span class="text-gray-500">URL:</span>
+                    <a href={asset["href"]} target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:underline break-all ml-1">
+                      <%= asset["href"] %>
+                    </a>
+                  </div>
+                <% end %>
+
+                <%= if asset["roles"] && length(asset["roles"]) > 0 do %>
+                  <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs text-gray-500">Roles:</span>
+                    <%= for role <- asset["roles"] do %>
+                      <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                        <%= role %>
+                      </span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="lg:col-span-1 space-y-6">
+      <%= if @item.geometry do %>
+        <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Geometry</h2>
+          <div class="space-y-3">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Type</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= cond do %>
+                  <% is_struct(@item.geometry) -> %>
+                    <%= @item.geometry.__struct__ |> to_string() |> String.split(".") |> List.last() %>
+                  <% is_map(@item.geometry) && @item.geometry["type"] -> %>
+                    <%= @item.geometry["type"] %>
+                  <% true -> %>
+                    Unknown
+                <% end %>
+              </dd>
+            </div>
+            
+            <%= if @item.bbox do %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Bounding Box</dt>
+                <dd class="mt-1 text-xs text-gray-900 font-mono break-all">
+                  <%= Jason.encode!(@item.bbox) %>
+                </dd>
+              </div>
+            <% end %>
+
+            <div>
+              <dt class="text-sm font-medium text-gray-500 mb-2">Coordinates</dt>
+              <dd class="mt-1">
+                <pre class="text-xs bg-gray-50 p-3 rounded overflow-x-auto max-h-64"><%= cond do %>
+  <% is_struct(@item.geometry) -> %><%= inspect(@item.geometry, pretty: true) %>
+  <% is_map(@item.geometry) -> %><%= Jason.encode!(@item.geometry, pretty: true) %>
+  <% true -> %><%= inspect(@item.geometry) %>
+<% end %></pre>
+              </dd>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Raw JSON</h2>
+        <div class="relative">
+          <button onclick="navigator.clipboard.writeText(document.getElementById('item-json').textContent)"
+                  class="absolute top-2 right-2 px-3 py-1 text-xs bg-gray-700 text-white rounded hover:bg-gray-800">
+            Copy
+          </button>
+          <pre id="item-json" class="text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto max-h-96"><%= Jason.encode!(@item, pretty: true) %></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
