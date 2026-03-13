@@ -8,7 +8,16 @@
 
 This Phoenix application provides a STAC (SpatioTemporal Asset Catalog) API implementation with both REST API endpoints and HTML browser interface for exploring geospatial data catalogs.
 
-  
+
+
+## Document contribution workflow:
+
+- make a fork from https://github.com/LandscapeGeoinformatics/stac_api_ex yo your own GitHub
+- make a new "working branch" for yourself, keep the master branch just clean and in sync with our (https://github.com/LandscapeGeoinformatics/stac_api_ex) master branch (this way you always have a clean base in sync with upstream)
+- from your working branch (can also be smaller feature branches) make a pull request to our master branch
+- try to keep pull requests somewhat "isolated" (specific updates, not touching all the files all over the place)
+
+
 
 ## Source JSON to Database Flow
 
