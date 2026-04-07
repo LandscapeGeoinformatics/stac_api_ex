@@ -50,7 +50,7 @@ defmodule StacApi.Data.Catalog do
     case {depth, parent_id} do
       {0, _} -> changeset
       {d, nil} when d > 0 -> add_error(changeset, :depth, "non-root catalog must have parent")
-      {d, _} when d > 2 -> add_error(changeset, :depth, "maximum depth is 2 levels")
+      {d, _} when d > 3 -> add_error(changeset, :depth, "maximum depth is 3 levels")
       _ -> changeset
     end
   end

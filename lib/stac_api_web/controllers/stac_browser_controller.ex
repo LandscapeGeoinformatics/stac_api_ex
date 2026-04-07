@@ -142,19 +142,13 @@ defmodule StacApiWeb.StacBrowserController do
     case String.split(path, "/", trim: true) do
       ["catalog", catalog_id] ->
         {:catalog, catalog_id}
-      
-      ["catalog", catalog_id, "collection", collection_id] ->
-        {:collection, collection_id}
-      
+
       ["collection", collection_id] ->
         {:collection, collection_id}
-      
-      ["catalog", _catalog_id, "collection", collection_id, "item", item_id] ->
-        {:item, collection_id, item_id}
-      
+
       ["collection", collection_id, "item", item_id] ->
         {:item, collection_id, item_id}
-      
+
       _ ->
         {:error, :invalid_path}
     end
@@ -187,11 +181,11 @@ defmodule StacApiWeb.StacBrowserController do
             title: child_catalog.title || child_catalog.id,
             description: child_catalog.description,
             type: "Catalog",
-            path: "#{path}/catalog/#{child_catalog.id}",
+            path: "catalog/#{child_catalog.id}",
             is_directory: true
           }
         end)
-        
+
         collection_items = collections
         |> Enum.map(fn collection ->
           item_count = Repo.aggregate(
@@ -199,13 +193,13 @@ defmodule StacApiWeb.StacBrowserController do
             :count,
             :id
           )
-          
+
           %{
             id: collection.id,
             title: collection.title || collection.id,
             description: collection.description,
             type: "Collection",
-            path: "#{path}/collection/#{collection.id}",
+            path: "collection/#{collection.id}",
             is_directory: true,
             item_count: item_count
           }
@@ -310,64 +304,35 @@ defmodule StacApiWeb.StacBrowserController do
     end
   end
 
-  defp build_breadcrumbs_from_catalog(catalog) do
-    breadcrumbs = [%{name: "Home", path: ""}]
-    
-    if catalog.parent_catalog_id do
-      case Repo.get(Catalog, catalog.parent_catalog_id) do
-        nil -> breadcrumbs
-        parent ->
-          breadcrumbs ++ [
-            %{name: parent.title || parent.id, path: "catalog/#{parent.id}"},
-            %{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}
-          ]
-      end
-    else
-      breadcrumbs ++ [%{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}]
+  # Recursively walks up the catalog ancestor chain, building crumbs deepest-first.
+  defp catalog_ancestor_crumbs(nil), do: []
+  defp catalog_ancestor_crumbs(catalog_id) do
+    case Repo.get(Catalog, catalog_id) do
+      nil -> []
+      catalog ->
+        catalog_ancestor_crumbs(catalog.parent_catalog_id) ++
+          [%{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}]
     end
   end
 
+  defp build_breadcrumbs_from_catalog(catalog) do
+    [%{name: "Home", path: ""}] ++
+      catalog_ancestor_crumbs(catalog.parent_catalog_id) ++
+      [%{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"}]
+  end
+
   defp build_breadcrumbs_from_collection(collection) do
-    breadcrumbs = [%{name: "Home", path: ""}]
-    
-    if collection.catalog_id do
-      case Repo.get(Catalog, collection.catalog_id) do
-        nil -> 
-          breadcrumbs ++ [%{name: collection.title || collection.id, path: "collection/#{collection.id}"}]
-        
-        catalog ->
-          catalog_breadcrumbs = if catalog.parent_catalog_id do
-            case Repo.get(Catalog, catalog.parent_catalog_id) do
-              nil -> []
-              parent -> [%{name: parent.title || parent.id, path: "catalog/#{parent.id}"}]
-            end
-          else
-            []
-          end
-          
-          breadcrumbs ++ 
-          catalog_breadcrumbs ++ 
-          [
-            %{name: catalog.title || catalog.id, path: "catalog/#{catalog.id}"},
-            %{name: collection.title || collection.id, path: "catalog/#{catalog.id}/collection/#{collection.id}"}
-          ]
-      end
-    else
-      breadcrumbs ++ [%{name: collection.title || collection.id, path: "collection/#{collection.id}"}]
-    end
+    catalog_crumbs = catalog_ancestor_crumbs(collection.catalog_id)
+
+    [%{name: "Home", path: ""}] ++
+      catalog_crumbs ++
+      [%{name: collection.title || collection.id, path: "collection/#{collection.id}"}]
   end
 
   defp build_breadcrumbs_from_item(item, collection) do
     collection_breadcrumbs = build_breadcrumbs_from_collection(collection)
     item_title = get_in(item.properties, ["title"]) || item.id
-    
-    if collection.catalog_id do
-      collection_path = "catalog/#{collection.catalog_id}/collection/#{collection.id}"
-      collection_breadcrumbs ++ [%{name: item_title, path: "#{collection_path}/item/#{item.id}"}]
-    else
-      collection_path = "collection/#{collection.id}"
-      collection_breadcrumbs ++ [%{name: item_title, path: "#{collection_path}/item/#{item.id}"}]
-    end
+    collection_breadcrumbs ++ [%{name: item_title, path: "collection/#{collection.id}/item/#{item.id}"}]
   end
 
   defp reconstruct_item_assets(item_id, stac_extensions) do
