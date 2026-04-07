@@ -36,7 +36,15 @@
 
   <%= if @current_type == :catalog && @current_entity do %>
     <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-      <h2 class="text-lg font-semibold text-blue-900 mb-2"><%= @current_entity.title || @current_entity.id %></h2>
+      <div class="flex items-start justify-between">
+        <h2 class="text-lg font-semibold text-blue-900 mb-2"><%= @current_entity.title || @current_entity.id %></h2>
+        <a href={"/stac/api/v1/catalogs/#{@current_entity.id}"}
+           target="_blank" rel="noopener noreferrer"
+           title="View API JSON"
+           class="ml-4 flex-shrink-0 text-xs font-mono text-blue-500 hover:text-blue-700 border border-blue-300 hover:border-blue-500 rounded px-2 py-0.5 bg-white">
+          { } JSON
+        </a>
+      </div>
       <%= if @current_entity.description do %>
         <p class="text-sm text-blue-700"><%= @current_entity.description %></p>
       <% end %>
@@ -45,7 +53,15 @@
 
   <%= if @current_type == :collection && @current_entity do %>
     <div class="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-      <h2 class="text-lg font-semibold text-green-900 mb-2"><%= @current_entity.title || @current_entity.id %></h2>
+      <div class="flex items-start justify-between">
+        <h2 class="text-lg font-semibold text-green-900 mb-2"><%= @current_entity.title || @current_entity.id %></h2>
+        <a href={"/stac/api/v1/collections/#{@current_entity.id}"}
+           target="_blank" rel="noopener noreferrer"
+           title="View API JSON"
+           class="ml-4 flex-shrink-0 text-xs font-mono text-green-500 hover:text-green-700 border border-green-300 hover:border-green-500 rounded px-2 py-0.5 bg-white">
+          { } JSON
+        </a>
+      </div>
       <%= if @current_entity.description do %>
         <p class="text-sm text-green-700 mb-2"><%= @current_entity.description %></p>
       <% end %>
