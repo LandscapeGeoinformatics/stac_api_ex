@@ -132,16 +132,20 @@ defmodule StacApiWeb.DynamicLinkGenerator do
     |> Repo.one()
   end
 
-  # Helper function to create standardized links
-  defp create_link(rel, href, opts \\ []) do
+  # Helper function to create standardized links with absolute URLs
+  defp create_link(rel, path, opts \\ []) do
     %{
       "rel" => rel,
-      "href" => href,
+      "href" => base_url() <> path,
       "type" => Keyword.get(opts, :type, "application/json"),
       "title" => Keyword.get(opts, :title),
       "method" => Keyword.get(opts, :method)
     }
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
     |> Map.new()
+  end
+
+  defp base_url do
+    Application.get_env(:stac_api, :base_url, "")
   end
 end

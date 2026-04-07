@@ -356,8 +356,13 @@ defmodule StacApiWeb.ItemsCrudController do
   List all items (filters out items from private catalogs if not authenticated)
   """
   def index(conn, params) do
+    cfg = Application.get_env(:stac_api, :items_endpoint, [])
+    default_page_size = Keyword.get(cfg, :default_page_size, 10)
+    max_page_size = Keyword.get(cfg, :max_page_size, 100)
+    base_url = Application.get_env(:stac_api, :base_url, "")
+
     authenticated = conn.assigns[:authenticated] || false
-    limit = min(parse_int(params["limit"] || "10"), 100)
+    limit = min(parse_int(params["limit"] || "#{default_page_size}"), max_page_size)
     offset = parse_int(params["offset"] || "0")
 
     base_query = if authenticated do
@@ -368,10 +373,10 @@ defmodule StacApiWeb.ItemsCrudController do
         left_join: cat in Catalog, on: c.catalog_id == cat.id,
         where: is_nil(c.catalog_id) or cat.private != true or is_nil(cat.private)
     end
-    
+
     query = from(i in base_query, limit: ^limit, offset: ^offset, order_by: [desc: i.datetime])
     items = Repo.all(query)
-    
+
     count_query = if authenticated do
       from i in Item
     else
@@ -385,8 +390,6 @@ defmodule StacApiWeb.ItemsCrudController do
     items_with_links = Enum.map(items, fn item ->
       custom_links = item.links || []
       links = DynamicLinkGenerator.generate_item_links(item, custom_links)
-
-      # Reconstruct assets from normalized data
       assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
 
       %{
@@ -403,17 +406,33 @@ defmodule StacApiWeb.ItemsCrudController do
       }
     end)
 
+    self_url = "#{base_url}/stac/api/v1/items?limit=#{limit}&offset=#{offset}"
+
+    pagination_links =
+      [%{"rel" => "self", "href" => self_url, "type" => "application/geo+json"},
+       %{"rel" => "root", "href" => "#{base_url}/stac/api/v1/", "type" => "application/json"}] ++
+      (if offset + limit < total_count do
+        next_url = "#{base_url}/stac/api/v1/items?limit=#{limit}&offset=#{offset + limit}"
+        [%{"rel" => "next", "href" => next_url, "type" => "application/geo+json"}]
+      else [] end) ++
+      (if offset > 0 do
+        prev_offset = max(offset - limit, 0)
+        prev_url = "#{base_url}/stac/api/v1/items?limit=#{limit}&offset=#{prev_offset}"
+        [%{"rel" => "prev", "href" => prev_url, "type" => "application/geo+json"}]
+      else [] end)
+
     json(conn, %{
       type: "FeatureCollection",
+      description: "Non-STAC management endpoint: returns all items across all collections with pagination. " <>
+                   "For STAC-conformant item access use GET /stac/api/v1/collections/{collectionId}/items " <>
+                   "or GET /stac/api/v1/search.",
       features: items_with_links,
-      links: [
-        %{"rel" => "self", "href" => "/stac/api/v1/items", "type" => "application/geo+json"},
-        %{"rel" => "root", "href" => "/stac/api/v1/", "type" => "application/json"}
-      ],
+      links: pagination_links,
       context: %{
         returned: length(items_with_links),
         matched: total_count,
-        limit: limit
+        limit: limit,
+        offset: offset
       }
     })
   end

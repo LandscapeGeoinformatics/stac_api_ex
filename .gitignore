@@ -15,6 +15,8 @@
 # OS
 .DS_Store
 Thumbs.db
+.claude
+memory
 
 # Mix lock file (optional to ignore in libs, but include for apps)
 # mix.lock

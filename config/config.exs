@@ -34,6 +34,11 @@ config :phoenix, :json_library, Jason
 # Configure Ecto repositories
 config :stac_api, ecto_repos: [StacApi.Repo]
 
+# Non-STAC flat items endpoint pagination
+config :stac_api, :items_endpoint,
+  default_page_size: 10,
+  max_page_size: 100
+
 
 # Geo configuration for PostGIS
 config :geo,
