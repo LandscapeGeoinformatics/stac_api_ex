@@ -58,11 +58,41 @@ mix phx.server
 
 ## API Endpoints
 
-- `GET /stac/api/v1/` - Root catalog
-- `GET /stac/api/v1/search` - Search STAC items
+### STAC API — public read (optional auth unlocks private catalogs)
+
+- `GET /stac/api/v1/` - Root catalog landing page
+- `GET /stac/api/v1/conformance` - OGC/STAC conformance classes
+- `GET /stac/api/v1/search` - Search STAC items (GET)
+- `POST /stac/api/v1/search` - Search STAC items (POST with body)
 - `GET /stac/api/v1/collections` - List all collections
 - `GET /stac/api/v1/collections/:id` - Get specific collection
 - `GET /stac/api/v1/collections/:id/items` - Get items in collection
+- `GET /stac/api/v1/collections/:collection_id/items/:item_id` - Get specific item
+- `GET /stac/api/v1/openapi.json` - OpenAPI specification
+- `GET /stac/api/v1/docs` - API documentation
+
+### Management API — requires `X-API-Key` (read-write key)
+
+- `GET  /stac/manage/v1/catalogs` - List all catalogs
+- `GET  /stac/manage/v1/catalogs/:id` - Get specific catalog
+- `POST /stac/manage/v1/catalogs` - Create catalog
+- `PUT  /stac/manage/v1/catalogs/:id` - Replace catalog
+- `PATCH /stac/manage/v1/catalogs/:id` - Partial update catalog
+- `DELETE /stac/manage/v1/catalogs/:id` - Delete catalog (cascade)
+- `GET  /stac/manage/v1/collections` - List all collections (CRUD view)
+- `POST /stac/manage/v1/collections` - Create collection
+- `PUT  /stac/manage/v1/collections/:id` - Replace collection
+- `PATCH /stac/manage/v1/collections/:id` - Partial update collection
+- `DELETE /stac/manage/v1/collections/:id` - Delete collection (cascade)
+- `GET  /stac/manage/v1/items` - List all items (CRUD view)
+- `POST /stac/manage/v1/items` - Create item
+- `POST /stac/manage/v1/items/import` - Bulk import items
+- `PUT  /stac/manage/v1/items/:id` - Replace item
+- `PATCH /stac/manage/v1/items/:id` - Partial update item
+- `DELETE /stac/manage/v1/items/:id` - Delete item
+
+### Web browser interface
+
 - `GET /stac/web/browse` - HTML browser interface
 
 ## STAC Data Structure

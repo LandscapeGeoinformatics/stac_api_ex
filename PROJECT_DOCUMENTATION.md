@@ -55,12 +55,13 @@ StacApi/
 │
 ├── Web/                     # Web layer
 │   ├── Controllers/        # Request handlers
-│   │   ├── RootController.ex
-│   │   ├── SearchController.ex
-│   │   ├── CatalogsCrudController.ex
-│   │   ├── CollectionsCrudController.ex
-│   │   ├── ItemsCrudController.ex
-│   │   └── StacBrowserController.ex
+│   │   ├── RootController.ex          # STAC API root, conformance, catalog browse
+│   │   ├── SearchController.ex        # STAC search
+│   │   ├── CollectionsController.ex   # STAC-conformant collection/item reads
+│   │   ├── CatalogsCrudController.ex  # Management: catalog CRUD
+│   │   ├── CollectionsCrudController.ex # Management: collection CRUD
+│   │   ├── ItemsCrudController.ex     # Management: item CRUD + bulk import
+│   │   └── StacBrowserController.ex   # Web GUI
 │   ├── Plugs/              # Middleware
 │   │   ├── AuthPlug.ex     # Write authentication
 │   │   └── ReadAuthPlug.ex # Read authentication
@@ -129,69 +130,63 @@ Catalog (Root Level)
 
 ## API Endpoints
 
-The API is versioned at `/stac/api/v1` and organized into three main categories:
+The API is split into two namespaces: the public STAC API (`/stac/api/v1`) and the internal Management API (`/stac/manage/v1`).
 
-### 1. Public Read Endpoints (No Authentication Required)
+### 1. STAC API — Public Read (`/stac/api/v1`)
 
-These endpoints are publicly accessible but respect private catalog filtering when authenticated.
+These endpoints are publicly accessible and STAC-conformant. They respect private catalog filtering: unauthenticated requests only see public content; providing a valid `X-API-Key` (RO or RW) unlocks private catalogs.
 
 #### Root & Discovery
 
-- `GET /stac/api/v1/` - Root catalog landing page
+- `GET /stac/api/v1/` - Root catalog landing page with `conformsTo`
+- `GET /stac/api/v1/conformance` - OGC/STAC conformance classes
 - `GET /stac/api/v1/openapi.json` - OpenAPI specification
 - `GET /stac/api/v1/docs` - API documentation
-- `GET /stac/api/v1/catalog/:id` - Get specific catalog
+- `GET /stac/api/v1/catalog/:id` - Get specific catalog (non-standard, used by web GUI)
 
 #### Search
 
 - `GET /stac/api/v1/search` - Search STAC items (GET)
 - `POST /stac/api/v1/search` - Search STAC items (POST with complex queries)
 
-#### Catalogs (Read)
-
-- `GET /stac/api/v1/catalogs` - List all catalogs
-- `GET /stac/api/v1/catalogs/:id` - Get specific catalog
-
-#### Collections (Read)
+#### Collections & Items (STAC-conformant)
 
 - `GET /stac/api/v1/collections` - List all collections
 - `GET /stac/api/v1/collections/:id` - Get specific collection
+- `GET /stac/api/v1/collections/:id/items` - Get items in a collection (paginated)
+- `GET /stac/api/v1/collections/:collection_id/items/:item_id` - Get specific item
 
-#### Items (Read)
+### 2. Management API — Requires Authentication (`/stac/manage/v1`)
 
-- `GET /stac/api/v1/items` - List all items
-- `GET /stac/api/v1/items/:id` - Get specific item
+All endpoints under this namespace require the `X-API-Key` header with a **read-write key**. These endpoints are not STAC-conformant and are intended for internal data management only.
 
-#### Legacy Collection Endpoints (Backward Compatibility)
+#### Catalogs (Full CRUD)
 
-- `GET /stac/api/v1/collections/:id/items` - Get items in a collection
-- `GET /stac/api/v1/collections/:collection_id/items/:item_id` - Get specific item in collection
+- `GET /stac/manage/v1/catalogs` - List all catalogs
+- `GET /stac/manage/v1/catalogs/:id` - Get specific catalog
+- `POST /stac/manage/v1/catalogs` - Create a new catalog
+- `PUT /stac/manage/v1/catalogs/:id` - Full replacement of a catalog
+- `PATCH /stac/manage/v1/catalogs/:id` - Partial update of a catalog
+- `DELETE /stac/manage/v1/catalogs/:id` - Delete catalog (cascade delete)
 
-### 2. Protected Write Endpoints (Requires Authentication)
+#### Collections (Full CRUD)
 
-These endpoints require the `X-API-Key` header with a read-write API key.
+- `GET /stac/manage/v1/collections` - List all collections
+- `GET /stac/manage/v1/collections/:id` - Get specific collection
+- `POST /stac/manage/v1/collections` - Create a new collection
+- `PUT /stac/manage/v1/collections/:id` - Full replacement of a collection
+- `PATCH /stac/manage/v1/collections/:id` - Partial update of a collection
+- `DELETE /stac/manage/v1/collections/:id` - Delete collection (cascade delete)
 
-#### Catalogs (Write)
+#### Items (Full CRUD)
 
-- `POST /stac/api/v1/catalogs` - Create a new catalog
-- `PUT /stac/api/v1/catalogs/:id` - Full update of a catalog
-- `PATCH /stac/api/v1/catalogs/:id` - Partial update of a catalog
-- `DELETE /stac/api/v1/catalogs/:id` - Delete catalog (cascade delete)
-
-#### Collections (Write)
-
-- `POST /stac/api/v1/collections` - Create a new collection
-- `PUT /stac/api/v1/collections/:id` - Full update of a collection
-- `PATCH /stac/api/v1/collections/:id` - Partial update of a collection
-- `DELETE /stac/api/v1/collections/:id` - Delete collection (cascade delete)
-
-#### Items (Write)
-
-- `POST /stac/api/v1/items` - Create a new item
-- `POST /stac/api/v1/items/import` - Bulk import items
-- `PUT /stac/api/v1/items/:id` - Full update of an item
-- `PATCH /stac/api/v1/items/:id` - Partial update of an item
-- `DELETE /stac/api/v1/items/:id` - Delete an item
+- `GET /stac/manage/v1/items` - List all items
+- `GET /stac/manage/v1/items/:id` - Get specific item
+- `POST /stac/manage/v1/items` - Create a new item
+- `POST /stac/manage/v1/items/import` - Bulk import items (GeoJSON FeatureCollection)
+- `PUT /stac/manage/v1/items/:id` - Full replacement of an item
+- `PATCH /stac/manage/v1/items/:id` - Partial update of an item
+- `DELETE /stac/manage/v1/items/:id` - Delete an item
 
 ### 3. Web Interface Endpoints
 
@@ -540,7 +535,7 @@ Located in `config/dev.exs`:
 ┌─────────────┐
 │   Client    │
 │  POST /stac/│
-│  api/v1/    │
+│  manage/v1/ │
 │  catalogs   │
 │  + Body     │
 └──────┬──────┘
@@ -595,7 +590,8 @@ Located in `config/dev.exs`:
 ┌─────────────┐
 │   Client    │
 │  DELETE     │
-│  /catalogs/ │
+│  /manage/v1/│
+│  catalogs/  │
 │  :id        │
 └──────┬──────┘
        │
@@ -702,7 +698,7 @@ Located in `config/dev.exs`:
 **Request:**
 
 ```http
-POST /stac/api/v1/catalogs
+POST /stac/manage/v1/catalogs
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -742,7 +738,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /stac/api/v1/catalogs
+POST /stac/manage/v1/catalogs
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -761,7 +757,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /stac/api/v1/collections
+POST /stac/manage/v1/collections
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -788,7 +784,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-POST /stac/api/v1/items
+POST /stac/manage/v1/items
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -853,7 +849,7 @@ X-API-Key: dev-read-only-key-2024
 **Request:**
 
 ```http
-PATCH /stac/api/v1/catalogs/satellite-imagery
+PATCH /stac/manage/v1/catalogs/satellite-imagery
 Content-Type: application/json
 X-API-Key: dev-api-key-2024
 
@@ -868,7 +864,7 @@ X-API-Key: dev-api-key-2024
 **Request:**
 
 ```http
-DELETE /stac/api/v1/catalogs/satellite-imagery
+DELETE /stac/manage/v1/catalogs/satellite-imagery
 X-API-Key: dev-api-key-2024
 ```
 

@@ -3,8 +3,8 @@
   "id": "estonia-sentinel2-ndvi",
   "stac_version": "1.0.0",
   "stac_extensions": [],
-  "title": "Estonia Sentinel-2 NDVI (2017\u20132025)",
-  "description": "Normalized Difference Vegetation Index (NDVI) seasonal composites derived from Sentinel-2 imagery over Estonia. Three seasons per year: spring (Apr\u2013May), summer (Jun\u2013Aug), autumn (Sep\u2013Oct). Composites include max, mean, median, min, range and std statistics.",
+  "title": "Estonia Sentinel-2 NDVI (2017-2025)",
+  "description": "Normalized Difference Vegetation Index (NDVI) seasonal composites derived from Sentinel-2 imagery over Estonia. Three seasons per year: spring (Apr-May), summer (Jun-Aug), autumn (Sep-Oct). Composites include max, mean, median, min, range and std statistics.",
   "license": "CC-BY-4.0",
   "keywords": [
     "vegetation",

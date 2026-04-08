@@ -15,12 +15,20 @@ Configure your STAC API base URL and API key:
 ```elixir
 base_url = "http://localhost:4000"
 api_version = "/stac/api/v1"
+manage_version = "/stac/manage/v1"
 
 read_write_api_key = System.get_env("STAC_API_KEY") || "dev-api-key-2024"
 read_only_api_key = System.get_env("STAC_API_KEY_RO") || "dev-read-only-key-2024"
 
-# Create a base Req client
+# STAC API read client — public endpoints, no auth required
+# Pass X-API-Key here to unlock private catalogs/collections/items
 req = Req.new(base_url: base_url <> api_version)
+
+# Management API client — all CRUD operations require the RW key
+manage_req = Req.new(
+  base_url: base_url <> manage_version,
+  headers: [{"x-api-key", read_write_api_key}]
+)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -74,13 +82,14 @@ read_only_api_key
 "dev-read-only-key-2024"
 ```
 
-## Example 1: Exploring Catalogs (No Auth)
+## Example 1: Exploring Catalogs
 
-Reading catalogs doesn't require authentication. Let's explore what's available:
+Catalogs are managed via the Management API (`/stac/manage/v1`) and always require authentication.
+Collections and items can also be browsed via the public STAC API (`/stac/api/v1`).
 
 ```elixir
-# Get all catalogs
-{:ok, response} = Req.get(req, url: "/catalogs")
+# Get all catalogs (management endpoint — requires RW key)
+{:ok, response} = Req.get(manage_req, url: "/catalogs")
 
 IO.puts("Status: #{response.status}")
 IO.puts("\nCatalogs:")
@@ -103,8 +112,8 @@ Catalogs:
 ```
 
 ```elixir
-# Get a specific catalog by ID
-{:ok, response} = Req.get(req, url: "/catalogs/my-test-catalog")
+# Get a specific catalog by ID (management endpoint)
+{:ok, response} = Req.get(manage_req, url: "/catalogs/my-test-catalog")
 
 IO.puts("Catalog Details:")
 IO.inspect(response.body, pretty: true)
@@ -314,12 +323,13 @@ Root API:
 
 ## Example 2: Creating Resources (With Auth)
 
-Creating, updating, and deleting require authentication via `x-api-key` header:
+Creating, updating, and deleting require the RW `X-API-Key` header and go through the
+Management API (`/stac/manage/v1`). Use `manage_req` defined in Setup, or:
 
 ```elixir
-# Create a base authenticated request client
+# Equivalent to manage_req — shown explicitly for clarity
 rw_auth_req = Req.new(
-  base_url: base_url <> api_version,
+  base_url: base_url <> manage_version,
   headers: [{"x-api-key", read_write_api_key}]
 )
 ```
@@ -827,7 +837,7 @@ Status: 200
 
 ```elixir
 # This will delete the catalog AND all its children
-{:ok, response} = Req.delete(auth_req, url: "/catalogs/my-test-catalog")
+{:ok, response} = Req.delete(manage_req, url: "/catalogs/my-test-catalog")
 
 IO.puts("Status: #{response.status}")
 IO.puts("\nCascade Delete Summary:")
@@ -847,7 +857,7 @@ demo_catalog = %{
   "description" => "Temporary demo catalog"
 }
 
-{:ok, catalog_response} = Req.post(auth_req, url: "/catalogs", json: demo_catalog)
+{:ok, catalog_response} = Req.post(manage_req, url: "/catalogs", json: demo_catalog)
 catalog_id = catalog_response.body["data"]["id"]
 IO.puts("   Created catalog: #{catalog_id}")
 
@@ -865,13 +875,14 @@ demo_collection = %{
   }
 }
 
-{:ok, collection_response} = Req.post(auth_req, url: "/collections", json: demo_collection)
+{:ok, collection_response} = Req.post(manage_req, url: "/collections", json: demo_collection)
 collection_id = collection_response.body["data"]["id"]
 IO.puts("   Created collection: #{collection_id}")
 
-# 3. Verify everything exists (no auth needed)
+# 3. Verify resources exist
+# Catalogs via manage (requires auth); collections via STAC API (public)
 IO.puts("\n3. Verifying resources...")
-{:ok, verify_response} = Req.get(req, url: "/catalogs/#{catalog_id}")
+{:ok, verify_response} = Req.get(manage_req, url: "/catalogs/#{catalog_id}")
 IO.puts("   Catalog exists: #{verify_response.body["id"]}")
 
 {:ok, collection_verify} = Req.get(req, url: "/collections/#{collection_id}")
@@ -879,7 +890,7 @@ IO.puts("   Collection exists: #{collection_verify.body["id"]}")
 
 # 4. Update the catalog
 IO.puts("\n4. Updating catalog title...")
-{:ok, update_response} = Req.patch(auth_req, 
+{:ok, update_response} = Req.patch(manage_req,
   url: "/catalogs/#{catalog_id}",
   json: %{"id" => catalog_id, "title" => "Updated Demo Catalog"}
 )
@@ -887,14 +898,14 @@ IO.puts("   New title: #{update_response.body["data"]["title"]}")
 
 # 5. Clean up - cascade delete everything
 IO.puts("\n5. Cleaning up (cascade delete)...")
-{:ok, delete_response} = Req.delete(auth_req, url: "/catalogs/#{catalog_id}")
+{:ok, delete_response} = Req.delete(manage_req, url: "/catalogs/#{catalog_id}")
 IO.puts("   Deleted successfully!")
 IO.puts("   Cascade summary:")
 IO.inspect(delete_response.body["cascade_deleted"], pretty: true)
 
 # 6. Verify deletion
 IO.puts("\n6. Verifying deletion...")
-case Req.get(req, url: "/catalogs/#{catalog_id}") do
+case Req.get(manage_req, url: "/catalogs/#{catalog_id}") do
   {:ok, %{status: 404}} -> IO.puts("   ✓ Catalog successfully deleted")
   {:ok, _} -> IO.puts("   ✗ Catalog still exists!")
 end
@@ -903,17 +914,15 @@ end
 ## Error Handling Examples
 
 ```elixir
-# Try to create a catalog without authentication (should fail)
-no_auth_req = Req.new(base_url: base_url <> api_version)
+# Try to create a catalog without authentication (should return 401)
+# The manage API always requires a valid RW key
+no_auth_req = Req.new(base_url: base_url <> manage_version)
 
 case Req.post(no_auth_req, url: "/catalogs", json: %{"id" => "test"}) do
-  {:ok, %{status: 401} = response} -> 
+  {:ok, %{status: 401} = response} ->
     IO.puts("Expected 401 Unauthorized:")
     IO.inspect(response.body)
-  {:ok, %{status: 403} = response} -> 
-    IO.puts("Expected 403 Forbidden:")
-    IO.inspect(response.body)
-  other -> 
+  other ->
     IO.puts("Unexpected response:")
     IO.inspect(other)
 end
@@ -921,11 +930,11 @@ end
 
 ```elixir
 # Try to get a non-existent catalog
-case Req.get(req, url: "/catalogs/definitely-does-not-exist") do
-  {:ok, %{status: 404} = response} -> 
+case Req.get(manage_req, url: "/catalogs/definitely-does-not-exist") do
+  {:ok, %{status: 404} = response} ->
     IO.puts("Expected 404 Not Found:")
     IO.inspect(response.body)
-  other -> 
+  other ->
     IO.puts("Unexpected response:")
     IO.inspect(other)
 end
@@ -938,11 +947,11 @@ invalid_catalog = %{
   "description" => "This is missing the required 'id' field"
 }
 
-case Req.post(auth_req, url: "/catalogs", json: invalid_catalog) do
-  {:ok, %{status: 400} = response} -> 
+case Req.post(manage_req, url: "/catalogs", json: invalid_catalog) do
+  {:ok, %{status: 400} = response} ->
     IO.puts("Expected 400 Bad Request:")
     IO.inspect(response.body)
-  other -> 
+  other ->
     IO.puts("Unexpected response:")
     IO.inspect(other)
 end
@@ -950,22 +959,23 @@ end
 
 ## Helper Functions
 
-Here are some reusable helper functions for your STAC API interactions:
+Reusable helper functions. Pass `manage_req` (authenticated, manage base URL) for catalog
+operations, and `req` (public STAC API base URL) for browsing collections/items.
 
 ```elixir
 defmodule STACHelpers do
-  @doc "List all catalogs"
-  def list_catalogs(req) do
-    case Req.get(req, url: "/catalogs") do
+  @doc "List all catalogs. Pass manage_req (auth required)."
+  def list_catalogs(manage_req) do
+    case Req.get(manage_req, url: "/catalogs") do
       {:ok, %{status: 200, body: body}} -> {:ok, body["catalogs"]}
       {:ok, response} -> {:error, response}
       error -> error
     end
   end
 
-  @doc "Get a specific catalog"
-  def get_catalog(req, id) do
-    case Req.get(req, url: "/catalogs/#{id}") do
+  @doc "Get a specific catalog. Pass manage_req (auth required)."
+  def get_catalog(manage_req, id) do
+    case Req.get(manage_req, url: "/catalogs/#{id}") do
       {:ok, %{status: 200, body: body}} -> {:ok, body}
       {:ok, %{status: 404}} -> {:error, :not_found}
       {:ok, response} -> {:error, response}
@@ -973,9 +983,9 @@ defmodule STACHelpers do
     end
   end
 
-  @doc "Create a catalog with authentication"
-  def create_catalog(auth_req, catalog_data) do
-    case Req.post(auth_req, url: "/catalogs", json: catalog_data) do
+  @doc "Create a catalog. Pass manage_req (RW key required)."
+  def create_catalog(manage_req, catalog_data) do
+    case Req.post(manage_req, url: "/catalogs", json: catalog_data) do
       {:ok, %{status: 201, body: body}} -> {:ok, body["data"]}
       {:ok, %{status: 409}} -> {:error, :already_exists}
       {:ok, response} -> {:error, response}
@@ -983,9 +993,9 @@ defmodule STACHelpers do
     end
   end
 
-  @doc "Update a catalog (full replacement)"
-  def update_catalog(auth_req, id, catalog_data) do
-    case Req.put(auth_req, url: "/catalogs/#{id}", json: catalog_data) do
+  @doc "Full replacement of a catalog. Pass manage_req (RW key required)."
+  def update_catalog(manage_req, id, catalog_data) do
+    case Req.put(manage_req, url: "/catalogs/#{id}", json: catalog_data) do
       {:ok, %{status: 200, body: body}} -> {:ok, body["data"]}
       {:ok, %{status: 404}} -> {:error, :not_found}
       {:ok, response} -> {:error, response}
@@ -993,9 +1003,9 @@ defmodule STACHelpers do
     end
   end
 
-  @doc "Delete a catalog (cascade)"
-  def delete_catalog(auth_req, id) do
-    case Req.delete(auth_req, url: "/catalogs/#{id}") do
+  @doc "Delete a catalog (cascade). Pass manage_req (RW key required)."
+  def delete_catalog(manage_req, id) do
+    case Req.delete(manage_req, url: "/catalogs/#{id}") do
       {:ok, %{status: 200, body: body}} -> {:ok, body["cascade_deleted"]}
       {:ok, %{status: 404}} -> {:error, :not_found}
       {:ok, response} -> {:error, response}
@@ -1007,7 +1017,7 @@ end
 
 ```elixir
 # Use the helper functions
-{:ok, catalogs} = STACHelpers.list_catalogs(req)
+{:ok, catalogs} = STACHelpers.list_catalogs(manage_req)
 IO.puts("Found #{length(catalogs)} catalogs")
 
 # Create a catalog using helper
@@ -1017,7 +1027,7 @@ new_catalog = %{
   "description" => "Test catalog"
 }
 
-case STACHelpers.create_catalog(auth_req, new_catalog) do
+case STACHelpers.create_catalog(manage_req, new_catalog) do
   {:ok, catalog} -> IO.puts("Created: #{catalog["id"]}")
   {:error, reason} -> IO.puts("Error: #{inspect(reason)}")
 end

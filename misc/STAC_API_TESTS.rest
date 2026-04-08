@@ -16,6 +16,10 @@
 GET http://localhost:4000/stac/api/v1/
 Accept: application/json
 
+# Get conformance classes (required by STAC API spec)
+GET http://localhost:4000/stac/api/v1/conformance
+Accept: application/json
+
 ### ========================================
 ### COLLECTIONS ENDPOINTS
 ### ========================================
@@ -261,6 +265,173 @@ Accept: application/geo+json
 
 GET http://localhost:4000/stac/api/v1/search?limit=5
 Accept: */*
+
+### ========================================
+### MANAGEMENT API — CATALOGS
+### ========================================
+# All manage endpoints require X-API-Key header with the read-write key.
+# Default dev key: dev-api-key-2024
+
+# List all catalogs
+GET http://localhost:4000/stac/manage/v1/catalogs
+Accept: application/json
+X-API-Key: dev-api-key-2024
+
+# Get a specific catalog
+GET http://localhost:4000/stac/manage/v1/catalogs/my-catalog
+Accept: application/json
+X-API-Key: dev-api-key-2024
+
+# Create a catalog
+POST http://localhost:4000/stac/manage/v1/catalogs
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-catalog",
+  "title": "My Catalog",
+  "description": "A test catalog",
+  "type": "Catalog",
+  "stac_version": "1.0.0"
+}
+
+# Create a private catalog
+POST http://localhost:4000/stac/manage/v1/catalogs
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-private-catalog",
+  "title": "Private Catalog",
+  "description": "Only visible with auth",
+  "private": true
+}
+
+# Partial update (PATCH)
+PATCH http://localhost:4000/stac/manage/v1/catalogs/my-catalog
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-catalog",
+  "title": "Updated Title"
+}
+
+# Full replacement (PUT)
+PUT http://localhost:4000/stac/manage/v1/catalogs/my-catalog
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-catalog",
+  "title": "Replaced Catalog",
+  "description": "Fully replaced",
+  "type": "Catalog",
+  "stac_version": "1.0.0"
+}
+
+# Delete a catalog (cascade deletes all child catalogs, collections, items)
+DELETE http://localhost:4000/stac/manage/v1/catalogs/my-catalog
+X-API-Key: dev-api-key-2024
+
+### ========================================
+### MANAGEMENT API — COLLECTIONS
+### ========================================
+
+# List all collections (management view)
+GET http://localhost:4000/stac/manage/v1/collections
+Accept: application/json
+X-API-Key: dev-api-key-2024
+
+# Create a collection
+POST http://localhost:4000/stac/manage/v1/collections
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-collection",
+  "title": "My Collection",
+  "description": "A test collection",
+  "license": "CC-BY-4.0",
+  "stac_version": "1.0.0",
+  "extent": {
+    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+    "temporal": {"interval": [["2020-01-01T00:00:00Z", null]]}
+  }
+}
+
+# Create a collection inside a catalog
+POST http://localhost:4000/stac/manage/v1/collections
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-catalog-collection",
+  "title": "Collection in Catalog",
+  "description": "Belongs to my-catalog",
+  "license": "CC-BY-4.0",
+  "catalog_id": "my-catalog",
+  "stac_version": "1.0.0",
+  "extent": {
+    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+    "temporal": {"interval": [["2020-01-01T00:00:00Z", null]]}
+  }
+}
+
+# Delete a collection
+DELETE http://localhost:4000/stac/manage/v1/collections/my-collection
+X-API-Key: dev-api-key-2024
+
+### ========================================
+### MANAGEMENT API — ITEMS
+### ========================================
+
+# List all items (management view)
+GET http://localhost:4000/stac/manage/v1/items
+Accept: application/json
+X-API-Key: dev-api-key-2024
+
+# Create an item
+POST http://localhost:4000/stac/manage/v1/items
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "id": "my-item",
+  "collection_id": "my-collection",
+  "stac_version": "1.0.0",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[21, 57], [28, 57], [28, 60], [21, 60], [21, 57]]]
+  },
+  "bbox": [21, 57, 28, 60],
+  "datetime": "2024-01-01T00:00:00Z",
+  "properties": {}
+}
+
+# Bulk import items (GeoJSON FeatureCollection)
+POST http://localhost:4000/stac/manage/v1/items/import
+Content-Type: application/json
+X-API-Key: dev-api-key-2024
+
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "bulk-item-1",
+      "collection_id": "my-collection",
+      "geometry": {"type": "Point", "coordinates": [24.7, 59.4]},
+      "bbox": [24.6, 59.3, 24.8, 59.5],
+      "datetime": "2024-01-01T00:00:00Z",
+      "properties": {}
+    }
+  ]
+}
+
+# Delete an item
+DELETE http://localhost:4000/stac/manage/v1/items/my-item
+X-API-Key: dev-api-key-2024
 
 ### ========================================
 ### TESTING NOTES

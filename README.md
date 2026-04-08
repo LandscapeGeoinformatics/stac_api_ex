@@ -311,18 +311,30 @@ extensions: [{Geo.PostGIS.Extension, library:  Geo}]
 #### 2. Router Integration
 
 ```elixir
-
-scope  "/stac/api/v1", YourAppWeb  do
-pipe_through  :api
-get  "/", StacController, :root
-get  "/search", StacController, :search
+# STAC API — public read (optional auth for private catalogs)
+scope "/stac/api/v1", YourAppWeb do
+  pipe_through [:api, :read_auth]
+  get "/", RootController, :index
+  get "/conformance", RootController, :conformance
+  get "/search", SearchController, :index
+  post "/search", SearchController, :index
+  get "/collections", CollectionsController, :index
+  get "/collections/:id", CollectionsController, :show
+  get "/collections/:id/items", CollectionsController, :items
+  get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
 end
-scope  "/stac/web", YourAppWeb  do
-pipe_through  :browser
-get  "/browse", StacBrowserController, :index
-get  "/browse/*path", StacBrowserController, :show
+
+# Management API — requires RW key
+scope "/stac/manage/v1", YourAppWeb do
+  pipe_through [:api, :auth]
+  # catalogs, collections, items CRUD routes
 end
 
+scope "/stac/web", YourAppWeb do
+  pipe_through :browser
+  get "/browse", StacBrowserController, :index
+  get "/browse/*path", StacBrowserController, :show
+end
 ```
 
   
@@ -487,23 +499,26 @@ stac_data_path:  System.get_env("STAC_DATA_PATH") || "priv/stac_data"
 
 ## API Endpoints
 
-  
+### STAC API — public read (`/stac/api/v1`)
 
-### REST API
+- `GET /stac/api/v1/` - STAC root catalog
+- `GET /stac/api/v1/conformance` - OGC/STAC conformance classes
+- `GET /stac/api/v1/search` - Search STAC items (GET + POST)
+- `GET /stac/api/v1/collections` - List all collections
+- `GET /stac/api/v1/collections/:id` - Get specific collection
+- `GET /stac/api/v1/collections/:id/items` - Get items in collection
+- `GET /stac/api/v1/collections/:collection_id/items/:item_id` - Get specific item
 
--  `GET /stac/api/v1/` - STAC root catalog
+### Management API — requires `X-API-Key` (`/stac/manage/v1`)
 
--  `GET /stac/api/v1/search` - Search STAC items with filters
-
-  
+- Full CRUD for catalogs, collections, and items
+- Bulk item import (`POST /stac/manage/v1/items/import`)
 
 ### Browser Interface
 
--  `GET /stac/web/browse` - HTML directory browser
-
--  `GET /stac/web/browse/*path` - Browse specific paths
-
--  `GET /stac/web/search` - HTML search interface
+- `GET /stac/web/browse` - HTML directory browser
+- `GET /stac/web/browse/*path` - Browse specific paths
+- `GET /stac/web/search` - HTML search interface
 
   
 
