@@ -11,7 +11,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
       "title" => "Test Catalog",
       "description" => "Test"
     }
-    post(auth_conn, ~p"/stac/api/v1/catalogs", catalog_params)
+    post(auth_conn, ~p"/stac/manage/v1/catalogs", catalog_params)
 
     collection_params = %{
       "id" => "test-collection",
@@ -24,7 +24,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "temporal" => %{"interval" => [["2020-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
       }
     }
-    post(auth_conn, ~p"/stac/api/v1/collections", collection_params)
+    post(auth_conn, ~p"/stac/manage/v1/collections", collection_params)
 
     {:ok, conn: auth_conn}
   end
@@ -106,8 +106,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "properties" => %{"description" => "Second item"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item1_params)
-      post(conn, ~p"/stac/api/v1/items", item2_params)
+      post(conn, ~p"/stac/manage/v1/items", item1_params)
+      post(conn, ~p"/stac/manage/v1/items", item2_params)
 
       :ok
     end
@@ -144,7 +144,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "description" => "No items",
         "license" => "CC-BY-4.0"
       }
-      post(conn, ~p"/stac/api/v1/collections", empty_params)
+      post(conn, ~p"/stac/manage/v1/collections", empty_params)
 
       conn = get(conn, ~p"/stac/api/v1/collections/empty-collection/items")
       assert response = json_response(conn, 200)
@@ -171,7 +171,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "properties" => %{"description" => "Specific test item", "source" => "test"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
@@ -215,43 +215,140 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
   end
 
-  describe "Private collection access" do
+  describe "Private catalog access control" do
     setup %{conn: conn} do
       # Create a private catalog
-      private_catalog_params = %{
+      post(conn, ~p"/stac/manage/v1/catalogs", %{
         "id" => "private-catalog",
         "title" => "Private Catalog",
-        "description" => "Private",
+        "description" => "Only visible to authenticated users",
         "private" => true
-      }
-      post(conn, ~p"/stac/api/v1/catalogs", private_catalog_params)
+      })
 
-      # Create a collection in the private catalog
-      private_collection_params = %{
+      # Create a collection inside the private catalog
+      post(conn, ~p"/stac/manage/v1/collections", %{
         "id" => "private-collection",
         "title" => "Private Collection",
         "description" => "In private catalog",
         "license" => "CC-BY-4.0",
         "catalog_id" => "private-catalog"
-      }
-      post(conn, ~p"/stac/api/v1/collections", private_collection_params)
+      })
+
+      # Create an item inside that collection
+      post(conn, ~p"/stac/manage/v1/items", %{
+        "id" => "private-item",
+        "collection_id" => "private-collection",
+        "geometry" => %{"type" => "Point", "coordinates" => [25.0, 58.5]},
+        "bbox" => [24.0, 57.5, 26.0, 59.5],
+        "datetime" => "2024-06-01T12:00:00Z",
+        "properties" => %{"description" => "Private item"}
+      })
 
       :ok
     end
 
-    test "hides private collection from unauthenticated users in GET /collections", %{} do
-      unauth_conn = build_conn()
-      conn = get(unauth_conn, ~p"/stac/api/v1/collections")
-      response = json_response(conn, 200)
+    # --- Unauthenticated: must NOT see private resources ---
 
+    test "GET /collections — hides private collection from unauthenticated users" do
+      conn = get(build_conn(), ~p"/stac/api/v1/collections")
+      response = json_response(conn, 200)
       ids = Enum.map(response["collections"], & &1["id"])
       refute "private-collection" in ids
     end
 
-    test "returns 404 for private collection without authentication", %{} do
-      unauth_conn = build_conn()
-      conn = get(unauth_conn, ~p"/stac/api/v1/collections/private-collection")
+    test "GET /collections/:id — returns 404 for private collection without auth" do
+      conn = get(build_conn(), ~p"/stac/api/v1/collections/private-collection")
       assert json_response(conn, 404)
+    end
+
+    test "GET /collections/:id/items — returns 404 for private collection items without auth" do
+      conn = get(build_conn(), ~p"/stac/api/v1/collections/private-collection/items")
+      assert json_response(conn, 404)
+    end
+
+    test "GET /collections/:collection_id/items/:item_id — returns 404 for private item without auth" do
+      conn = get(build_conn(), ~p"/stac/api/v1/collections/private-collection/items/private-item")
+      assert json_response(conn, 404)
+    end
+
+    test "POST /search — excludes private items from unauthenticated search" do
+      conn = post(build_conn(), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      response = json_response(conn, 200)
+      ids = Enum.map(response["features"], & &1["id"])
+      refute "private-item" in ids
+    end
+
+    # --- RO key: must see private resources ---
+
+    test "GET /collections — shows private collection with RO key" do
+      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections")
+      response = json_response(conn, 200)
+      ids = Enum.map(response["collections"], & &1["id"])
+      assert "private-collection" in ids
+    end
+
+    test "GET /collections/:id — returns private collection with RO key" do
+      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection")
+      response = json_response(conn, 200)
+      assert response["id"] == "private-collection"
+      assert response["type"] == "Collection"
+    end
+
+    test "GET /collections/:id/items — returns items from private collection with RO key" do
+      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items")
+      response = json_response(conn, 200)
+      assert response["type"] == "FeatureCollection"
+      ids = Enum.map(response["features"], & &1["id"])
+      assert "private-item" in ids
+    end
+
+    test "GET /collections/:collection_id/items/:item_id — returns private item with RO key" do
+      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items/private-item")
+      response = json_response(conn, 200)
+      assert response["id"] == "private-item"
+      assert response["type"] == "Feature"
+    end
+
+    test "POST /search — includes private items with RO key" do
+      conn = post(read_only_conn(build_conn()), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      response = json_response(conn, 200)
+      ids = Enum.map(response["features"], & &1["id"])
+      assert "private-item" in ids
+    end
+
+    # --- RW key: must also see private resources ---
+
+    test "GET /collections — shows private collection with RW key" do
+      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections")
+      response = json_response(conn, 200)
+      ids = Enum.map(response["collections"], & &1["id"])
+      assert "private-collection" in ids
+    end
+
+    test "GET /collections/:id — returns private collection with RW key" do
+      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection")
+      response = json_response(conn, 200)
+      assert response["id"] == "private-collection"
+    end
+
+    test "GET /collections/:id/items — returns items from private collection with RW key" do
+      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items")
+      response = json_response(conn, 200)
+      ids = Enum.map(response["features"], & &1["id"])
+      assert "private-item" in ids
+    end
+
+    test "GET /collections/:collection_id/items/:item_id — returns private item with RW key" do
+      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items/private-item")
+      response = json_response(conn, 200)
+      assert response["id"] == "private-item"
+    end
+
+    test "POST /search — includes private items with RW key" do
+      conn = post(authenticated_conn(build_conn()), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      response = json_response(conn, 200)
+      ids = Enum.map(response["features"], & &1["id"])
+      assert "private-item" in ids
     end
   end
 
@@ -312,7 +409,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
           "temporal" => %{"interval" => [["2017-01-01T00:00:00Z", nil]]}
         }
       }
-      post(conn, ~p"/stac/api/v1/collections", params)
+      post(conn, ~p"/stac/manage/v1/collections", params)
       :ok
     end
 
@@ -341,7 +438,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "license" => "CC0-1.0",
         "catalog_id" => "test-catalog"
       }
-      post(conn, ~p"/stac/api/v1/collections", col_params)
+      post(conn, ~p"/stac/manage/v1/collections", col_params)
 
       # Item 1: polygon in Estonia-ish area, spring 2017
       item1 = %{
@@ -377,8 +474,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
         }
       }
 
-      post(conn, ~p"/stac/api/v1/items", item1)
-      post(conn, ~p"/stac/api/v1/items", item2)
+      post(conn, ~p"/stac/manage/v1/items", item1)
+      post(conn, ~p"/stac/manage/v1/items", item2)
       :ok
     end
 

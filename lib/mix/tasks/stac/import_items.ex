@@ -104,7 +104,7 @@ defmodule Mix.Tasks.Stac.ImportItems do
     }
     |> maybe_add_catalog_id(catalog_id)
 
-    url = "#{base_url}/stac/api/v1/collections"
+    url = "#{base_url}/stac/manage/v1/collections"
     body = Jason.encode!(payload)
     headers = [{"content-type", "application/json"}, {"x-api-key", api_key}]
     request = Finch.build(:post, url, headers, body)
@@ -124,7 +124,7 @@ defmodule Mix.Tasks.Stac.ImportItems do
       features: Enum.map(items, fn item -> Map.put(item, "collection_id", collection_id) |> Map.delete("collection") end)
     }
 
-    url = "#{base_url}/stac/api/v1/items/import"
+    url = "#{base_url}/stac/manage/v1/items/import"
     body = Jason.encode!(payload)
     headers = [{"content-type", "application/json"}, {"x-api-key", api_key}]
     request = Finch.build(:post, url, headers, body)

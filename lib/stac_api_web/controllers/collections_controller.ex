@@ -192,27 +192,56 @@ defmodule StacApiWeb.CollectionsController do
 
   def show_item(conn, %{"collection_id" => collection_id, "item_id" => item_id}) do
     try do
-      query = from i in StacApi.Data.Item,
-        where: i.collection_id == ^collection_id and i.id == ^item_id
+      authenticated = conn.assigns[:authenticated] || false
 
-      case Repo.one(query) do
-        nil ->
+      # Check collection exists and its catalog is not private
+      catalog_check = case Repo.get(Collection, collection_id) do
+        nil -> :not_found
+        collection ->
+          if collection.catalog_id do
+            case Repo.get(Catalog, collection.catalog_id) do
+              nil -> :ok
+              catalog ->
+                if catalog.private == true && !authenticated, do: :private, else: :ok
+            end
+          else
+            :ok
+          end
+      end
+
+      case catalog_check do
+        :not_found ->
           conn
           |> put_status(:not_found)
           |> json(%{error: "Item not found"})
 
-        item ->
-          sanitized_item = sanitize_item(item)
-          # Reconstruct assets from normalized data
-          assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
-          sanitized_item = Map.put(sanitized_item, :assets, assets)
-          
-          custom_links = item.links || []
-          resolved_links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
-          
+        :private ->
           conn
-          |> put_resp_content_type("application/geo+json")
-          |> json(Map.put(sanitized_item, :links, resolved_links))
+          |> put_status(:not_found)
+          |> json(%{error: "Item not found"})
+
+        :ok ->
+          query = from i in StacApi.Data.Item,
+            where: i.collection_id == ^collection_id and i.id == ^item_id
+
+          case Repo.one(query) do
+            nil ->
+              conn
+              |> put_status(:not_found)
+              |> json(%{error: "Item not found"})
+
+            item ->
+              sanitized_item = sanitize_item(item)
+              assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+              sanitized_item = Map.put(sanitized_item, :assets, assets)
+
+              custom_links = item.links || []
+              resolved_links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
+
+              conn
+              |> put_resp_content_type("application/geo+json")
+              |> json(Map.put(sanitized_item, :links, resolved_links))
+          end
       end
     rescue
       error ->

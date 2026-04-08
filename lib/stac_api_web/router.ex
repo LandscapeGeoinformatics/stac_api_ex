@@ -29,12 +29,13 @@ defmodule StacApiWeb.Router do
     get "/stac", RootController, :redirect_to_landing
   end
 
-  # STAC API (REST) endpoints - versioned API structure
-  # Read endpoints use optional read auth to filter private catalogs
+  # ---------------------------------------------------------------------------
+  # STAC API — OGC/STAC conformant, public read-only
+  # Optional X-API-Key (RO or RW) gates private catalog/collection/item access
+  # ---------------------------------------------------------------------------
   scope "/stac/api/v1", StacApiWeb do
     pipe_through [:api, :read_auth]
 
-    # Root and search endpoints (public read-only)
     get "/", RootController, :index
     get "/conformance", RootController, :conformance
     get "/search", SearchController, :index
@@ -43,42 +44,39 @@ defmodule StacApiWeb.Router do
     get "/openapi.json", RootController, :openapi
     get "/docs", RootController, :docs
 
-    # Legacy collection endpoints (for backward compatibility - read-only)
+    # OGC API Features / STAC collections + items
     get "/collections", CollectionsController, :index
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items
     get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
-
-    # CRUD endpoints for catalogs (read-only endpoints - public)
-    get "/catalogs", CatalogsCrudController, :index
-    get "/catalogs/:id", CatalogsCrudController, :show
-
-    # CRUD endpoints for collections (read-only endpoints - public)
-    get "/collections", CollectionsCrudController, :index
-    get "/collections/:id", CollectionsCrudController, :show
-
-    # CRUD endpoints for items (read-only endpoints - public)
-    get "/items", ItemsCrudController, :index
-    get "/items/:id", ItemsCrudController, :show
   end
 
-  # Protected write endpoints (require authentication)
-  scope "/stac/api/v1", StacApiWeb do
+  # ---------------------------------------------------------------------------
+  # Management API — internal CRUD, requires RW key (X-API-Key: <rw-value>)
+  # Not STAC-spec conformant; for administrative tooling only.
+  # ---------------------------------------------------------------------------
+  scope "/stac/manage/v1", StacApiWeb do
     pipe_through [:api, :auth]
 
-    # Protected write endpoints for catalogs
+    # Catalog management (full CRUD)
+    get "/catalogs", CatalogsCrudController, :index
+    get "/catalogs/:id", CatalogsCrudController, :show
     post "/catalogs", CatalogsCrudController, :create
     put "/catalogs/:id", CatalogsCrudController, :update
     patch "/catalogs/:id", CatalogsCrudController, :patch
     delete "/catalogs/:id", CatalogsCrudController, :delete
 
-    # Protected write endpoints for collections
+    # Collection management (full CRUD)
+    get "/collections", CollectionsCrudController, :index
+    get "/collections/:id", CollectionsCrudController, :show
     post "/collections", CollectionsCrudController, :create
     put "/collections/:id", CollectionsCrudController, :update
     patch "/collections/:id", CollectionsCrudController, :patch
     delete "/collections/:id", CollectionsCrudController, :delete
 
-    # Protected write endpoints for items
+    # Item management (full CRUD + bulk import)
+    get "/items", ItemsCrudController, :index
+    get "/items/:id", ItemsCrudController, :show
     post "/items", ItemsCrudController, :create
     post "/items/import", ItemsCrudController, :bulk_import
     put "/items/:id", ItemsCrudController, :update

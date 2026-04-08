@@ -3,25 +3,20 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
   alias StacApi.Data.{Collection, Catalog, Item}
   alias StacApi.Repo
 
-  setup do
-    # Default test API key from config/test.exs
-    {:ok, api_key: "test-api-key-2024"}
-  end
-
   defp add_auth_header(conn, api_key) do
     put_req_header(conn, "x-api-key", api_key)
   end
 
-  setup do
-    # Create a test catalog for collection tests
+  setup %{conn: conn} do
+    auth_conn = authenticated_conn(conn)
     catalog_params = %{
       "id" => "test-catalog",
       "title" => "Test Catalog",
       "description" => "Test"
     }
-    post(build_conn() |> add_auth_header("test-api-key-2024"), ~p"/stac/api/v1/catalogs", catalog_params)
+    post(auth_conn, ~p"/stac/manage/v1/catalogs", catalog_params)
 
-    {:ok, api_key: "test-api-key-2024"}
+    {:ok, conn: auth_conn, api_key: "test-api-key-2024"}
   end
 
   describe "POST /collections - create collection" do
@@ -38,7 +33,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         }
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
       assert response = json_response(conn, 201)
       assert response["success"] == true
@@ -62,7 +57,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         }
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
       assert response = json_response(conn, 201)
       assert response["data"]["id"] == "catalog-collection"
@@ -76,9 +71,9 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "license" => "CC-BY-4.0"
       }
 
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
       assert response = json_response(conn, 409)
       assert response["error"] =~ "already exists"
     end
@@ -90,7 +85,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "license" => "CC-BY-4.0"
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "id"
     end
@@ -104,7 +99,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "catalog_id" => "non-existent-catalog"
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "catalog"
     end
@@ -112,7 +107,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
 
   describe "GET /collections - list all collections" do
     test "returns empty list when no collections exist", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/collections")
+      conn = get(conn, ~p"/stac/manage/v1/collections")
       assert response = json_response(conn, 200)
       assert response["collections"] == []
       assert is_list(response["links"])
@@ -132,10 +127,10 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "license" => "CC-BY-4.0"
       }
 
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", col1_params)
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", col2_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", col1_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", col2_params)
 
-      conn = get(conn, ~p"/stac/api/v1/collections")
+      conn = get(conn, ~p"/stac/manage/v1/collections")
       assert response = json_response(conn, 200)
       assert length(response["collections"]) == 2
 
@@ -153,9 +148,9 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "description" => "Test",
         "license" => "CC-BY-4.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
-      conn = get(conn, ~p"/stac/api/v1/collections/show-collection")
+      conn = get(conn, ~p"/stac/manage/v1/collections/show-collection")
       assert response = json_response(conn, 200)
       assert response["id"] == "show-collection"
       assert response["title"] == "Show Test"
@@ -163,7 +158,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
     end
 
     test "returns 404 for non-existent collection", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/collections/non-existent")
+      conn = get(conn, ~p"/stac/manage/v1/collections/non-existent")
       assert response = json_response(conn, 404)
       assert response["error"] =~ "not found"
     end
@@ -177,7 +172,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "description" => "Original",
         "license" => "CC-BY-4.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
       update_params = %{
         "id" => "update-collection",
@@ -186,7 +181,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "license" => "CC0-1.0"
       }
 
-      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/api/v1/collections/update-collection", update_params)
+      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/manage/v1/collections/update-collection", update_params)
       assert response = json_response(conn, 200)
       assert response["success"] == true
       assert response["data"]["title"] == "Updated Title"
@@ -200,7 +195,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "license" => "CC-BY-4.0"
       }
 
-      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/api/v1/collections/non-existent", params)
+      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/manage/v1/collections/non-existent", params)
       assert response = json_response(conn, 404)
     end
   end
@@ -213,14 +208,14 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "description" => "Original",
         "license" => "CC-BY-4.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
       patch_params = %{
         "id" => "patch-collection",
         "title" => "Patched Title"
       }
 
-      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/api/v1/collections/patch-collection", patch_params)
+      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/manage/v1/collections/patch-collection", patch_params)
       assert response = json_response(conn, 200)
       assert response["data"]["title"] == "Patched Title"
       assert response["data"]["description"] == "Original"
@@ -229,7 +224,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
     test "returns 404 when patching non-existent collection", %{conn: conn, api_key: api_key} do
       params = %{"id" => "non-existent", "title" => "Title"}
 
-      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/api/v1/collections/non-existent", params)
+      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/manage/v1/collections/non-existent", params)
       assert response = json_response(conn, 404)
     end
   end
@@ -241,15 +236,15 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "title" => "To Delete",
         "license" => "CC-BY-4.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", params)
 
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/collections/delete-collection")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/collections/delete-collection")
       assert response = json_response(conn, 200)
       assert response["success"] == true
       assert response["message"] =~ "deleted successfully"
 
       # Verify it's gone
-      get_conn = get(build_conn(), ~p"/stac/api/v1/collections/delete-collection")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/collections/delete-collection")
       assert json_response(get_conn, 404)
     end
 
@@ -260,7 +255,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "title" => "Collection with Items",
         "license" => "CC-BY-4.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/collections", col_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/collections", col_params)
 
       # Create items in the collection
       item_params = %{
@@ -271,20 +266,20 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
         "datetime" => "2024-01-01T12:00:00Z",
         "properties" => %{"description" => "Test item"}
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/items", item_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/items", item_params)
 
       # Delete the collection
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/collections/col-with-items")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/collections/col-with-items")
       assert response = json_response(conn, 200)
       assert response["cascade_deleted"]["items"] >= 1
 
       # Verify item is gone
-      get_conn = get(build_conn(), ~p"/stac/api/v1/items/test-item")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/items/test-item")
       assert json_response(get_conn, 404)
     end
 
     test "returns 404 when deleting non-existent collection", %{conn: conn, api_key: api_key} do
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/collections/non-existent")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/collections/non-existent")
       assert response = json_response(conn, 404)
     end
   end

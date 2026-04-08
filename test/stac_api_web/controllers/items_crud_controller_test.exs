@@ -11,7 +11,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
       "title" => "Test Catalog",
       "description" => "Test"
     }
-    post(auth_conn, ~p"/stac/api/v1/catalogs", catalog_params)
+    post(auth_conn, ~p"/stac/manage/v1/catalogs", catalog_params)
 
     collection_params = %{
       "id" => "test-collection",
@@ -24,7 +24,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "temporal" => %{"interval" => [["2020-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
       }
     }
-    post(auth_conn, ~p"/stac/api/v1/collections", collection_params)
+    post(auth_conn, ~p"/stac/manage/v1/collections", collection_params)
 
     {:ok, conn: auth_conn}
   end
@@ -41,7 +41,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Test item", "source" => "test"}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
 
       assert response = json_response(conn, 201)
       assert response["success"] == true
@@ -73,7 +73,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         }
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
 
       assert response = json_response(conn, 201)
       assert response["success"] == true
@@ -91,9 +91,9 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      post(conn, ~p"/stac/api/v1/items", params)
+      post(conn, ~p"/stac/manage/v1/items", params)
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 409)
       assert response["error"] =~ "already exists"
     end
@@ -107,7 +107,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "id"
     end
@@ -121,7 +121,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "geometry"
     end
@@ -136,7 +136,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "collection"
     end
@@ -162,14 +162,14 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Second"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item1_params)
-      post(conn, ~p"/stac/api/v1/items", item2_params)
+      post(conn, ~p"/stac/manage/v1/items", item1_params)
+      post(conn, ~p"/stac/manage/v1/items", item2_params)
 
       :ok
     end
 
     test "returns all items", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items")
+      conn = get(conn, ~p"/stac/manage/v1/items")
       assert response = json_response(conn, 200)
 
       assert response["type"] == "FeatureCollection"
@@ -178,7 +178,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     end
 
     test "returns items with proper GeoJSON structure", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items")
+      conn = get(conn, ~p"/stac/manage/v1/items")
       response = json_response(conn, 200)
 
       features = response["features"]
@@ -193,7 +193,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     end
 
     test "supports pagination with limit parameter", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items?limit=1")
+      conn = get(conn, ~p"/stac/manage/v1/items?limit=1")
       assert response = json_response(conn, 200)
 
       assert length(response["features"]) <= 1
@@ -212,13 +212,13 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Show test"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
 
     test "returns a specific item", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items/show-item")
+      conn = get(conn, ~p"/stac/manage/v1/items/show-item")
       assert response = json_response(conn, 200)
 
       assert response["id"] == "show-item"
@@ -228,7 +228,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     end
 
     test "returns item with STAC properties", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items/show-item")
+      conn = get(conn, ~p"/stac/manage/v1/items/show-item")
       response = json_response(conn, 200)
 
       assert response["stac_version"]
@@ -242,7 +242,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     end
 
     test "returns 404 for non-existent item", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/items/non-existent")
+      conn = get(conn, ~p"/stac/manage/v1/items/non-existent")
       assert response = json_response(conn, 404)
       assert response["error"] =~ "not found"
     end
@@ -259,7 +259,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Original"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
@@ -276,7 +276,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "stac_version" => "1.0.0"
       }
 
-      conn = put(conn, ~p"/stac/api/v1/items/update-item", update_params)
+      conn = put(conn, ~p"/stac/manage/v1/items/update-item", update_params)
 
       assert response = json_response(conn, 200)
       assert response["success"] == true
@@ -295,7 +295,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "stac_version" => "1.0.0"
       }
 
-      conn = put(conn, ~p"/stac/api/v1/items/non-existent", params)
+      conn = put(conn, ~p"/stac/manage/v1/items/non-existent", params)
       assert response = json_response(conn, 404)
     end
   end
@@ -311,7 +311,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Original", "source" => "test"}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
@@ -322,7 +322,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{"description" => "Patched", "source" => "test"}
       }
 
-      conn = patch(conn, ~p"/stac/api/v1/items/patch-item", patch_params)
+      conn = patch(conn, ~p"/stac/manage/v1/items/patch-item", patch_params)
 
       assert response = json_response(conn, 200)
       assert response["success"] == true
@@ -333,7 +333,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     test "returns 404 when patching non-existent item", %{conn: conn} do
       params = %{"id" => "non-existent", "properties" => %{"description" => "Test"}}
 
-      conn = patch(conn, ~p"/stac/api/v1/items/non-existent", params)
+      conn = patch(conn, ~p"/stac/manage/v1/items/non-existent", params)
       assert response = json_response(conn, 404)
     end
   end
@@ -349,25 +349,25 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
 
     test "deletes an item successfully", %{conn: conn} do
-      conn = delete(conn, ~p"/stac/api/v1/items/delete-item")
+      conn = delete(conn, ~p"/stac/manage/v1/items/delete-item")
 
       assert response = json_response(conn, 200)
       assert response["success"] == true
       assert response["message"] =~ "deleted successfully"
 
       # Verify it's gone
-      get_conn = get(build_conn(), ~p"/stac/api/v1/items/delete-item")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/items/delete-item")
       assert json_response(get_conn, 404)
     end
 
     test "returns 404 when deleting non-existent item", %{conn: conn} do
-      conn = delete(conn, ~p"/stac/api/v1/items/non-existent")
+      conn = delete(conn, ~p"/stac/manage/v1/items/non-existent")
       assert response = json_response(conn, 404)
     end
   end
@@ -395,7 +395,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items/import", params)
+      conn = post(conn, ~p"/stac/manage/v1/items/import", params)
 
       assert response = json_response(conn, 200)
       assert response["success"] == true
@@ -403,7 +403,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
       assert response["total"] == 2
 
       # Verify items were created
-      get_conn = get(build_conn(), ~p"/stac/api/v1/items/bulk-item-1")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/items/bulk-item-1")
       assert json_response(get_conn, 200)
     end
 
@@ -429,7 +429,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items/import", params)
+      conn = post(conn, ~p"/stac/manage/v1/items/import", params)
 
       assert response = json_response(conn, 200)
       assert response["total"] == 2
@@ -440,7 +440,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
     test "returns 400 when features array is empty", %{conn: conn} do
       params = %{"features" => []}
 
-      conn = post(conn, ~p"/stac/api/v1/items/import", params)
+      conn = post(conn, ~p"/stac/manage/v1/items/import", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "at least one"
     end
@@ -465,11 +465,11 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         }
       }
 
-      post_conn = post(conn, ~p"/stac/api/v1/items", item_params)
+      post_conn = post(conn, ~p"/stac/manage/v1/items", item_params)
       assert json_response(post_conn, 201)
 
       # Retrieve and verify assets
-      get_conn = get(conn, ~p"/stac/api/v1/items/asset-item")
+      get_conn = get(conn, ~p"/stac/manage/v1/items/asset-item")
       response = json_response(get_conn, 200)
 
       assert is_map(response["assets"])
@@ -488,7 +488,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 201)
       assert response["data"]["geometry"]["type"] == "Point"
     end
@@ -512,7 +512,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "properties" => %{}
       }
 
-      conn = post(conn, ~p"/stac/api/v1/items", params)
+      conn = post(conn, ~p"/stac/manage/v1/items", params)
       assert response = json_response(conn, 201)
       assert response["data"]["geometry"]["type"] == "Polygon"
     end
@@ -527,7 +527,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "description" => "Private",
         "private" => true
       }
-      post(conn, ~p"/stac/api/v1/catalogs", private_catalog_params)
+      post(conn, ~p"/stac/manage/v1/catalogs", private_catalog_params)
 
       # Create a collection in the private catalog
       private_collection_params = %{
@@ -537,7 +537,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "license" => "CC-BY-4.0",
         "catalog_id" => "private-catalog"
       }
-      post(conn, ~p"/stac/api/v1/collections", private_collection_params)
+      post(conn, ~p"/stac/manage/v1/collections", private_collection_params)
 
       # Create an item in the private collection
       item_params = %{
@@ -548,24 +548,21 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
         "datetime" => "2024-01-01T12:00:00Z",
         "properties" => %{}
       }
-      post(conn, ~p"/stac/api/v1/items", item_params)
+      post(conn, ~p"/stac/manage/v1/items", item_params)
 
       :ok
     end
 
-    test "hides items from private catalogs in GET /items for unauthenticated users", %{} do
+    test "rejects unauthenticated access to GET /items (manage endpoint requires auth)", %{} do
       unauth_conn = build_conn()
-      conn = get(unauth_conn, ~p"/stac/api/v1/items")
-      response = json_response(conn, 200)
-
-      ids = Enum.map(response["features"], & &1["id"])
-      refute "private-item" in ids
+      conn = get(unauth_conn, ~p"/stac/manage/v1/items")
+      assert json_response(conn, 401)
     end
 
-    test "returns 404 for item in private catalog without authentication", %{} do
+    test "rejects unauthenticated access to GET /items/:id (manage endpoint requires auth)", %{} do
       unauth_conn = build_conn()
-      conn = get(unauth_conn, ~p"/stac/api/v1/items/private-item")
-      assert json_response(conn, 404)
+      conn = get(unauth_conn, ~p"/stac/manage/v1/items/private-item")
+      assert json_response(conn, 401)
     end
   end
 end

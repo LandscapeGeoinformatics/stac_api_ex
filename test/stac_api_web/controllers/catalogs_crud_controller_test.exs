@@ -3,9 +3,8 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
   alias StacApi.Data.Catalog
   alias StacApi.Repo
 
-  setup do
-    # Default test API key from config/test.exs
-    {:ok, api_key: "test-api-key-2024"}
+  setup %{conn: conn} do
+    {:ok, conn: authenticated_conn(conn), api_key: "test-api-key-2024"}
   end
 
   defp add_auth_header(conn, api_key) do
@@ -22,7 +21,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "stac_version" => "1.0.0"
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
       assert response = json_response(conn, 201)
       assert response["success"] == true
@@ -41,7 +40,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "type" => "Catalog",
         "stac_version" => "1.0.0"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", parent_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", parent_params)
 
       # Create nested catalog
       nested_params = %{
@@ -53,7 +52,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "parent_catalog_id" => "parent-catalog"
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", nested_params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", nested_params)
       assert response = json_response(conn, 201)
       assert response["data"]["id"] == "nested-catalog"
     end
@@ -68,10 +67,10 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
       }
 
       # Create first time
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
       # Try to create again
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
       assert response = json_response(conn, 409)
       assert response["error"] =~ "already exists"
     end
@@ -83,7 +82,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "type" => "Catalog"
       }
 
-      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn = conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
       assert response = json_response(conn, 400)
       assert response["error"] =~ "id"
     end
@@ -91,7 +90,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
 
   describe "GET /catalogs - list all catalogs" do
     test "returns a list of catalogs", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/catalogs")
+      conn = get(conn, ~p"/stac/manage/v1/catalogs")
       assert response = json_response(conn, 200)
       assert is_list(response["catalogs"])
       assert is_list(response["links"])
@@ -105,10 +104,10 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
       cat1_params = %{"id" => unique_id1, "title" => "Catalog 1", "description" => "First"}
       cat2_params = %{"id" => unique_id2, "title" => "Catalog 2", "description" => "Second"}
 
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", cat1_params)
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", cat2_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", cat1_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", cat2_params)
 
-      conn = get(conn, ~p"/stac/api/v1/catalogs")
+      conn = get(conn, ~p"/stac/manage/v1/catalogs")
       assert response = json_response(conn, 200)
       assert is_list(response["catalogs"])
       assert length(response["catalogs"]) >= 2
@@ -126,9 +125,9 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Show Test",
         "description" => "Test"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
-      conn = get(conn, ~p"/stac/api/v1/catalogs/show-catalog")
+      conn = get(conn, ~p"/stac/manage/v1/catalogs/show-catalog")
       assert response = json_response(conn, 200)
       assert response["id"] == "show-catalog"
       assert response["title"] == "Show Test"
@@ -136,7 +135,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
     end
 
     test "returns 404 for non-existent catalog", %{conn: conn} do
-      conn = get(conn, ~p"/stac/api/v1/catalogs/non-existent")
+      conn = get(conn, ~p"/stac/manage/v1/catalogs/non-existent")
       assert response = json_response(conn, 404)
       assert response["error"] =~ "not found"
     end
@@ -150,7 +149,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Original Title",
         "description" => "Original Description"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
       # Update it
       update_params = %{
@@ -159,7 +158,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "description" => "Updated Description"
       }
 
-      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/api/v1/catalogs/update-catalog", update_params)
+      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/manage/v1/catalogs/update-catalog", update_params)
       assert response = json_response(conn, 200)
       assert response["success"] == true
       assert response["data"]["title"] == "Updated Title"
@@ -171,7 +170,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Title"
       }
 
-      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/api/v1/catalogs/non-existent", params)
+      conn = conn |> add_auth_header(api_key) |> put(~p"/stac/manage/v1/catalogs/non-existent", params)
       assert response = json_response(conn, 404)
       assert response["error"] =~ "not found"
     end
@@ -185,7 +184,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Original Title",
         "description" => "Original Description"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
       # Partial update - only change title
       patch_params = %{
@@ -193,7 +192,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Patched Title"
       }
 
-      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/api/v1/catalogs/patch-catalog", patch_params)
+      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/manage/v1/catalogs/patch-catalog", patch_params)
       assert response = json_response(conn, 200)
       assert response["data"]["title"] == "Patched Title"
       assert response["data"]["description"] == "Original Description"
@@ -202,7 +201,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
     test "returns 404 when patching non-existent catalog", %{conn: conn, api_key: api_key} do
       params = %{"id" => "non-existent", "title" => "Title"}
 
-      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/api/v1/catalogs/non-existent", params)
+      conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/manage/v1/catalogs/non-existent", params)
       assert response = json_response(conn, 404)
     end
   end
@@ -214,16 +213,16 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "id" => "delete-catalog",
         "title" => "To Delete"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", params)
 
       # Delete it
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/catalogs/delete-catalog")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/catalogs/delete-catalog")
       assert response = json_response(conn, 200)
       assert response["success"] == true
       assert response["message"] =~ "deleted successfully"
 
       # Verify it's gone
-      get_conn = get(build_conn(), ~p"/stac/api/v1/catalogs/delete-catalog")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/catalogs/delete-catalog")
       assert json_response(get_conn, 404)
     end
 
@@ -233,7 +232,7 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "id" => "parent-delete",
         "title" => "Parent"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", parent_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", parent_params)
 
       # Create child catalog
       child_params = %{
@@ -241,20 +240,20 @@ defmodule StacApiWeb.CatalogsCrudControllerTest do
         "title" => "Child",
         "parent_catalog_id" => "parent-delete"
       }
-      conn |> add_auth_header(api_key) |> post(~p"/stac/api/v1/catalogs", child_params)
+      conn |> add_auth_header(api_key) |> post(~p"/stac/manage/v1/catalogs", child_params)
 
       # Delete parent - should cascade
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/catalogs/parent-delete")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/catalogs/parent-delete")
       assert response = json_response(conn, 200)
       assert response["cascade_deleted"]["catalogs"] >= 1
 
       # Verify child is gone
-      get_conn = get(build_conn(), ~p"/stac/api/v1/catalogs/child-delete")
+      get_conn = get(authenticated_conn(build_conn()), ~p"/stac/manage/v1/catalogs/child-delete")
       assert json_response(get_conn, 404)
     end
 
     test "returns 404 when deleting non-existent catalog", %{conn: conn, api_key: api_key} do
-      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/api/v1/catalogs/non-existent")
+      conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/catalogs/non-existent")
       assert response = json_response(conn, 404)
     end
   end
