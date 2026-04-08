@@ -7,7 +7,7 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   """
 
   alias StacApi.Repo
-  alias StacApi.Data.{Catalog, Collection, Item}
+  alias StacApi.Data.{Catalog, Collection}
   import Ecto.Query
 
   @doc """
@@ -94,22 +94,14 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   end
 
   defp generate_item_runtime_links(item) do
-    links = [
-      # Self link
+    # parent = the collection (STAC spec: parent is the direct container of the item)
+    # Do NOT use /catalog/:id — that is a non-standard route and breaks conforming clients.
+    [
       create_link("self", "/stac/api/v1/collections/#{item.collection_id}/items/#{item.id}"),
-      # Root link
       create_link("root", "/stac/api/v1/"),
-      # Collection link
+      create_link("parent", "/stac/api/v1/collections/#{item.collection_id}"),
       create_link("collection", "/stac/api/v1/collections/#{item.collection_id}")
     ]
-
-    # Parent catalog link (if collection has a catalog)
-    parent_links = case get_collection_catalog_id(item.collection_id) do
-      nil -> []
-      catalog_id -> [create_link("parent", "/stac/api/v1/catalog/#{catalog_id}")]
-    end
-
-    links ++ parent_links
   end
 
   # Helper functions for database queries
@@ -122,11 +114,6 @@ defmodule StacApiWeb.DynamicLinkGenerator do
   defp get_collections_in_catalog(catalog_id) do
     from(c in Collection, where: c.catalog_id == ^catalog_id, order_by: c.id)
     |> Repo.all()
-  end
-
-  defp get_collection_catalog_id(collection_id) do
-    from(c in Collection, where: c.id == ^collection_id, select: c.catalog_id)
-    |> Repo.one()
   end
 
   # Helper function to create standardized links with absolute URLs
