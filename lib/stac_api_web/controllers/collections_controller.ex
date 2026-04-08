@@ -98,16 +98,19 @@ defmodule StacApiWeb.CollectionsController do
     end
   end
 
-  def items(conn, %{"id" => collection_id}) do
+  def items(conn, %{"id" => collection_id} = params) do
     try do
       authenticated = conn.assigns[:authenticated] || false
-      
+
+      limit = parse_int(params["limit"] || "10") |> max(1) |> min(10_000)
+      offset = parse_int(params["offset"] || "0") |> max(0)
+
       case Repo.get(Collection, collection_id) do
         nil ->
           conn
           |> put_status(:not_found)
           |> json(%{error: "Collection not found"})
-        
+
         collection ->
           # Check if collection is in a private catalog
           catalog_check = if collection.catalog_id do
@@ -124,30 +127,58 @@ defmodule StacApiWeb.CollectionsController do
           else
             :ok
           end
-          
+
           if catalog_check == :private do
             conn
             |> put_status(:not_found)
             |> json(%{error: "Collection not found"})
           else
-            query = from i in StacApi.Data.Item,
-              where: i.collection_id == ^collection_id
+            base_query = from i in StacApi.Data.Item,
+              where: i.collection_id == ^collection_id,
+              order_by: [desc: i.datetime]
 
-            items = Repo.all(query)
+            total_count = Repo.aggregate(base_query, :count, :id)
+
+            items = Repo.all(from i in base_query, limit: ^limit, offset: ^offset)
+
             sanitized_items = Enum.map(items, fn item ->
               sanitized = sanitize_item(item)
               assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
               sanitized = Map.put(sanitized, :assets, assets)
-              
+
               custom_links = item.links || []
               links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
               Map.put(sanitized, :links, links)
             end)
 
-            json(conn, %{
+            base_url = Application.get_env(:stac_api, :base_url, "")
+            items_base = "#{base_url}/stac/api/v1/collections/#{collection_id}/items"
+
+            pagination_links =
+              [
+                %{"rel" => "self", "href" => "#{items_base}?limit=#{limit}&offset=#{offset}", "type" => "application/geo+json"},
+                %{"rel" => "root", "href" => "#{base_url}/stac/api/v1/", "type" => "application/json"},
+                %{"rel" => "collection", "href" => "#{base_url}/stac/api/v1/collections/#{collection_id}", "type" => "application/json"}
+              ] ++
+              (if offset + limit < total_count do
+                [%{"rel" => "next", "href" => "#{items_base}?limit=#{limit}&offset=#{offset + limit}", "type" => "application/geo+json"}]
+              else [] end) ++
+              (if offset > 0 do
+                prev_offset = max(offset - limit, 0)
+                [%{"rel" => "prev", "href" => "#{items_base}?limit=#{limit}&offset=#{prev_offset}", "type" => "application/geo+json"}]
+              else [] end)
+
+            conn
+            |> put_resp_content_type("application/geo+json")
+            |> json(%{
               type: "FeatureCollection",
               features: sanitized_items,
-              links: LinkResolver.create_item_links(collection_id)
+              links: pagination_links,
+              context: %{
+                returned: length(sanitized_items),
+                matched: total_count,
+                limit: limit
+              }
             })
           end
       end
@@ -179,7 +210,9 @@ defmodule StacApiWeb.CollectionsController do
           custom_links = item.links || []
           resolved_links = StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
           
-          json(conn, Map.put(sanitized_item, :links, resolved_links))
+          conn
+          |> put_resp_content_type("application/geo+json")
+          |> json(Map.put(sanitized_item, :links, resolved_links))
       end
     rescue
       error ->
@@ -206,6 +239,15 @@ defmodule StacApiWeb.CollectionsController do
     |> maybe_put_collection_field(:keywords, Map.get(collection, :keywords))
     |> maybe_put_collection_field(:providers, Map.get(collection, :providers))
   end
+
+  defp parse_int(str) when is_binary(str) do
+    case Integer.parse(str) do
+      {num, _} -> num
+      :error -> 0
+    end
+  end
+  defp parse_int(num) when is_integer(num), do: num
+  defp parse_int(_), do: 0
 
   defp maybe_put_collection_field(map, _key, nil), do: map
   defp maybe_put_collection_field(map, _key, []), do: map

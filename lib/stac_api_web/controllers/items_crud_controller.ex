@@ -176,7 +176,9 @@ defmodule StacApiWeb.ItemsCrudController do
             links: links
           }
 
-          json(conn, item_response)
+          conn
+          |> put_resp_content_type("application/geo+json")
+          |> json(item_response)
         end
     end
   end
@@ -421,7 +423,9 @@ defmodule StacApiWeb.ItemsCrudController do
         [%{"rel" => "prev", "href" => prev_url, "type" => "application/geo+json"}]
       else [] end)
 
-    json(conn, %{
+    conn
+    |> put_resp_content_type("application/geo+json")
+    |> json(%{
       type: "FeatureCollection",
       description: "Non-STAC management endpoint: returns all items across all collections with pagination. " <>
                    "For STAC-conformant item access use GET /stac/api/v1/collections/{collectionId}/items " <>
