@@ -10,12 +10,50 @@ This Phoenix application provides a STAC (SpatioTemporal Asset Catalog) API impl
 
 
 
-## Document contribution workflow:
+## Contributing
 
-- make a fork from https://github.com/LandscapeGeoinformatics/stac_api_ex yo your own GitHub
-- make a new "working branch" for yourself, keep the master branch just clean and in sync with our (https://github.com/LandscapeGeoinformatics/stac_api_ex) master branch (this way you always have a clean base in sync with upstream)
-- from your working branch (can also be smaller feature branches) make a pull request to our master branch
-- try to keep pull requests somewhat "isolated" (specific updates, not touching all the files all over the place)
+### External Contributors
+- Fork the repository from [GitHub](https://github.com/LandscapeGeoinformatics/stac_api_ex).
+- Create a feature branch for your changes.
+- Submit a Pull Request to the `master` branch.
+- Keep pull requests focused on specific updates.
+
+### Maintainer Workflow (Dual Remote Mirroring)
+We maintain an internal GitLab (`origin`) and a public GitHub mirror (`outbound`). To keep histories identical across both while using rebases, follow the "Mirroring Workflow":
+
+#### 1. One-Time Setup
+Create a combined `all` remote that pushes to both GitLab and GitHub:
+```bash
+git remote add all git@gitlab.ut.ee:geog/stac_api_ex.git
+git remote set-url --add --push all git@gitlab.ut.ee:geog/stac_api_ex.git
+git remote set-url --add --push all git@github.com:LandscapeGeoinformatics/stac_api_ex.git
+```
+
+#### 2. Daily Development
+Always pull from the internal GitLab and push to the combined remote:
+```bash
+# Pull and rebase from internal source
+git pull origin master --rebase
+
+# Push to both remotes simultaneously
+git push all master --force-with-lease
+```
+
+#### 3. Merging GitHub Pull Requests
+When merging external contributions from GitHub:
+```bash
+# Fetch the PR branch (replace ID with PR number)
+git fetch outbound pull/ID/head:pr-branch
+
+# Rebase and merge locally
+git checkout master
+git rebase pr-branch
+
+# Update both remotes
+git push all master --force-with-lease
+git branch -D pr-branch
+```
+
 
 
 
