@@ -66,8 +66,56 @@
         <p class="text-sm text-green-700 mb-2"><%= @current_entity.description %></p>
       <% end %>
       <%= if @current_entity.license do %>
-        <p class="text-xs text-green-600">License: <%= @current_entity.license %></p>
+        <p class="text-xs text-green-600 mb-3">License: <%= @current_entity.license %></p>
       <% end %>
+
+      <%!-- Keywords --%>
+      <%= if @current_entity.keywords not in [nil, []] do %>
+        <div class="mb-2">
+          <%= for word <- @current_entity.keywords do %>
+            <span class="inline-block mr-1 mb-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 border border-green-200"><%= word %></span>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%!-- Providers --%>
+      <%= if @current_entity.providers not in [nil, []] do %>
+        <div class="mb-2 text-xs text-green-700 space-y-0.5">
+          <%= for p <- @current_entity.providers do %>
+            <div class="flex flex-wrap items-baseline gap-1.5">
+              <span class="font-medium"><%= p["name"] %></span>
+              <%= if p["roles"] not in [nil, []] do %>
+                <span class="text-green-500">(<%= Enum.join(p["roles"], ", ") %>)</span>
+              <% end %>
+              <%= if p["url"] do %>
+                <a href={p["url"]} target="_blank" rel="noopener noreferrer"
+                   class="text-green-400 hover:text-green-600 hover:underline break-all"><%= p["url"] %></a>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%!-- Summaries --%>
+      <%= if @current_entity.summaries not in [nil, %{}] do %>
+        <div class="mt-1 mb-1 text-xs text-green-600 space-y-0.5">
+          <%= for {key, vals} <- @current_entity.summaries do %>
+            <div class="flex items-baseline gap-1">
+              <span class="font-medium text-green-500 shrink-0"><%= key %>:</span>
+              <span><%= if is_list(vals), do: Enum.join(vals, ", "), else: inspect(vals) %></span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="mt-3 flex space-x-4 text-xs text-green-400 border-t border-green-100 pt-2">
+        <%= if @current_entity.inserted_at do %>
+          <span>Created: <%= NaiveDateTime.to_string(@current_entity.inserted_at) %> UTC</span>
+        <% end %>
+        <%= if @current_entity.updated_at do %>
+          <span>Updated: <%= NaiveDateTime.to_string(@current_entity.updated_at) %> UTC</span>
+        <% end %>
+      </div>
     </div>
   <% end %>
 

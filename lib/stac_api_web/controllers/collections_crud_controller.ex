@@ -34,7 +34,8 @@ defmodule StacApiWeb.CollectionsCrudController do
               license: collection.license,
               extent: collection.extent,
               summaries: collection.summaries,
-              properties: collection.properties,
+              keywords: collection.keywords,
+              providers: collection.providers,
               stac_extensions: collection.stac_extensions || [],
               links: links
             }
@@ -109,10 +110,13 @@ defmodule StacApiWeb.CollectionsCrudController do
             license: collection.license,
             extent: collection.extent,
             summaries: collection.summaries,
-            properties: collection.properties,
+            keywords: collection.keywords,
+            providers: collection.providers,
             stac_extensions: collection.stac_extensions || [],
             links: links
           }
+          |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+          |> Enum.into(%{})
 
           json(conn, collection_response)
         end
@@ -148,7 +152,8 @@ defmodule StacApiWeb.CollectionsCrudController do
                   license: updated_collection.license,
                   extent: updated_collection.extent,
                   summaries: updated_collection.summaries,
-                  properties: updated_collection.properties,
+                  keywords: updated_collection.keywords,
+                  providers: updated_collection.providers,
                   stac_extensions: updated_collection.stac_extensions || [],
                   links: links
                 }
@@ -209,7 +214,8 @@ defmodule StacApiWeb.CollectionsCrudController do
                   license: reloaded_collection.license,
                   extent: reloaded_collection.extent,
                   summaries: reloaded_collection.summaries,
-                  properties: reloaded_collection.properties,
+                  keywords: reloaded_collection.keywords,
+                  providers: reloaded_collection.providers,
                   stac_extensions: reloaded_collection.stac_extensions || [],
                   links: links
                 }
@@ -289,7 +295,7 @@ defmodule StacApiWeb.CollectionsCrudController do
       custom_links = collection.links || []
       links = DynamicLinkGenerator.generate_collection_links(collection, custom_links)
       
-      %{
+      base = %{
         stac_version: collection.stac_version || "1.0.0",
         type: "Collection",
         id: collection.id,
@@ -298,10 +304,12 @@ defmodule StacApiWeb.CollectionsCrudController do
         license: collection.license,
         extent: collection.extent,
         summaries: collection.summaries,
-        properties: collection.properties,
+        keywords: collection.keywords,
+        providers: collection.providers,
         stac_extensions: collection.stac_extensions || [],
         links: links
       }
+      base |> Enum.reject(fn {_k, v} -> is_nil(v) end) |> Enum.into(%{})
     end)
 
     json(conn, %{
@@ -344,7 +352,8 @@ defmodule StacApiWeb.CollectionsCrudController do
           "license" => params["license"],
           "extent" => params["extent"],
           "summaries" => params["summaries"],
-          "properties" => params["properties"] || %{},
+          "keywords" => params["keywords"],
+          "providers" => params["providers"],
           "stac_version" => params["stac_version"] || "1.0.0",
           "stac_extensions" => params["stac_extensions"] || [],
           "links" => params["links"] || [],
@@ -360,7 +369,7 @@ defmodule StacApiWeb.CollectionsCrudController do
       {:error, "Missing required field: id"}
     else
       catalog_id = params["catalog_id"]
-      
+
       if catalog_id && !Repo.get(Catalog, catalog_id) do
         {:error, "Referenced catalog does not exist"}
       else
@@ -371,7 +380,8 @@ defmodule StacApiWeb.CollectionsCrudController do
         |> maybe_put("license", params["license"])
         |> maybe_put("extent", params["extent"])
         |> maybe_put("summaries", params["summaries"])
-        |> maybe_put("properties", params["properties"])
+        |> maybe_put("keywords", params["keywords"])
+        |> maybe_put("providers", params["providers"])
         |> maybe_put("stac_version", params["stac_version"])
         |> maybe_put("stac_extensions", params["stac_extensions"])
         |> maybe_put("links", params["links"])

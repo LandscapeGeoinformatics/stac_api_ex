@@ -75,6 +75,21 @@
               </dd>
             </div>
           <% end %>
+
+          <div class="border-t border-gray-100 pt-3 grid grid-cols-2 gap-4">
+            <%= if @current_entity.inserted_at do %>
+              <div>
+                <dt class="text-xs font-medium text-gray-400">Record created</dt>
+                <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= NaiveDateTime.to_string(@current_entity.inserted_at) %> UTC</dd>
+              </div>
+            <% end %>
+            <%= if @current_entity.updated_at do %>
+              <div>
+                <dt class="text-xs font-medium text-gray-400">Record updated</dt>
+                <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= NaiveDateTime.to_string(@current_entity.updated_at) %> UTC</dd>
+              </div>
+            <% end %>
+          </div>
         </dl>
       </div>
 

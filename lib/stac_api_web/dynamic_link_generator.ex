@@ -85,13 +85,10 @@ defmodule StacApiWeb.DynamicLinkGenerator do
                   type: "application/geo+json")
     ]
 
-    # Parent catalog link
-    parent_links = case collection.catalog_id do
-      nil ->
-        [create_link("parent", "/stac/api/v1/")]
-      catalog_id ->
-        [create_link("parent", "/stac/api/v1/catalog/#{catalog_id}")]
-    end
+    # Parent link — always point to the STAC root catalog.
+    # Custom /catalog/ paths are not STAC-API conformant; catalogs are internal
+    # grouping only and the spec has no /catalog/ route.
+    parent_links = [create_link("parent", "/stac/api/v1/")]
 
     links ++ parent_links
   end

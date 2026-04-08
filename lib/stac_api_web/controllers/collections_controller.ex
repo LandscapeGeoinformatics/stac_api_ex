@@ -199,14 +199,17 @@ defmodule StacApiWeb.CollectionsController do
       license: collection.license || "",
       extent: collection.extent || %{},
       summaries: collection.summaries || %{},
-      properties: collection.properties || %{},
       stac_version: collection.stac_version || "",
       stac_extensions: collection.stac_extensions || [],
-      links: collection.links || [],
-      inserted_at: collection.inserted_at,
-      updated_at: collection.updated_at
+      links: collection.links || []
     }
+    |> maybe_put_collection_field(:keywords, Map.get(collection, :keywords))
+    |> maybe_put_collection_field(:providers, Map.get(collection, :providers))
   end
+
+  defp maybe_put_collection_field(map, _key, nil), do: map
+  defp maybe_put_collection_field(map, _key, []), do: map
+  defp maybe_put_collection_field(map, key, value), do: Map.put(map, key, value)
 
   defp sanitize_item(item) do
     %{

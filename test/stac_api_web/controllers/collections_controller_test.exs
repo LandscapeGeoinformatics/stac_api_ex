@@ -254,4 +254,174 @@ defmodule StacApiWeb.CollectionsControllerTest do
       assert json_response(conn, 404)
     end
   end
+
+  describe "STAC conformance — Issue 3: no properties field on Collection" do
+    test "collection response must not contain a top-level properties field", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/test-collection")
+      response = json_response(conn, 200)
+      refute Map.has_key?(response, "properties"),
+        "STAC Collections must not have a top-level 'properties' field"
+    end
+
+    test "collections list must not contain properties on any collection", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections")
+      response = json_response(conn, 200)
+      Enum.each(response["collections"], fn col ->
+        refute Map.has_key?(col, "properties"),
+          "Collection #{col["id"]} must not expose 'properties'"
+      end)
+    end
+  end
+
+  describe "STAC conformance — Issue 6: no Ecto timestamps in STAC responses" do
+    test "collection GET must not leak inserted_at or updated_at", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/test-collection")
+      response = json_response(conn, 200)
+      refute Map.has_key?(response, "inserted_at"), "inserted_at must not appear in STAC response"
+      refute Map.has_key?(response, "updated_at"), "updated_at must not appear in STAC response"
+    end
+  end
+
+  describe "STAC conformance — Issue 5: parent link must be STAC-conformant" do
+    test "collection parent link points to root, not a /catalog/ path", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/test-collection")
+      response = json_response(conn, 200)
+      parent_link = Enum.find(response["links"], &(&1["rel"] == "parent"))
+      assert parent_link, "Collection must have a parent link"
+      refute String.contains?(parent_link["href"], "/catalog/"),
+        "parent link must not use non-standard /catalog/ path, got: #{parent_link["href"]}"
+    end
+  end
+
+  describe "STAC conformance — Issue 4: keywords and providers round-trip" do
+    setup %{conn: conn} do
+      params = %{
+        "id" => "kw-collection",
+        "title" => "Keywords Test",
+        "description" => "Testing keywords and providers",
+        "license" => "CC0-1.0",
+        "catalog_id" => "test-catalog",
+        "keywords" => ["ndvi", "sentinel-2", "estonia"],
+        "providers" => [%{
+          "name" => "University of Tartu HPC",
+          "roles" => ["producer"],
+          "url" => "https://hpc.ut.ee"
+        }],
+        "extent" => %{
+          "spatial" => %{"bbox" => [[21.7, 57.5, 28.2, 59.9]]},
+          "temporal" => %{"interval" => [["2017-01-01T00:00:00Z", nil]]}
+        }
+      }
+      post(conn, ~p"/stac/api/v1/collections", params)
+      :ok
+    end
+
+    test "keywords are stored and returned", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/kw-collection")
+      response = json_response(conn, 200)
+      assert response["keywords"] == ["ndvi", "sentinel-2", "estonia"]
+    end
+
+    test "providers are stored and returned", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/kw-collection")
+      response = json_response(conn, 200)
+      assert [provider | _] = response["providers"]
+      assert provider["name"] == "University of Tartu HPC"
+      assert provider["roles"] == ["producer"]
+    end
+  end
+
+  describe "STAC conformance — Issue 1 & 2: computed spatial and temporal extent" do
+    setup %{conn: conn} do
+      # Create a collection and add two items with known bounding boxes and date ranges
+      col_params = %{
+        "id" => "extent-test-collection",
+        "title" => "Extent Test",
+        "description" => "Tests that extent is computed from items",
+        "license" => "CC0-1.0",
+        "catalog_id" => "test-catalog"
+      }
+      post(conn, ~p"/stac/api/v1/collections", col_params)
+
+      # Item 1: polygon in Estonia-ish area, spring 2017
+      item1 = %{
+        "id" => "extent-item-1",
+        "collection_id" => "extent-test-collection",
+        "geometry" => %{
+          "type" => "Polygon",
+          "coordinates" => [[[21.0, 57.0], [22.0, 57.0], [22.0, 58.0], [21.0, 58.0], [21.0, 57.0]]]
+        },
+        "bbox" => [21.0, 57.0, 22.0, 58.0],
+        "datetime" => nil,
+        "properties" => %{
+          "datetime" => nil,
+          "start_datetime" => "2017-04-01T00:00:00Z",
+          "end_datetime" => "2017-05-31T23:59:59Z"
+        }
+      }
+
+      # Item 2: polygon shifted east, autumn 2024
+      item2 = %{
+        "id" => "extent-item-2",
+        "collection_id" => "extent-test-collection",
+        "geometry" => %{
+          "type" => "Polygon",
+          "coordinates" => [[[26.0, 58.0], [28.0, 58.0], [28.0, 60.0], [26.0, 60.0], [26.0, 58.0]]]
+        },
+        "bbox" => [26.0, 58.0, 28.0, 60.0],
+        "datetime" => nil,
+        "properties" => %{
+          "datetime" => nil,
+          "start_datetime" => "2024-09-01T00:00:00Z",
+          "end_datetime" => "2024-10-31T23:59:59Z"
+        }
+      }
+
+      post(conn, ~p"/stac/api/v1/items", item1)
+      post(conn, ~p"/stac/api/v1/items", item2)
+      :ok
+    end
+
+    test "extent.spatial.bbox is present and covers all items", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/extent-test-collection")
+      response = json_response(conn, 200)
+
+      assert extent = response["extent"], "extent must be present"
+      assert spatial = extent["spatial"], "extent.spatial must be present"
+      assert [bbox | _] = spatial["bbox"], "extent.spatial.bbox must be a non-empty list"
+
+      # bbox must be [minx, miny, maxx, maxy] covering both items
+      [minx, miny, maxx, maxy] = bbox
+      assert minx <= 21.0, "minx should cover western item (21.0)"
+      assert miny <= 57.0, "miny should cover southern item (57.0)"
+      assert maxx >= 28.0, "maxx should cover eastern item (28.0)"
+      assert maxy >= 60.0, "maxy should cover northern item (60.0)"
+    end
+
+    test "extent.temporal.interval spans all items using start/end_datetime", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/extent-test-collection")
+      response = json_response(conn, 200)
+
+      assert extent = response["extent"]
+      assert temporal = extent["temporal"]
+      assert [[start_dt, end_dt] | _] = temporal["interval"]
+
+      # start must be <= 2017-04-01 (earliest start_datetime)
+      assert start_dt <= "2017-04-01T00:00:00Z",
+        "temporal start should be at or before 2017-04-01, got #{start_dt}"
+
+      # end must be >= 2024-10-31 (latest end_datetime)
+      assert end_dt >= "2024-10-31T23:59:59Z",
+        "temporal end should be at or after 2024-10-31, got #{end_dt}"
+    end
+
+    test "temporal extent timestamps have no microseconds (.000000Z)", %{conn: conn} do
+      conn = get(conn, ~p"/stac/api/v1/collections/extent-test-collection")
+      response = json_response(conn, 200)
+
+      [[start_dt, end_dt]] = response["extent"]["temporal"]["interval"]
+      refute String.contains?(start_dt || "", "."), "start_datetime must not contain microseconds"
+      refute String.contains?(end_dt || "", "."), "end_datetime must not contain microseconds"
+    end
+  end
 end

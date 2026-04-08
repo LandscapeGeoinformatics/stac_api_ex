@@ -11,7 +11,8 @@ defmodule StacApi.Data.Collection do
     field :license, :string
     field :extent, :map
     field :summaries, :map
-    field :properties, :map
+    field :keywords, {:array, :string}
+    field :providers, {:array, :map}
     field :stac_version, :string
     field :stac_extensions, {:array, :string}
     field :links, {:array, :map}
@@ -26,7 +27,7 @@ defmodule StacApi.Data.Collection do
   def changeset(collection, attrs) do
     collection
     |> cast(attrs, [:id, :title, :description, :license, :extent, :summaries,
-                    :properties, :stac_version, :stac_extensions, :links, :catalog_id])
+                    :keywords, :providers, :stac_version, :stac_extensions, :links, :catalog_id])
     |> validate_required([:id])
     |> unique_constraint(:id)
     |> foreign_key_constraint(:catalog_id)

@@ -697,78 +697,59 @@ defmodule StacApiWeb.ItemsCrudController do
     AND i.geometry IS NOT NULL
     """
 
-    # Calculate temporal extent
+    # Calculate temporal extent — consider datetime column AND start_datetime/end_datetime
+    # from properties JSONB (STAC items may have datetime=null with start/end_datetime).
     temporal_sql = """
-    SELECT 
-      MIN(i.datetime) as min_datetime,
-      MAX(i.datetime) as max_datetime
+    SELECT
+      LEAST(
+        MIN(i.datetime),
+        MIN((i.properties->>'start_datetime')::timestamptz)
+      ) AS min_datetime,
+      GREATEST(
+        MAX(i.datetime),
+        MAX((i.properties->>'end_datetime')::timestamptz),
+        MAX((i.properties->>'datetime')::timestamptz)
+      ) AS max_datetime
     FROM items i
     WHERE i.collection_id = $1
-    AND i.datetime IS NOT NULL
     """
 
-    case Repo.query(spatial_bbox_sql, [collection_id]) do
-      {:ok, %{rows: [[bbox_string] | _]}} when is_binary(bbox_string) ->
-        # Parse Box2D output: "BOX(minx miny, maxx maxy)"
-        bbox_coords = parse_box2d(bbox_string)
-        
-        case Repo.query(temporal_sql, [collection_id]) do
-          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
-            temporal_interval = build_temporal_interval(min_dt, max_dt)
-            extent = build_extent(bbox_coords, temporal_interval)
-            update_collection_extent_field(collection_id, extent)
-          
-          {:ok, %{rows: []}} ->
-            # No temporal data, only spatial
-            extent = build_extent(bbox_coords, nil)
-            update_collection_extent_field(collection_id, extent)
-          
-          _ ->
-            # Error or no temporal data, use spatial only
-            extent = build_extent(bbox_coords, nil)
-            update_collection_extent_field(collection_id, extent)
-        end
+    # Box2D returns NULL (as a nil row) when no items have geometry, so handle both
+    # empty rows and a single nil-valued row the same way.
+    spatial_result =
+      case Repo.query(spatial_bbox_sql, [collection_id]) do
+        {:ok, %{rows: [[bbox_string | _] | _]}} when is_binary(bbox_string) ->
+          parse_box2d(bbox_string)
+        _ ->
+          nil
+      end
 
-      {:ok, %{rows: []}} ->
-        # No items with geometry, check if we have temporal data only
-        case Repo.query(temporal_sql, [collection_id]) do
-          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
-            temporal_interval = build_temporal_interval(min_dt, max_dt)
-            extent = build_extent(nil, temporal_interval)
-            update_collection_extent_field(collection_id, extent)
-          
-          _ ->
-            # No items at all, set extent to nil or empty
-            update_collection_extent_field(collection_id, nil)
-        end
+    temporal_result =
+      case Repo.query(temporal_sql, [collection_id]) do
+        {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
+          build_temporal_interval(min_dt, max_dt)
+        _ ->
+          nil
+      end
 
-      _ ->
-        # Error in spatial query, try temporal only
-        case Repo.query(temporal_sql, [collection_id]) do
-          {:ok, %{rows: [[min_dt, max_dt] | _]}} ->
-            temporal_interval = build_temporal_interval(min_dt, max_dt)
-            extent = build_extent(nil, temporal_interval)
-            update_collection_extent_field(collection_id, extent)
-          
-          _ ->
-            :ok  # Silently fail if no data
-        end
-    end
+    extent = build_extent(spatial_result, temporal_result)
+    update_collection_extent_field(collection_id, extent)
   end
 
   defp update_collection_extent(_), do: :ok
 
   defp parse_box2d(box_string) when is_binary(box_string) do
-    # Parse "BOX(minx miny, maxx maxy)" format
-    case Regex.run(~r/BOX\(([\d\.\-]+)\s+([\d\.\-]+),\s+([\d\.\-]+)\s+([\d\.\-]+)\)/, box_string) do
+    # Parse "BOX(minx miny,maxx maxy)" format (no space after comma in PostgreSQL Box2D output)
+    case Regex.run(~r/BOX\(([\d\.\-]+)\s+([\d\.\-]+),\s*([\d\.\-]+)\s+([\d\.\-]+)\)/i, box_string) do
       [_, minx, miny, maxx, maxy] ->
         try do
-          [
-            String.to_float(minx),
-            String.to_float(miny),
-            String.to_float(maxx),
-            String.to_float(maxy)
-          ]
+          coords = [minx, miny, maxx, maxy]
+          Enum.map(coords, fn c ->
+            case Float.parse(c) do
+              {f, _} -> f
+              :error -> raise "bad coord"
+            end
+          end)
         rescue
           _ -> nil
         end
@@ -796,9 +777,12 @@ defmodule StacApiWeb.ItemsCrudController do
 
   defp build_temporal_interval(_, _), do: nil
 
-  defp to_iso8601_safe(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  defp to_iso8601_safe(%DateTime{} = dt) do
+    dt |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+  end
   defp to_iso8601_safe(%NaiveDateTime{} = ndt) do
     ndt
+    |> NaiveDateTime.truncate(:second)
     |> DateTime.from_naive!("Etc/UTC")
     |> DateTime.to_iso8601()
   end
