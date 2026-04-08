@@ -1,7 +1,5 @@
 defmodule StacApiWeb.ItemsCrudControllerTest do
   use StacApiWeb.ConnCase, async: true
-  alias StacApi.Data.{Item, Collection, Catalog}
-  alias StacApi.Repo
 
   setup %{conn: conn} do
     auth_conn = authenticated_conn(conn)
@@ -296,7 +294,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
       }
 
       conn = put(conn, ~p"/stac/manage/v1/items/non-existent", params)
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 
@@ -334,7 +332,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
       params = %{"id" => "non-existent", "properties" => %{"description" => "Test"}}
 
       conn = patch(conn, ~p"/stac/manage/v1/items/non-existent", params)
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 
@@ -368,7 +366,7 @@ defmodule StacApiWeb.ItemsCrudControllerTest do
 
     test "returns 404 when deleting non-existent item", %{conn: conn} do
       conn = delete(conn, ~p"/stac/manage/v1/items/non-existent")
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 

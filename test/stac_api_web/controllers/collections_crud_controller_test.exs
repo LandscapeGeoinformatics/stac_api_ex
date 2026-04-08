@@ -1,7 +1,5 @@
 defmodule StacApiWeb.CollectionsCrudControllerTest do
   use StacApiWeb.ConnCase, async: true
-  alias StacApi.Data.{Collection, Catalog, Item}
-  alias StacApi.Repo
 
   defp add_auth_header(conn, api_key) do
     put_req_header(conn, "x-api-key", api_key)
@@ -196,7 +194,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
       }
 
       conn = conn |> add_auth_header(api_key) |> put(~p"/stac/manage/v1/collections/non-existent", params)
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 
@@ -225,7 +223,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
       params = %{"id" => "non-existent", "title" => "Title"}
 
       conn = conn |> add_auth_header(api_key) |> patch(~p"/stac/manage/v1/collections/non-existent", params)
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 
@@ -280,7 +278,7 @@ defmodule StacApiWeb.CollectionsCrudControllerTest do
 
     test "returns 404 when deleting non-existent collection", %{conn: conn, api_key: api_key} do
       conn = conn |> add_auth_header(api_key) |> delete(~p"/stac/manage/v1/collections/non-existent")
-      assert response = json_response(conn, 404)
+      assert json_response(conn, 404)
     end
   end
 end

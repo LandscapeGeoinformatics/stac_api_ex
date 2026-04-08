@@ -1,0 +1,56 @@
+{
+  "type": "Collection",
+  "id": "estonia-sentinel2-ndvi",
+  "stac_version": "1.0.0",
+  "stac_extensions": [],
+  "title": "Estonia Sentinel-2 NDVI (2017\u20132025)",
+  "description": "Normalized Difference Vegetation Index (NDVI) seasonal composites derived from Sentinel-2 imagery over Estonia. Three seasons per year: spring (Apr\u2013May), summer (Jun\u2013Aug), autumn (Sep\u2013Oct). Composites include max, mean, median, min, range and std statistics.",
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "vegetation",
+    "ndvi",
+    "sentinel-2",
+    "estonia",
+    "composite"
+  ],
+  "providers": [
+    {
+      "name": "Copernicus Data Space Ecosystem",
+      "roles": [
+        "licensor",
+        "producer"
+      ],
+      "url": "https://dataspace.copernicus.eu/"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          21.664072,
+          57.471219,
+          28.275494,
+          59.831227
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2017-04-01T00:00:00Z",
+          "2025-10-31T23:59:59Z"
+        ]
+      ]
+    }
+  },
+  "summaries": {
+    "platform": [
+      "sentinel-2a",
+      "sentinel-2b"
+    ],
+    "instruments": [
+      "msi"
+    ]
+  },
+  "links": []
+}

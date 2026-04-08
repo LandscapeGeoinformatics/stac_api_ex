@@ -1,0 +1,254 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/alternate-assets/v1.1.0/schema.json"
+  ],
+  "id": "est_s2_ndvi_2017-09-01_2017-10-31",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          21.813947,
+          57.516343
+        ],
+        [
+          21.664072,
+          59.831227
+        ],
+        [
+          28.275494,
+          59.783032
+        ],
+        [
+          28.001647,
+          57.471219
+        ],
+        [
+          21.813947,
+          57.516343
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    21.664072,
+    57.471219,
+    28.275494,
+    59.831227
+  ],
+  "properties": {
+    "datetime": null,
+    "start_datetime": "2017-09-01T00:00:00Z",
+    "end_datetime": "2017-10-31T23:59:59Z",
+    "proj:code": "EPSG:3301",
+    "proj:geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            369000.0,
+            6377000.0
+          ],
+          [
+            369000.0,
+            6635000.0
+          ],
+          [
+            740000.0,
+            6635000.0
+          ],
+          [
+            740000.0,
+            6377000.0
+          ],
+          [
+            369000.0,
+            6377000.0
+          ]
+        ]
+      ]
+    },
+    "proj:bbox": [
+      369000.0,
+      6377000.0,
+      740000.0,
+      6635000.0
+    ],
+    "proj:transform": [
+      369000.0,
+      10.0,
+      0.0,
+      6635000.0,
+      0.0,
+      -10.0
+    ],
+    "proj:shape": [
+      25800,
+      37100
+    ]
+  },
+  "links": [],
+  "assets": {
+    "ndvi_max": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_max_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Maximum Composite",
+      "roles": [
+        "data",
+        "statistics"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 847832320,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_max_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    },
+    "ndvi_mean": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_mean_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Mean Composite",
+      "roles": [
+        "data",
+        "statistics"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 860914710,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_mean_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    },
+    "ndvi_median": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_median_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Median Composite",
+      "roles": [
+        "data"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 869216183,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_median_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    },
+    "ndvi_min": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_min_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Minimum Composite",
+      "roles": [
+        "data",
+        "statistics"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 870044761,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_min_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    },
+    "ndvi_range": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_range_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Range (Max minus Min)",
+      "roles": [
+        "metadata",
+        "statistics"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 675935327,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_range_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    },
+    "ndvi_std": {
+      "href": "https://s3.hpc.ut.ee/geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_std_2017-09-01_2017-10-31_cog.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "NDVI Standard Deviation",
+      "roles": [
+        "metadata",
+        "statistics"
+      ],
+      "raster:bands": [
+        {
+          "nodata": -9999.0,
+          "data_type": "int16",
+          "spatial_resolution": 10.0,
+          "unit": "metre",
+          "sampling": "area",
+          "scale": 0.001
+        }
+      ],
+      "file:size": 579536870,
+      "alternate": {
+        "s3": {
+          "href": "s3://geokuup/estonia/sentinel2/ndvi/2017/est_s2_ndvi_std_2017-09-01_2017-10-31_cog.tif",
+          "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+        }
+      }
+    }
+  },
+  "collection": "estonia-sentinel2-ndvi"
+}

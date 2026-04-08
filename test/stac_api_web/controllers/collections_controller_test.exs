@@ -1,7 +1,5 @@
 defmodule StacApiWeb.CollectionsControllerTest do
   use StacApiWeb.ConnCase, async: true
-  alias StacApi.Data.{Collection, Item, Catalog}
-  alias StacApi.Repo
 
   setup %{conn: conn} do
     auth_conn = authenticated_conn(conn)
