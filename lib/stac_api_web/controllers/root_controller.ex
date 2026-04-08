@@ -5,8 +5,22 @@ defmodule StacApiWeb.RootController do
   alias StacApiWeb.LinkResolver
   import Ecto.Query
 
+  @conformance_classes [
+    "https://api.stacspec.org/v1.0.0/core",
+    "https://api.stacspec.org/v1.0.0/item-search",
+    "https://api.stacspec.org/v1.0.0/item-search#context",
+    "https://api.stacspec.org/v1.0.0/ogcapi-features",
+    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
+    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",
+    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
+  ]
+
   def redirect_to_landing(conn, _params) do
     redirect(conn, to: "/stac/web/")
+  end
+
+  def conformance(conn, _params) do
+    json(conn, %{conformsTo: @conformance_classes})
   end
 
   def index(conn, _params) do
@@ -48,14 +62,14 @@ defmodule StacApiWeb.RootController do
       title: "Geokuup STAC API",
       description: "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
       type: "Catalog",
-      conformsTo: [
-        "https://api.stacspec.org/v1.0.0/core",
-        "https://api.stacspec.org/v1.0.0/item-search"
-      ],
+      conformsTo: @conformance_classes,
       links: [
         # Required STAC Core links
         LinkResolver.create_link("self", "/stac/api/v1/"),
         LinkResolver.create_link("root", "/stac/api/v1/"),
+        LinkResolver.create_link("conformance", "/stac/api/v1/conformance",
+          title: "OGC API conformance classes implemented by this server"
+        ),
         LinkResolver.create_link("service-desc", "/stac/api/v1/openapi.json",
           type: "application/vnd.oai.openapi+json;version=3.0",
           title: "OpenAPI service description"
@@ -67,13 +81,15 @@ defmodule StacApiWeb.RootController do
         LinkResolver.create_link("data", "/stac/api/v1/collections",
           title: "Collections"
         ),
+        # GET search: type = response media type
         LinkResolver.create_link("search", "/stac/api/v1/search",
           type: "application/geo+json",
           title: "STAC search",
           method: "GET"
         ),
+        # POST search: type = request body media type (clients set Content-Type from this)
         LinkResolver.create_link("search", "/stac/api/v1/search",
-          type: "application/geo+json",
+          type: "application/json",
           title: "STAC search",
           method: "POST"
         ),

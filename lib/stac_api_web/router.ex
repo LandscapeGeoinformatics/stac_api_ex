@@ -36,6 +36,7 @@ defmodule StacApiWeb.Router do
 
     # Root and search endpoints (public read-only)
     get "/", RootController, :index
+    get "/conformance", RootController, :conformance
     get "/search", SearchController, :index
     post "/search", SearchController, :index
     get "/catalog/:id", RootController, :catalog
