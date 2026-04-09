@@ -23,9 +23,24 @@ Composable single-resource commands
   create-catalog    --file <path.json> [--catalog-id <override-id>]
   create-collection --file <path.json> [--catalog-id <parent-id>]
   add-item          --file <path.json> [--collection-id <id>]
+  update-catalog    --file <path.json> [--catalog-id <id>]
+  update-collection --file <path.json> [--collection-id <id>]
+  update-item       --file <path.json> [--item-id <id>] [--collection-id <id>]
   delete-item       --item-id <id>
   delete-collection --collection-id <id>
   delete-catalog    --catalog-id <id>
+
+Notes on update commands (all use PATCH, not PUT)
+--------------------------------------------------
+  • PATCH sends only fields present in the file; absent fields are left untouched
+    on the server (server uses maybe_put/3 to drop nil values).
+  • IDs cannot be changed.  The URL path id (--catalog-id / --collection-id /
+    --item-id, or the 'id' field in the JSON) addresses the existing record;
+    any 'id' in the body must match.
+  • Collection extent (spatial + temporal) is recomputed server-side whenever
+    items are added, updated, or deleted.  Sending 'extent' in an update file
+    stores it temporarily but it will be overwritten by the next item operation.
+    Omit 'extent' from collection update files to leave the server value intact.
 
 Global options (place BEFORE the command name)
 ----------------------------------------------
@@ -48,6 +63,14 @@ Examples
   python test_stac_api.py create-catalog --file cat.json --catalog-id my-id
   python test_stac_api.py create-collection --file col.json --catalog-id geokuup
   python test_stac_api.py add-item --file item.json --collection-id my-collection
+  python test_stac_api.py update-catalog --file cat.json
+  python test_stac_api.py update-catalog --file cat.json --catalog-id geokuup
+  python test_stac_api.py update-collection --file col.json
+  python test_stac_api.py update-collection --file col.json --collection-id estonia-sentinel2-ndvi
+  python test_stac_api.py update-collection --file col.json --catalog-id geokuup          # move to catalog
+  python test_stac_api.py update-collection --file col.json --catalog-id ""               # detach from catalog
+  python test_stac_api.py update-item --file item.json
+  python test_stac_api.py update-item --file item.json --item-id est_s2_ndvi_2017-04-01_2017-05-31
   python test_stac_api.py delete-item --item-id est_s2_ndvi_2017-04-01_2017-05-31
   python test_stac_api.py delete-collection --collection-id estonia-sentinel2-ndvi
   python test_stac_api.py delete-catalog --catalog-id geokuup
@@ -157,8 +180,8 @@ def cmd_insert(cfg: argparse.Namespace) -> None:
         f"{cfg.manage_url}/catalogs",
         json={
             "id": "geokuup",
-            "title": "GeoKuup",
-            "description": "GeoKuup public geospatial data catalog",
+            "title": "Geokuup",
+            "description": "Geokuup public geospatial data catalog",
             "type": "Catalog",
             "stac_version": "1.0.0",
             "private": False,
@@ -664,6 +687,154 @@ def cmd_add_item(cfg: argparse.Namespace) -> None:
         print(f"  created: {r.json()}")
 
 
+def cmd_update_catalog(cfg: argparse.Namespace) -> None:
+    """Partially update a catalog via PATCH from a JSON file.
+
+    Only fields present in the file are sent; absent fields are left untouched
+    on the server.  The catalog ID is taken from --catalog-id if given,
+    otherwise from the 'id' field in the JSON.  IDs cannot be changed.
+    """
+    section(f"UPDATE CATALOG (PATCH) from {cfg.file}")
+    with open(cfg.file) as f:
+        data = json.load(f)
+
+    resource_id = cfg.catalog_id or data.get("id")
+    if not resource_id:
+        log("Update catalog", False,
+            "Cannot determine catalog ID: use --catalog-id or include 'id' in the JSON file")
+        return
+
+    # Body id must match the URL path id — enforce that here so the server never
+    # sees a mismatch (PUT validates this; PATCH does not, but it's cleaner).
+    data["id"] = resource_id
+
+    r = requests.patch(
+        f"{cfg.manage_url}/catalogs/{resource_id}",
+        json=data,
+        headers={"Content-Type": "application/json", "X-API-Key": cfg.rw_key},
+    )
+    if assert_status(r, 200, f"PATCH /manage/v1/catalogs/{resource_id}"):
+        body = r.json()
+        updated = body.get("data", body)
+        print(f"  updated title       : {updated.get('title')}")
+        print(f"  updated description : {updated.get('description')}")
+        print(f"  private             : {updated.get('private')}")
+
+
+def cmd_update_collection(cfg: argparse.Namespace) -> None:
+    """Partially update a collection via PATCH from a JSON file.
+
+    Only fields present in the file are sent.  The collection ID is taken from
+    --collection-id if given, otherwise from the 'id' field in the JSON.
+    IDs cannot be changed.
+
+    --catalog-id sets or overrides the parent catalog, effectively moving the
+    collection to a different catalog.  It takes precedence over the
+    'catalog_id' field in the JSON file.  Pass an empty string ('') to detach
+    the collection from any catalog (root-level collection).
+
+    Extent note: collection extent (spatial + temporal bbox) is recomputed
+    server-side whenever items are added, updated, or deleted.  If the file
+    contains an 'extent' key it will be stored, but will be overwritten by
+    the next item operation.  Omit 'extent' from the update file to leave the
+    server-maintained value intact.
+    """
+    section(f"UPDATE COLLECTION (PATCH) from {cfg.file}")
+    with open(cfg.file) as f:
+        data = json.load(f)
+
+    resource_id = cfg.collection_id or data.get("id")
+    if not resource_id:
+        log("Update collection", False,
+            "Cannot determine collection ID: use --collection-id or include 'id' in the JSON file")
+        return
+
+    data["id"] = resource_id
+
+    # --catalog-id on the CLI overrides (or removes) the parent catalog.
+    # cfg.catalog_id is None when the flag was not passed; empty string means
+    # "detach from catalog" (server accepts null catalog_id).
+    if cfg.catalog_id is not None:
+        data["catalog_id"] = cfg.catalog_id or None  # "" → None → detach
+        action = f"move to catalog '{cfg.catalog_id}'" if cfg.catalog_id else "detach from catalog"
+        print(f"  [catalog-id] {action} (overrides JSON)")
+
+    # Warn if the file carries an extent — it will be overwritten by item operations.
+    if "extent" in data:
+        print(
+            "  [note] 'extent' is present in the file and will be stored, but the server "
+            "recomputes it from child items on every item mutation.  Remove 'extent' from "
+            "the update file to preserve the server-managed value."
+        )
+
+    r = requests.patch(
+        f"{cfg.manage_url}/collections/{resource_id}",
+        json=data,
+        headers={"Content-Type": "application/json", "X-API-Key": cfg.rw_key},
+    )
+    if assert_status(r, 200, f"PATCH /manage/v1/collections/{resource_id}"):
+        body = r.json()
+        updated = body.get("data", body)
+        print(f"  updated title       : {updated.get('title')}")
+        print(f"  updated description : {updated.get('description')}")
+        print(f"  license             : {updated.get('license')}")
+        print(f"  extent (server)     : {updated.get('extent')}")
+
+
+def cmd_update_item(cfg: argparse.Namespace) -> None:
+    """Partially update a STAC item via PATCH from a JSON file.
+
+    The JSON file is expected to be a STAC Feature (GeoJSON Feature with STAC
+    fields).  It is mapped to the management API format the same way as add-item
+    (collection → collection_id, properties.datetime → top-level datetime).
+
+    Only fields present in the file are updated on the server.  If the file
+    includes an 'assets' key, ALL existing assets for the item are replaced;
+    omit 'assets' to keep existing assets untouched.
+
+    The item ID is taken from --item-id if given, otherwise from the 'id' field
+    in the JSON.  IDs cannot be changed.  --collection-id overrides the
+    'collection' field in the JSON when specifying the parent collection.
+    """
+    section(f"UPDATE ITEM (PATCH) from {cfg.file}")
+    with open(cfg.file) as f:
+        stac_item = json.load(f)
+
+    item_id = cfg.item_id or stac_item.get("id")
+    if not item_id:
+        log("Update item", False,
+            "Cannot determine item ID: use --item-id or include 'id' in the JSON file")
+        return
+
+    try:
+        payload = _stac_feature_to_item_payload(stac_item, cfg.collection_id)
+    except ValueError as exc:
+        log(f"Update item '{item_id}'", False, str(exc))
+        return
+
+    # Ensure URL path id and body id agree.
+    payload["id"] = item_id
+
+    if "assets" in stac_item:
+        print(
+            f"  [note] 'assets' key present ({len(stac_item['assets'])} asset(s)) — "
+            "all existing assets for this item will be replaced."
+        )
+
+    r = requests.patch(
+        f"{cfg.manage_url}/items/{item_id}",
+        json=payload,
+        headers={"Content-Type": "application/json", "X-API-Key": cfg.rw_key},
+    )
+    if assert_status(r, 200, f"PATCH /manage/v1/items/{item_id}"):
+        body = r.json()
+        updated = body.get("data", body)
+        asset_keys = list((updated.get("assets") or {}).keys())
+        print(f"  updated id          : {updated.get('id')}")
+        print(f"  collection          : {updated.get('collection')}")
+        print(f"  assets              : {asset_keys}")
+
+
 def cmd_delete_item(cfg: argparse.Namespace) -> None:
     """Delete a single item by item ID."""
     section(f"DELETE ITEM  id={cfg.item_id}")
@@ -714,12 +885,15 @@ BULK_COMMANDS: dict[str, tuple[str, object]] = {
 
 # Composable commands — each registered with its handler; args added below in build_parser()
 COMPOSABLE_COMMANDS: dict[str, tuple[str, object]] = {
-    "create-catalog":    ("create a catalog from a JSON file",                   cmd_create_catalog),
-    "create-collection": ("create a collection from a JSON file",                cmd_create_collection),
+    "create-catalog":    ("create a catalog from a JSON file",                       cmd_create_catalog),
+    "create-collection": ("create a collection from a JSON file",                    cmd_create_collection),
     "add-item":          ("add one item from a JSON file to an existing collection", cmd_add_item),
-    "delete-item":       ("delete a single item by item ID",                     cmd_delete_item),
-    "delete-collection": ("delete a collection (cascade: all items) by ID",      cmd_delete_collection),
-    "delete-catalog":    ("cascade-delete a catalog by ID",                      cmd_delete_catalog),
+    "update-catalog":    ("PATCH-update a catalog from a JSON file",                 cmd_update_catalog),
+    "update-collection": ("PATCH-update a collection from a JSON file",              cmd_update_collection),
+    "update-item":       ("PATCH-update a STAC item from a JSON file",               cmd_update_item),
+    "delete-item":       ("delete a single item by item ID",                         cmd_delete_item),
+    "delete-collection": ("delete a collection (cascade: all items) by ID",          cmd_delete_collection),
+    "delete-catalog":    ("cascade-delete a catalog by ID",                          cmd_delete_catalog),
 }
 
 ALL_COMMANDS = {**BULK_COMMANDS, **COMPOSABLE_COMMANDS}
@@ -848,6 +1022,86 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    # ---- composable: update-catalog -------------------------------------
+    sp = subparsers.add_parser(
+        "update-catalog",
+        help=COMPOSABLE_COMMANDS["update-catalog"][0],
+        description=(
+            "PATCH-update a catalog from a JSON file.  Only fields present in "
+            "the file are sent; absent fields are left untouched on the server.  "
+            "IDs cannot be changed."
+        ),
+    )
+    sp.add_argument(
+        "--file", required=True, type=pathlib.Path, metavar="PATH",
+        help="JSON file containing the fields to update",
+    )
+    sp.add_argument(
+        "--catalog-id", default=None, metavar="ID",
+        help=(
+            "ID of the catalog to update; overrides the 'id' field in the JSON. "
+            "Required if the JSON does not include an 'id' key."
+        ),
+    )
+
+    # ---- composable: update-collection ----------------------------------
+    sp = subparsers.add_parser(
+        "update-collection",
+        help=COMPOSABLE_COMMANDS["update-collection"][0],
+        description=(
+            "PATCH-update a collection from a JSON file.  Only fields present in "
+            "the file are sent.  IDs cannot be changed.  "
+            "--catalog-id moves the collection to a different parent catalog "
+            "(takes precedence over 'catalog_id' in the JSON; pass '' to detach).  "
+            "Collection extent is recomputed server-side on every item mutation; "
+            "omit 'extent' from the file to leave the server-managed value intact."
+        ),
+    )
+    sp.add_argument(
+        "--file", required=True, type=pathlib.Path, metavar="PATH",
+        help="JSON file containing the fields to update",
+    )
+    sp.add_argument(
+        "--collection-id", default=None, metavar="ID",
+        help=(
+            "ID of the collection to update; overrides the 'id' field in the JSON. "
+            "Required if the JSON does not include an 'id' key."
+        ),
+    )
+    sp.add_argument(
+        "--catalog-id", default=None, metavar="ID",
+        help=(
+            "move the collection to this parent catalog (overrides 'catalog_id' in "
+            "the JSON).  Pass an empty string to detach from any catalog."
+        ),
+    )
+
+    # ---- composable: update-item ----------------------------------------
+    sp = subparsers.add_parser(
+        "update-item",
+        help=COMPOSABLE_COMMANDS["update-item"][0],
+        description=(
+            "PATCH-update a STAC item from a JSON file (STAC Feature format). "
+            "Only fields present in the file are sent.  If 'assets' is present, "
+            "ALL existing assets are replaced.  IDs cannot be changed."
+        ),
+    )
+    sp.add_argument(
+        "--file", required=True, type=pathlib.Path, metavar="PATH",
+        help="JSON file containing the STAC Feature (item) fields to update",
+    )
+    sp.add_argument(
+        "--item-id", default=None, metavar="ID",
+        help=(
+            "ID of the item to update; overrides the 'id' field in the JSON. "
+            "Required if the JSON does not include an 'id' key."
+        ),
+    )
+    sp.add_argument(
+        "--collection-id", default=None, metavar="ID",
+        help="set or override the target collection (overrides 'collection' in the JSON)",
+    )
+
     # ---- composable: delete-item ----------------------------------------
     sp = subparsers.add_parser("delete-item", help=COMPOSABLE_COMMANDS["delete-item"][0])
     sp.add_argument(
@@ -886,7 +1140,10 @@ def main() -> None:
         sys.exit(2)
 
     # Validate --file exists for file-based composable commands
-    if args.command in ("create-catalog", "create-collection", "add-item"):
+    if args.command in (
+        "create-catalog", "create-collection", "add-item",
+        "update-catalog", "update-collection", "update-item",
+    ):
         if not args.file.is_file():
             print(f"error: file not found: {args.file}", file=sys.stderr)
             sys.exit(2)

@@ -1,0 +1,9 @@
+{
+    "id": "estonia",
+    "title": "Estonia",
+    "description": "Datasets covering Estonia",
+    "type": "Catalog",
+    "stac_version": "1.0.0",
+    "parent_catalog_id": "geokuup",
+    "private": false
+}

@@ -1,0 +1,8 @@
+{
+    "id": "geokuup",
+    "title": "Geokuup",
+    "description": "Geokuup public geospatial data catalog",
+    "type": "Catalog",
+    "stac_version": "1.0.0",
+    "private": false
+}
