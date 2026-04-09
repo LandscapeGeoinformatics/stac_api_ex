@@ -1,0 +1,13 @@
+[workspace]
+authors = ["Alexander Kmoch <alexander.kmoch@ut.ee>"]
+channels = ["conda-forge"]
+name = "misc"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+requests = ">=2.33.1,<3"
+pystac = ">=1.14.3,<2"
+pystac-client = ">=0.9.0,<0.10"
