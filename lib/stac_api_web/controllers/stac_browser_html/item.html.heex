@@ -93,6 +93,14 @@
         </dl>
       </div>
 
+      <%!-- Map visualization for item geometry/footprint --%>
+      <%= if @item.geometry do %>
+        <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Footprint / Geometry</h2>
+          <.stac_map map_id="item-geometry-map" geometry={@item.geometry} properties={@item.properties || %{}} />
+        </div>
+      <% end %>
+
       <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">Properties</h2>
         <%= if @item.properties && map_size(@item.properties) > 0 do %>

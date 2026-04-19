@@ -116,6 +116,14 @@
           <span>Updated: <%= NaiveDateTime.to_string(@current_entity.updated_at) %> UTC</span>
         <% end %>
       </div>
+
+      <%!-- Map visualization for collection spatial extent --%>
+      <%= if @current_type == :collection && @current_entity && @current_entity.extent do %>
+        <div class="mt-4">
+          <h3 class="text-lg font-semibold text-green-900 mb-3">Spatial Extent</h3>
+          <.stac_map map_id="collection-extent-map" geojson_data={@current_entity.extent} />
+        </div>
+      <% end %>
     </div>
   <% end %>
 

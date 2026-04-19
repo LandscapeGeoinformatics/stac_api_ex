@@ -6,6 +6,146 @@
     <title><%= assigns[:page_title] || "STAC API - Geokuup" %></title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+    
+    <!-- Turf JS for geometric calculations -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    
+    <!-- STAC Map Initialization Script -->
+    <script>
+      window.initStacMaps = function() {
+        const mapElements = document.querySelectorAll('[data-map-id]');
+        
+        mapElements.forEach(element => {
+          const mapId = element.getAttribute('data-map-id');
+          const dataAttr = element.getAttribute('data-geojson');
+          
+          if (!mapId || !dataAttr) return;
+          
+          try {
+            const geojsonData = JSON.parse(dataAttr);
+            initMap(mapId, geojsonData);
+          } catch (e) {
+            console.error('Error parsing GeoJSON for map', mapId, e);
+          }
+        });
+      };
+      
+      function initMap(mapId, geojsonData) {
+        if (typeof maplibregl === 'undefined') {
+          console.error('MapLibre GL not loaded');
+          return;
+        }
+        
+        // Convert extent data to GeoJSON if needed
+        let geojson;
+        if (geojsonData.type === 'Feature') {
+          geojson = geojsonData;
+        } else if (geojsonData.type === 'FeatureCollection') {
+          geojson = geojsonData;
+        } else if (Array.isArray(geojsonData) && geojsonData.length === 4) {
+          const [minLon, minLat, maxLon, maxLat] = geojsonData;
+          geojson = {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [[
+                [minLon, minLat],
+                [maxLon, minLat],
+                [maxLon, maxLat],
+                [minLon, maxLat],
+                [minLon, minLat]
+              ]]
+            }
+          };
+        } else if (geojsonData.spatial && Array.isArray(geojsonData.spatial.bbox)) {
+          const bbox = geojsonData.spatial.bbox[0];
+          const [minLon, minLat, maxLon, maxLat] = bbox;
+          geojson = {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [[
+                [minLon, minLat],
+                [maxLon, minLat],
+                [maxLon, maxLat],
+                [minLon, maxLat],
+                [minLon, minLat]
+              ]]
+            }
+          };
+        }
+        
+        if (!geojson) return;
+        
+        // Initialize map
+        const map = new maplibregl.Map({
+          container: mapId,
+          style: {
+            version: 8,
+            sources: {
+              osm: {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              }
+            },
+            layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+          },
+          center: [25.7482, 58.3800],
+          zoom: 7
+        });
+        
+        map.on('load', function() {
+          // Add source
+          map.addSource(mapId + '-source', {
+            type: 'geojson',
+            data: geojson
+          });
+          
+          // Add fill layer
+          map.addLayer({
+            id: mapId + '-fill',
+            type: 'fill',
+            source: mapId + '-source',
+            paint: {
+              'fill-color': '#088',
+              'fill-opacity': 0.3
+            }
+          });
+          
+          // Add outline layer
+          map.addLayer({
+            id: mapId + '-outline',
+            type: 'line',
+            source: mapId + '-source',
+            paint: {
+              'line-color': '#088',
+              'line-width': 2
+            }
+          });
+          
+          // Fit map to bounds
+          try {
+            const bounds = turf.bbox(geojson);
+            map.fitBounds(bounds, { padding: 50 });
+          } catch (e) {
+            console.warn('Could not fit bounds', e);
+          }
+        });
+      }
+      
+      // Auto-initialize maps when document is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', window.initStacMaps);
+      } else {
+        window.initStacMaps();
+      }
+    </script>
 </head>
 <body>
     <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
