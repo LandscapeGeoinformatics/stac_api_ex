@@ -10,20 +10,26 @@ defmodule StacApiWeb.StacBrowserHTML do
     geojson_data =
       if assigns[:geometry] && assigns[:properties] do
         geometry = convert_geography_to_geojson(assigns[:geometry])
-        %{"type" => "Feature", "geometry" => geometry, "properties" => assigns[:properties]}
+        geometry && %{"type" => "Feature", "geometry" => geometry, "properties" => assigns[:properties]}
       else
         extent = assigns[:geojson_data] || %{}
         convert_extent_to_geojson(extent)
       end
 
-    assigns = assign(assigns, :geojson_data, geojson_data)
+    encoded =
+      case Jason.encode(geojson_data) do
+        {:ok, json} -> json
+        {:error, _} -> "null"
+      end
+
+    assigns = assign(assigns, :encoded_geojson, encoded)
 
     ~H"""
     <div
       id={@map_id}
       class="w-full h-96 rounded-lg border border-gray-300 shadow-sm"
       data-map-id={@map_id}
-      data-geojson={Jason.encode!(@geojson_data)}
+      data-geojson={@encoded_geojson}
     >
     </div>
     """
@@ -40,11 +46,7 @@ defmodule StacApiWeb.StacBrowserHTML do
     %{"type" => "Point", "coordinates" => [lon, lat]}
   end
 
-  defp convert_geography_to_geojson(geom) when is_map(geom) do
-    geom
-  end
-
-  defp convert_geography_to_geojson(geom), do: geom
+  defp convert_geography_to_geojson(_), do: nil
 
   # Recursively convert tuples to lists for JSON encoding
   defp convert_tuples_to_lists(data) when is_tuple(data) do

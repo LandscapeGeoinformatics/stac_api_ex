@@ -84,7 +84,18 @@
         // Initialize map
         const map = new maplibregl.Map({
           container: mapId,
-          style: 'https://demotiles.maplibre.org/style.json',
+          style: {
+            version: 8,
+            sources: {
+              osm: {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              }
+            },
+            layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+          },
           center: [25.7482, 58.3800],
           zoom: 7
         });
