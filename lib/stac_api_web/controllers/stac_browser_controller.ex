@@ -352,7 +352,30 @@ defmodule StacApiWeb.StacBrowserController do
     end)
     |> Enum.reject(fn {_, v} -> is_nil(v) or v == "" end)
     |> Map.new()
+    |> merge_datetime_range()
   end
+
+  # Combine the form's `datetime_start` / `datetime_end` fields (HTML
+  # `datetime-local` inputs that omit the timezone) into the single STAC
+  # `datetime` parameter expected by `Search.search/1`. Missing sides become
+  # the `..` open-range marker.
+  defp merge_datetime_range(params) do
+    start_str = params["datetime_start"]
+    end_str = params["datetime_end"]
+
+    params = Map.drop(params, ["datetime_start", "datetime_end"])
+
+    case {present(start_str), present(end_str)} do
+      {nil, nil} -> params
+      {s, nil} -> Map.put(params, "datetime", "#{s}/..")
+      {nil, e} -> Map.put(params, "datetime", "../#{e}")
+      {s, e} -> Map.put(params, "datetime", "#{s}/#{e}")
+    end
+  end
+
+  defp present(nil), do: nil
+  defp present(""), do: nil
+  defp present(s) when is_binary(s), do: s
 
   defp parse_int(str) when is_binary(str) do
     case Integer.parse(str) do

@@ -232,13 +232,37 @@ defp convert_geojson_geometry(item), do: item
 
   defp parse_datetime(""), do: nil
   defp parse_datetime(nil), do: nil
+  defp parse_datetime(".."), do: nil
   defp parse_datetime(datetime_str) when is_binary(datetime_str) do
-    case DateTime.from_iso8601(datetime_str) do
-      {:ok, datetime, _} -> datetime
-      {:error, _} -> nil
+    # The HTML <input type="datetime-local"> control emits "YYYY-MM-DDTHH:MM"
+    # by default — pad missing seconds so NaiveDateTime can parse it.
+    padded = pad_seconds(datetime_str)
+
+    cond do
+      match?({:ok, _, _}, DateTime.from_iso8601(padded)) ->
+        {:ok, dt, _} = DateTime.from_iso8601(padded)
+        dt
+
+      match?({:ok, _}, NaiveDateTime.from_iso8601(padded)) ->
+        {:ok, ndt} = NaiveDateTime.from_iso8601(padded)
+        DateTime.from_naive!(ndt, "Etc/UTC")
+
+      match?({:ok, _}, Date.from_iso8601(padded)) ->
+        {:ok, date} = Date.from_iso8601(padded)
+        DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+
+      true ->
+        nil
     end
   end
   defp parse_datetime(_), do: nil
+
+  defp pad_seconds(str) do
+    case Regex.run(~r/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})($|[Z+\-].*$)/, str) do
+      [_, prefix, rest] -> prefix <> ":00" <> rest
+      _ -> str
+    end
+  end
 
   def serialize_item_for_api(%Item{} = item) do
   # Reconstruct assets from normalized data
