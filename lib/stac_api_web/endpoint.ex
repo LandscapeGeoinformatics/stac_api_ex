@@ -22,7 +22,7 @@ defmodule StacApiWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :stac_api,
-    gzip: false,
+    gzip: Mix.env() == :prod,
     only: StacApiWeb.static_paths()
 
   # Enable Tidewave in development for live reloading of static assets
