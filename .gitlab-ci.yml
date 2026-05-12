@@ -32,7 +32,7 @@ deploy-job: # This job runs in the deploy stage.
     - master
   script:
     - echo "Preparing application deployment..."
-    - mix deps.get --only prod && mix compile && mix assets.deploy
+    - mix deps.get --only prod && mix assets.setup && mix assets.build && mix compile && mix assets.deploy
     - mix release --overwrite
 
     - echo "Copying artefact to deployment location..."
