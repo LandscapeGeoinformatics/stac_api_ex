@@ -40,6 +40,7 @@ defmodule StacApiWeb do
 
       # Include shared imports and aliases for all views
       unquote(html_helpers())
+      unquote(verified_routes())
     end
   end
 
