@@ -3,9 +3,12 @@ import Config
 # For development, we disable any cache and enable
 # debugging and code reloading.
 
+
+port = String.to_integer(System.get_env("PORT") || "4000")
+
 config :stac_api,
   generators: [timestamp_type: :utc_datetime],
-  base_url: "http://localhost:4000"
+  base_url: "http://localhost:#{port}"
 
 
 # API Keys: STAC_API_KEY (read-write), STAC_API_KEY_RO (read-only)
@@ -37,10 +40,11 @@ config :stac_api, StacApi.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
+
 config :stac_api, StacApiWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {127, 0, 0, 1}, port: port],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,

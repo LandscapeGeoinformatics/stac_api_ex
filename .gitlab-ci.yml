@@ -9,7 +9,7 @@ build-job:
   script:
     - echo "Compiling the code..."
     - asdf which mix
-    - mix deps.get && mix assets.setup && mix assets.build && mix compile
+    - mix deps.get && mix assets.setup && mix assets.build && mix compile && mix assets.deploy
     
 unit-test-job: # This job runs in the test stage.
   stage: test # It only starts when the job in the build stage completes successfully.
@@ -32,9 +32,7 @@ deploy-job: # This job runs in the deploy stage.
     - master
   script:
     - echo "Preparing application deployment..."
-    - mix deps.get --only prod
-    - mix assets.setup && mix assets.deploy
-    - mix compile
+    - mix deps.get --only prod && mix compile && mix assets.deploy
     - mix release --overwrite
 
     - echo "Copying artefact to deployment location..."
