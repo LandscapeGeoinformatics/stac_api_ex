@@ -63,6 +63,7 @@ config :tailwind,
       --input=css/app.css
       --output=../priv/static/assets/app.css
     ),
-    cd: Path.expand("../assets", __DIR__)
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../assets/node_modules", __DIR__)}
   ]
 import_config "#{config_env()}.exs"

@@ -6,6 +6,9 @@ stages:
 build-job:
   stage: build
   tags: [lgeo4-geokuup]
+  before_script:
+    - which node && which npm
+    - npm --version
   script:
     - echo "Compiling the code..."
     - asdf which mix
@@ -30,6 +33,9 @@ deploy-job: # This job runs in the deploy stage.
     MIX_ENV: prod
   only:
     - master
+  before_script:
+    - which node && which npm
+    - npm --version
   script:
     - echo "Preparing application deployment..."
     - mix deps.get --only prod && mix assets.setup && mix assets.build && mix compile && mix assets.deploy
