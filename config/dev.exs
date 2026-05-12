@@ -13,7 +13,7 @@ config :stac_api, :api_keys,
   (fn ->
     read_write_key = System.get_env("STAC_API_KEY") || "dev-api-key-2024"
     read_only_key = System.get_env("STAC_API_KEY_RO") || "dev-read-only-key-2024"
-    
+
     %{
       read_write: [read_write_key],
       read_only: [read_only_key]
@@ -45,7 +45,10 @@ config :stac_api, StacApiWeb.Endpoint,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "sW+tNYUuhGpxY7e4H2uafd5fWjiHvZynpupgdvtGdDIo0IKjgoBbMTcpvJH9F1zx",
-  watchers: []
+watchers: [
+  esbuild: {Esbuild, :install_and_run, [:stac_api, ~w(--sourcemap=inline --watch)]},
+  tailwind: {Tailwind, :install_and_run, [:stac_api, ~w(--watch)]}
+]
 
 # ## SSL Support
 #

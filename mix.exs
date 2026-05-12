@@ -48,7 +48,9 @@ defmodule StacApi.MixProject do
       {:phoenix_ecto, "~> 4.4"},  # This provides Ecto integration with Phoenix
       {:geo_postgis, "~> 3.4"},
       {:geo, "~> 3.4"},
-      {:phoenix_html_helpers, "~> 1.0"}
+      {:phoenix_html_helpers, "~> 1.0"},
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
     ]
   end
 

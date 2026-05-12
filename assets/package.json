@@ -1,0 +1,34 @@
+{
+  "name": "stac_api_ex",
+  "version": "1.0.0",
+  "description": "This Phoenix application provides a STAC (SpatioTemporal Asset Catalog) API implementation with both REST API endpoints and HTML browser interface for exploring geospatial data catalogs.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+"scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "node node_modules/.bin/esbuild js/app.js --bundle --outdir=../priv/static/assets",
+    "watch": "node node_modules/.bin/esbuild js/app.js --bundle --outdir=../priv/static/assets --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SudaisAkbar/stac_api_ex.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SudaisAkbar/stac_api_ex/issues"
+  },
+  "homepage": "https://github.com/SudaisAkbar/stac_api_ex#readme",
+  "dependencies": {
+    "@turf/turf": "^7.3.5",
+    "autoprefixer": "^10.5.0",
+    "daisyui": "^5.5.19",
+    "maplibre-gl": "^5.24.0",
+    "postcss": "^8.5.13",
+    "tailwindcss": "^3.4.19"
+  }
+}
