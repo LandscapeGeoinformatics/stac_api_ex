@@ -62,7 +62,10 @@ defmodule StacApi.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"]
+      setup: ["deps.get", "assets.setup", "assets.build"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing", "cmd npm install --prefix assets"],
+      "assets.build": ["tailwind stac_api", "esbuild stac_api"],
+      "assets.deploy": ["tailwind stac_api --minify", "esbuild stac_api --minify", "phx.digest"]
     ]
   end
 end
