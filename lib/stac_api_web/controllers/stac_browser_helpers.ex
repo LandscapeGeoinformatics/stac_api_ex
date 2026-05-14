@@ -143,8 +143,8 @@ def get_parent_path(path) do
 
   def type_badge_class(type) do
     case type do
-      "Item" -> "bg-green-100 text-green-800"
-      "Asset" -> "bg-purple-100 text-purple-800"
+      "Item" -> "bg-secondary text-white"
+      "Asset" -> "bg-primary text-secondary"
       _ -> "bg-gray-100 text-gray-800"
     end
   end

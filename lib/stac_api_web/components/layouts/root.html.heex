@@ -10,7 +10,7 @@
     
 </head>
 <body>
-    <div class="min-h-screen">
+    <div class="min-h-screen flex flex-col">
         <div class="navbar bg-secondary shadow-md shadow-black/90 p-[0px] min-h-[56px] h-[56px]">
             <div class="flex-1 py-[0px] my-[0px]">
                 <a href="/stac/web/" class="btn btn-ghost text-lg text-primary hover:bg-[#6a7282]">
@@ -29,7 +29,7 @@
             </div>
         </div>
 
-        <main>
+        <main class="flex-grow">
             <%= @inner_content %>
         </main>
 
