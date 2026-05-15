@@ -18,6 +18,30 @@ This Phoenix application provides a STAC (SpatioTemporal Asset Catalog) API impl
 - Submit a Pull Request to the `master` branch.
 - Keep pull requests focused on specific updates.
 
+
+### Updated initialisation
+
+```bash
+# git clone
+# cd folder
+
+mix deps.get
+# mix ecto.setup for local docker dev could work (but have postgres db credentials
+)
+mix assets.setup
+mix assets.build
+
+mix compile
+
+mix assets.deploy
+
+mix ecto.migrate
+mix test
+
+```
+
+
+
 ### Maintainer Workflow (Dual Remote Mirroring)
 We maintain an internal GitLab (`origin`) and a public GitHub mirror (`outbound`). To keep histories identical across both while using rebases, follow the "Mirroring Workflow":
 
