@@ -52,7 +52,7 @@
   <% end %>
 
   <%= if @current_type == :collection && @current_entity do %>
-    <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 shadow-md shadow-black/20">
+    <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 shadow-sm shadow-black/20">
       <div class="flex items-start justify-between">
         <h2 class="text-lg font-semibold text-secondary mb-2"><%= @current_entity.title || @current_entity.id %></h2>
         <a href={"/stac/api/v1/collections/#{@current_entity.id}"}
@@ -73,7 +73,7 @@
       <%= if @current_entity.keywords not in [nil, []] do %>
         <div class="mb-2">
           <%= for word <- @current_entity.keywords do %>
-            <span class="inline-block mr-1 mb-1 px-2 py-0.5 text-xs rounded-full bg-secondary text-primary border border-black"><%= word %></span>
+            <span class="inline-block mr-1 mb-1 px-2 py-0.5 text-xs rounded-full bg-secondary text-primary"><%= word %></span>
           <% end %>
         </div>
       <% end %>
