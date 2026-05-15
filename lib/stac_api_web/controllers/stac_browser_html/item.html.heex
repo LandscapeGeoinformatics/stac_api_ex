@@ -111,80 +111,8 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-5">
-      <%!-- <%= if @item.geometry do %>
-        <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Geometry</h2>
-          <div class="space-y-3">
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Type</dt>
-              <dd class="mt-1 text-sm text-gray-900">
-                <%= cond do %>
-                  <% is_struct(@item.geometry) -> %>
-                    <%= @item.geometry.__struct__ |> to_string() |> String.split(".") |> List.last() %>
-                  <% is_map(@item.geometry) && @item.geometry["type"] -> %>
-                    <%= @item.geometry["type"] %>
-                  <% true -> %>
-                    Unknown
-                <% end %>
-              </dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Bounding Box</dt>
-              <dd class="mt-1 text-xs text-gray-900 font-mono break-all">
-                <%= if @item.bbox, do: Jason.encode!(@item.bbox), else: raw("<span class=\"text-gray-400 italic\">n/a</span>") %>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-sm font-medium text-gray-500 mb-2">Coordinates</dt>
-              <dd class="mt-1">
-                <pre class="text-xs bg-gray-50 p-3 rounded overflow-x-auto max-h-64"><%= cond do %>
-                  <% is_struct(@item.geometry) -> %><%= inspect(@item.geometry, pretty: true) %>
-                  <% is_map(@item.geometry) -> %><%= Jason.encode!(@item.geometry, pretty: true) %>
-                  <% true -> %><%= inspect(@item.geometry) %>
-                <% end %></pre>
-              </dd>
-            </div>
-          </div>
-        </div>
-      <% end %> --%>
-
-            <%!-- Map visualization for item geometry/footprint --%>
-      <%!-- <%= if @item.geometry do %>
-        <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Footprint / Geometry</h2>
-          <.stac_map map_id="item-geometry-map" geometry={@item.geometry} properties={@item.properties || %{}} />
-        </div>
-      <% end %> --%>
 
       <div class="mb-4 lg:col-span-2 lg:mr-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Properties</h2>
-        <%= if @item.properties && map_size(@item.properties) > 0 do %>
-          <dl class="grid grid-cols-1 gap-3">
-            <%= for {key, value} <- @item.properties do %>
-              <div class="border-b border-gray-100 pb-2">
-                <dt class="text-sm font-medium text-gray-500"><%= key %></dt>
-                <dd class="mt-1 text-sm text-gray-900 break-all">
-                  <%= cond do %>
-                    <% is_nil(value) -> %><span class="text-gray-400 italic">n/a</span>
-                    <% is_binary(value) -> %><%= value %>
-                    <% is_number(value) -> %><%= value %>
-                    <% is_boolean(value) -> %><%= to_string(value) %>
-                    <% is_list(value) or is_map(value) -> %>
-                      <pre class="text-xs bg-gray-50 p-2 rounded mt-1 overflow-x-auto"><%= Jason.encode!(value, pretty: true) %></pre>
-                    <% true -> %><%= inspect(value) %>
-                  <% end %>
-                </dd>
-              </div>
-            <% end %>
-          </dl>
-        <% else %>
-          <p class="text-sm text-gray-500 italic">No properties available</p>
-        <% end %>
-      </div>
-
-      <div class="mb-4 lg:col-span-2 lg:ml-2 lg:mr-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">
           Assets (<%= if @item.assets, do: map_size(@item.assets), else: 0 %>)
         </h2>
@@ -195,7 +123,7 @@
                 <%# Header row: key + media type badge %>
                 <div class="flex items-start justify-between mb-2">
                   <h3 class="font-medium text-gray-900"><%= key %></h3>
-                  <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded ml-2 flex-shrink-0">
+                  <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded ml-2 flex-shrink-0">
                     <%= asset["type"] || "n/a" %>
                   </span>
                 </div>
@@ -278,6 +206,32 @@
           </div>
         <% else %>
           <p class="text-sm text-gray-500 italic">No assets available</p>
+        <% end %>
+      </div>
+
+      <div class="mb-4 lg:col-span-2 lg:mr-2 lg:ml-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Properties</h2>
+        <%= if @item.properties && map_size(@item.properties) > 0 do %>
+          <dl class="grid grid-cols-1 gap-3">
+            <%= for {key, value} <- @item.properties do %>
+              <div class="border-b border-gray-100 pb-2">
+                <dt class="text-sm font-medium text-gray-500"><%= key %></dt>
+                <dd class="mt-1 text-sm text-gray-900 break-all">
+                  <%= cond do %>
+                    <% is_nil(value) -> %><span class="text-gray-400 italic">n/a</span>
+                    <% is_binary(value) -> %><%= value %>
+                    <% is_number(value) -> %><%= value %>
+                    <% is_boolean(value) -> %><%= to_string(value) %>
+                    <% is_list(value) or is_map(value) -> %>
+                      <pre class="text-xs bg-gray-50 p-2 rounded mt-1 overflow-x-auto"><%= Jason.encode!(value, pretty: true) %></pre>
+                    <% true -> %><%= inspect(value) %>
+                  <% end %>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="text-sm text-gray-500 italic">No properties available</p>
         <% end %>
       </div>
 
