@@ -90,6 +90,8 @@ defmodule StacApiWeb.Router do
     get "/", StacBrowserController, :landing
     get "/browse", StacBrowserController, :index
     get "/browse/*path", StacBrowserController, :show
+    post "/auth", StacBrowserController, :authenticate
+    post "/auth/logout", StacBrowserController, :logout
     get "/search", StacBrowserController, :search
   end
 

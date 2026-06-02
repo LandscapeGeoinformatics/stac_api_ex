@@ -14,6 +14,7 @@ defmodule StacApi.Data.Catalog do
     field :links, {:array, :map}
     field :depth, :integer, default: 0
     field :private, :boolean, default: false
+    field :unlock_key, :string
 
     belongs_to :parent_catalog, StacApi.Data.Catalog, foreign_key: :parent_catalog_id
     has_many :child_catalogs, StacApi.Data.Catalog, foreign_key: :parent_catalog_id
@@ -34,7 +35,8 @@ defmodule StacApi.Data.Catalog do
       :links,
       :parent_catalog_id,
       :depth,
-      :private
+      :private,
+      :unlock_key
     ])
     |> validate_required([:id])
     |> unique_constraint(:id)

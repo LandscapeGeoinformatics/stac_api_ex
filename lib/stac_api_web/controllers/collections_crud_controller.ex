@@ -357,7 +357,8 @@ defmodule StacApiWeb.CollectionsCrudController do
           "stac_version" => params["stac_version"] || "1.0.0",
           "stac_extensions" => params["stac_extensions"] || [],
           "links" => params["links"] || [],
-          "catalog_id" => catalog_id
+          "catalog_id" => catalog_id,
+          "unlock_key" => params["unlock_key"]
         }
         {:ok, collection_attrs}
       end
@@ -386,6 +387,7 @@ defmodule StacApiWeb.CollectionsCrudController do
         |> maybe_put("stac_extensions", params["stac_extensions"])
         |> maybe_put("links", params["links"])
         |> maybe_put("catalog_id", catalog_id)
+        |> maybe_put("unlock_key", params["unlock_key"])
         |> Enum.reject(fn {_k, v} -> is_nil(v) end)
         |> Enum.into(%{})
 

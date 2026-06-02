@@ -16,6 +16,7 @@ defmodule StacApi.Data.Collection do
     field :stac_version, :string
     field :stac_extensions, {:array, :string}
     field :links, {:array, :map}
+    field :unlock_key, :string
 
     # Add catalog relationship
     belongs_to :catalog, StacApi.Data.Catalog, foreign_key: :catalog_id, type: :string
@@ -27,7 +28,7 @@ defmodule StacApi.Data.Collection do
   def changeset(collection, attrs) do
     collection
     |> cast(attrs, [:id, :title, :description, :license, :extent, :summaries,
-                    :keywords, :providers, :stac_version, :stac_extensions, :links, :catalog_id])
+                    :keywords, :providers, :stac_version, :stac_extensions, :links, :catalog_id, :unlock_key])
     |> validate_required([:id])
     |> unique_constraint(:id)
     |> foreign_key_constraint(:catalog_id)

@@ -331,7 +331,8 @@ defmodule StacApiWeb.CatalogsCrudController do
         "links" => params["links"] || [],
         "parent_catalog_id" => params["parent_catalog_id"],
         "depth" => calculate_depth(params["parent_catalog_id"]),
-        "private" => private_value
+        "private" => private_value,
+        "unlock_key" => params["unlock_key"]
       }
       {:ok, catalog_attrs}
     end
@@ -370,6 +371,7 @@ defmodule StacApiWeb.CatalogsCrudController do
       |> maybe_put("parent_catalog_id", params["parent_catalog_id"])
       |> maybe_put("depth", depth_value)
       |> maybe_put("private", private_value)
+      |> maybe_put("unlock_key", params["unlock_key"])
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Enum.into(%{})
 

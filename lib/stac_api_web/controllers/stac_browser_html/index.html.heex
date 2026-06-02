@@ -39,6 +39,21 @@
     </ol>
   </nav>
 
+  <%= unless @browse_authenticated do %>
+    <div class="mb-6 rounded-lg border border-slate-300 bg-slate-50 p-4">
+      <p class="text-sm font-medium text-slate-900 mb-2">Enter the read-only API key to show private browse data.</p>
+      <form action="/stac/web/auth" method="post" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <input type="hidden" name="return_to" value={"/stac/web/browse/#{@current_path}"} />
+        <div class="w-full sm:max-w-sm">
+          <label class="block text-xs font-medium text-slate-700 mb-1">Read-only key</label>
+          <input name="api_key" type="password" placeholder="Enter key" class="input input-sm w-full" />
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary">OK</button>
+      </form>
+    </div>
+  <% end %>
+
   <%= if @current_type == :catalog && @current_entity do %>
     <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
       <div class="flex items-start justify-between">
@@ -153,6 +168,9 @@
               <% end %>
               
               <div class="flex flex-col">
+                <%= if Map.get(item, :locked, false) do %>
+                  <span class="text-xs font-medium text-amber-700 mb-1">🔒 Locked</span>
+                <% end %>
                 <%= if item.is_directory do %>
                   <a href={"/stac/web/browse/#{item.path}"} 
                      class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
@@ -180,11 +198,15 @@
             </div>
             
             <div class="col-span-3 text-sm text-gray-500">
-              <%= if Map.has_key?(item, :item_count) do %>
-                <%= item.item_count %> items
+              <%= if Map.get(item, :locked, false) do %>
+                Locked
               <% else %>
-                <%= if Map.has_key?(item, :datetime) && item.datetime do %>
-                  <%= Calendar.strftime(item.datetime, "%Y-%m-%d %H:%M") %>
+                <%= if Map.has_key?(item, :item_count) do %>
+                  <%= item.item_count %> items
+                <% else %>
+                  <%= if Map.has_key?(item, :datetime) && item.datetime do %>
+                    <%= Calendar.strftime(item.datetime, "%Y-%m-%d %H:%M") %>
+                  <% end %>
                 <% end %>
               <% end %>
             </div>
