@@ -155,7 +155,7 @@ defmodule StacApiWeb.CollectionsCrudController do
         case validate_collection_params_partial(params) do
           {:ok, collection_attrs} ->
             case update_collection_partial(collection, collection_attrs) do
-              {:ok, updated_collection} ->
+              {:ok, _updated_collection} ->
                 reloaded_collection = Repo.get(Collection, id)
                 
                 links = if Map.has_key?(params, "links") do
@@ -339,26 +339,6 @@ defmodule StacApiWeb.CollectionsCrudController do
     %Collection{}
     |> Collection.changeset(attrs)
     |> Repo.insert()
-  end
-
-  defp upsert_collection(attrs) do
-    case Repo.get(Collection, attrs["id"]) do
-      nil ->
-        %Collection{}
-        |> Collection.changeset(attrs)
-        |> Repo.insert()
-
-      existing_collection ->
-        existing_collection
-        |> Collection.changeset(attrs)
-        |> Repo.update()
-    end
-  end
-
-  defp update_collection(collection, attrs) do
-    collection
-    |> Collection.changeset(attrs)
-    |> Repo.update()
   end
 
   defp replace_collection(collection, attrs) do

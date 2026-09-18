@@ -138,8 +138,7 @@ defmodule StacApiWeb.LinkResolver do
   @doc """
   Creates a list of standard STAC links for search results.
   """
-  def create_search_links(conn, params, total_count) do
-    base_url = get_base_url_from_conn(conn)
+  def create_search_links(_conn, params, total_count) do
     current_limit = parse_int(params["limit"] || "10")
     current_offset = parse_int(params["offset"] || "0")
 

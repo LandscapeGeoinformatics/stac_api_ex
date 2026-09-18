@@ -135,9 +135,9 @@ defmodule StacApiWeb.StacBrowserHelpers do
   end
 
   @doc """
-Extracts the parent path of a given path
-"""
-def get_parent_path(path) do
+  Extracts the parent path of a given path
+  """
+  def get_parent_path(path) do
     Path.dirname(path)
   end
 
@@ -146,19 +146,6 @@ def get_parent_path(path) do
       "Item" -> "bg-secondary text-white"
       "Asset" -> "bg-primary text-secondary"
       _ -> "bg-gray-100 text-gray-800"
-    end
-  end
-
-  def type_badge_class("Collection"), do: "bg-blue-100 text-blue-800"
-  def type_badge_class("Item"), do: "bg-green-100 text-green-800"
-  def type_badge_class("Asset"), do: "bg-purple-100 text-purple-800"
-  def type_badge_class(_), do: "bg-gray-100 text-gray-800"
-
-  def get_parent_path(""), do: ""
-  def get_parent_path(path) do
-    case Path.dirname(path) do
-      "." -> ""
-      parent -> parent
     end
   end
 
@@ -206,29 +193,4 @@ def get_parent_path(path) do
         ""
     end
   end
-
-  # Add these helper functions to your controller or create a view module
-
-defp get_asset_type_icon(asset) do
-  case Map.get(asset, "type") do
-    "image/tiff" -> "🖼️"
-    "image/png" -> "🖼️"
-    "image/jpeg" -> "🖼️"
-    "application/json" -> "📄"
-    "application/geo+json" -> "🗺️"
-    "text/xml" -> "📄"
-    "application/xml" -> "📄"
-    "application/pdf" -> "📕"
-    type when is_binary(type) ->
-      cond do
-        String.contains?(type, "image") -> "🖼️"
-        String.contains?(type, "text") -> "📄"
-        String.contains?(type, "json") -> "📄"
-        String.contains?(type, "xml") -> "📄"
-        true -> "📁"
-      end
-    _ -> "📁"
-  end
-end
-
 end

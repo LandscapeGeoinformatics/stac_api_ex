@@ -133,7 +133,7 @@
           <div class="space-y-4">
             <%= for {key, asset} <- @item.assets do %>
               <div class="border border-gray-200 rounded-lg p-4">
-                <%# Header row: key + media type badge %>
+                <%!-- Header row: key + media type badge --%>
                 <div class="flex items-start justify-between mb-2">
                   <h3 class="font-medium text-gray-900"><%= key %></h3>
                   <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded ml-2 flex-shrink-0">
@@ -141,12 +141,12 @@
                   </span>
                 </div>
 
-                <%# Title %>
+                <%!-- Title --%>
                 <p class="text-sm text-gray-600 mb-2">
                   <%= asset["title"] || raw("<span class=\"text-gray-400 italic\">n/a</span>") %>
                 </p>
 
-                <%# HTTPS href %>
+                <%!-- HTTPS href --%>
                 <div class="text-sm mb-1">
                   <span class="text-gray-500">URL:</span>
                   <%= if asset["href"] do %>
@@ -159,7 +159,7 @@
                   <% end %>
                 </div>
 
-                <%# Roles %>
+                <%!-- Roles --%>
                 <div class="flex items-center gap-2 mt-2">
                   <span class="text-xs text-gray-500">Roles:</span>
                   <%= if asset["roles"] && length(asset["roles"]) > 0 do %>
@@ -171,7 +171,7 @@
                   <% end %>
                 </div>
 
-                <%# File size %>
+                <%!-- File size --%>
                 <div class="text-xs text-gray-500 mt-2">
                   <span>File size:</span>
                   <%= if asset["file:size"] do %>
@@ -183,7 +183,7 @@
                   <% end %>
                 </div>
 
-                <%# Raster bands %>
+                <%!-- Raster bands --%>
                 <%= if bands = asset["raster:bands"] do %>
                   <div class="mt-3 border-t border-gray-100 pt-2">
                     <p class="text-xs font-medium text-gray-500 mb-1">Raster bands</p>
@@ -198,7 +198,7 @@
                   </div>
                 <% end %>
 
-                <%# Alternate hrefs %>
+                <%!-- Alternate hrefs --%>
                 <%= if alt = asset["alternate"] do %>
                   <div class="mt-3 border-t border-gray-100 pt-2">
                     <p class="text-xs font-medium text-gray-500 mb-1">Alternate access</p>
