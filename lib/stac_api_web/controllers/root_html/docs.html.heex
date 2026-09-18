@@ -1,0 +1,233 @@
+<div class="container mx-auto px-4 py-8">
+  <%!-- Header --%>
+  <div class="bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6 mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold">
+          <span class="text-secondary"><%= ApiDocs.title() %></span>
+          <span class="text-gray-400 font-normal text-xl ml-1">documentation</span>
+        </h1>
+        <p class="mt-2 text-gray-700 max-w-3xl"><%= ApiDocs.description() %></p>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="px-2 py-0.5 rounded-full bg-secondary text-primary font-medium">STAC <%= ApiDocs.stac_version() %></span>
+          <span class="px-2 py-0.5 rounded-full bg-secondary text-primary font-medium">OpenAPI <%= ApiDocs.openapi_version() %></span>
+          <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-mono">v<%= ApiDocs.app_version() %></span>
+          <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-mono" title="Base URL"><%= @base_url %></span>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="/stac/api/v1/openapi.json" target="_blank" rel="noopener noreferrer"
+           class="btn btn-sm bg-secondary hover:bg-secondary text-white hover:text-primary transition-transform duration-200 hover:scale-105 shadow-md shadow-black/50 border-black hover:border-black">
+          &#123;&nbsp;&#125; openapi.json
+        </a>
+        <a href="/stac/api/v1/" target="_blank" rel="noopener noreferrer"
+           class="btn btn-sm bg-secondary hover:bg-secondary text-white hover:text-primary transition-transform duration-200 hover:scale-105 shadow-md shadow-black/50 border-black hover:border-black">
+          API root
+        </a>
+        <a href="/stac/web/browse"
+           class="btn btn-sm bg-secondary hover:bg-secondary text-white hover:text-primary transition-transform duration-200 hover:scale-105 shadow-md shadow-black/50 border-black hover:border-black">
+          Browse data
+        </a>
+        <.auth_controls browse_authenticated={@browse_authenticated} current_path="/stac/api/v1/docs" />
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <%!-- Table of contents --%>
+    <nav class="lg:col-span-1">
+      <div class="lg:sticky lg:top-4 bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-4 text-sm max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">On this page</p>
+        <ul class="space-y-1 mb-3">
+          <li><a href="#getting-started" class="text-blue-600 hover:underline">Getting started</a></li>
+          <li><a href="#authentication" class="text-blue-600 hover:underline">Authentication</a></li>
+          <li><a href="#conformance" class="text-blue-600 hover:underline">Conformance</a></li>
+        </ul>
+        <div :for={group <- @groups} class="mb-3">
+          <a href={"##{group.id}"} class="block font-semibold text-secondary hover:underline"><%= group.title %></a>
+          <ul class="mt-1 space-y-0.5 border-l border-gray-200 pl-2">
+            <li :for={ep <- group.endpoints}>
+              <a href={"##{ep.id}"} class="flex items-center gap-1.5 text-gray-700 hover:text-secondary hover:underline">
+                <span class={["inline-block w-14 text-center text-[10px] font-bold rounded px-1", method_class(ep.method)]}><%= ep.method %></span>
+                <span class="truncate"><%= ep.summary %></span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="lg:col-span-3 space-y-8">
+      <%!-- Getting started --%>
+      <section id="getting-started" class="bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6 scroll-mt-4">
+        <h2 class="text-2xl font-semibold text-secondary mb-3">Getting started</h2>
+        <p class="text-sm text-gray-700 mb-4">
+          The API follows the <a href="https://github.com/radiantearth/stac-api-spec" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">STAC API 1.0.0</a>
+          specification on top of <a href="https://ogcapi.ogc.org/features/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">OGC API – Features</a>.
+          Start at the landing page, follow its <code class="font-mono text-xs bg-gray-100 px-1 rounded">links</code>, and page through collections and items.
+          All responses are JSON; item responses are GeoJSON.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div class="bg-white border border-gray-200 rounded-lg p-3">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">1. Discover</p>
+            <a href="/stac/api/v1/collections" target="_blank" class="font-mono text-xs text-blue-600 hover:underline break-all">GET /stac/api/v1/collections</a>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-3">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">2. Search</p>
+            <a href="/stac/api/v1/search?limit=3" target="_blank" class="font-mono text-xs text-blue-600 hover:underline break-all">GET /stac/api/v1/search?bbox=…&amp;datetime=…</a>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-3">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">3. Access</p>
+            <span class="font-mono text-xs text-gray-700">assets[*].href → COG / FlatGeobuf on S3 (https or s3://)</span>
+          </div>
+        </div>
+        <div class="relative mt-4">
+          <.copy_button target_id="quickstart-curl" class="absolute top-2 right-2" />
+          <pre id="quickstart-curl" class="text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto"><%= @quickstart %></pre>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">
+          Works directly with <span class="font-mono">pystac-client</span>, <span class="font-mono">stac-client</span> (R), QGIS STAC plugins and GDAL's STAC drivers via the API root URL.
+        </p>
+      </section>
+
+      <%!-- Authentication --%>
+      <section id="authentication" class="bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6 scroll-mt-4">
+        <h2 class="text-2xl font-semibold text-secondary mb-3">Authentication</h2>
+        <p class="text-sm text-gray-700 mb-4">
+          Reading public data needs no credentials. An API key sent in the
+          <code class="font-mono text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header unlocks private catalogs<%= if @show_management, do: "; keys come in two levels", else: "" %>:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div :for={level <- @auth_levels} class="bg-white border border-gray-200 rounded-lg p-3">
+            <% {label, class, hint} = auth_badge(level) %>
+            <span class={["inline-block px-2 py-0.5 rounded text-xs font-medium mb-2", class]}><%= label %></span>
+            <p class="text-xs text-gray-600"><%= hint %></p>
+          </div>
+        </div>
+        <table :if={@show_management} class="mt-4 w-full text-sm text-left">
+          <thead class="text-xs uppercase tracking-wide text-gray-500">
+            <tr><th class="py-1 pr-4">Key</th><th class="py-1 pr-4">STAC API</th><th class="py-1">Management API</th></tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 text-gray-700">
+            <tr><td class="py-1.5 pr-4 font-medium">none</td><td class="py-1.5 pr-4">public catalogs only</td><td class="py-1.5">401</td></tr>
+            <tr><td class="py-1.5 pr-4 font-medium">read-only</td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">401</td></tr>
+            <tr><td class="py-1.5 pr-4 font-medium">read-write</td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">full access</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-gray-500 mt-3">
+          Private catalogs, their collections and items answer 404 to unauthenticated requests, not 403,
+          so their existence is not disclosed. The web browser has its own unlock form and keeps the state in the session cookie.
+        </p>
+      </section>
+
+      <%!-- Conformance --%>
+      <section id="conformance" class="bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6 scroll-mt-4">
+        <h2 class="text-2xl font-semibold text-secondary mb-3">Conformance classes</h2>
+        <p class="text-sm text-gray-700 mb-3">
+          Declared at <a href="/stac/api/v1/conformance" target="_blank" class="font-mono text-xs text-blue-600 hover:underline">/stac/api/v1/conformance</a>.
+        </p>
+        <ul class="space-y-1.5 text-sm">
+          <li :for={uri <- @conformance} class="flex flex-wrap items-baseline gap-x-3">
+            <span class="font-medium text-gray-900"><%= ApiDocs.conformance_label(uri) %></span>
+            <a href={uri} target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-blue-600 hover:underline break-all"><%= uri %></a>
+          </li>
+        </ul>
+      </section>
+
+      <%!-- Endpoint groups --%>
+      <section :for={group <- @groups} id={group.id} class="scroll-mt-4">
+        <div class="mb-3">
+          <h2 class="text-2xl font-semibold text-secondary"><%= group.title %></h2>
+          <p class="text-sm text-gray-700 mt-1"><%= group.description %></p>
+          <p class="text-xs text-gray-500 mt-1">Base path <span class="font-mono bg-gray-100 px-1 rounded"><%= group.base %></span></p>
+          <p :if={group.id == "management-api"} class="mt-2 inline-block text-xs px-2 py-1 rounded bg-primary/40 text-secondary border border-primary">
+            Visible because this browser session is unlocked with a read-write key. Lock the session to hide it again.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <article :for={ep <- group.endpoints} id={ep.id} class="bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-5 scroll-mt-4">
+            <% {auth_label, auth_class, auth_hint} = auth_badge(ep.auth) %>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class={["inline-block min-w-[4.5rem] text-center text-xs font-bold rounded px-2 py-1", method_class(ep.method)]}><%= ep.method %></span>
+              <code class="font-mono text-sm text-gray-900 break-all"><%= ep.path %></code>
+              <span class={["ml-auto inline-block px-2 py-0.5 rounded text-xs font-medium", auth_class]} title={auth_hint}><%= auth_label %></span>
+              <a :if={href = ApiDocs.try_href(ep)} href={href} target="_blank" rel="noopener noreferrer"
+                 class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-white border border-secondary text-secondary hover:bg-secondary hover:text-primary transition-colors"
+                 title={href}>
+                Try it ↗
+              </a>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900"><%= ep.summary %></h3>
+            <p class="text-sm text-gray-700 mt-1"><%= ep.description %></p>
+
+            <div :if={ep.params != []} class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Parameters</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border border-gray-200 rounded">
+                  <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th class="px-2 py-1">Name</th>
+                      <th class="px-2 py-1">In</th>
+                      <th class="px-2 py-1">Type</th>
+                      <th class="px-2 py-1">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 bg-white">
+                    <tr :for={p <- ep.params}>
+                      <td class="px-2 py-1.5 font-mono text-xs whitespace-nowrap">
+                        <%= p.name %><span :if={p.required} class="text-red-600" title="required">*</span>
+                      </td>
+                      <td class="px-2 py-1.5 text-xs text-gray-500"><%= p.in %></td>
+                      <td class="px-2 py-1.5 text-xs font-mono text-gray-600"><%= p.type %></td>
+                      <td class="px-2 py-1.5 text-gray-700">
+                        <%= p.description %>
+                        <span :if={p.example} class="block text-xs text-gray-500 mt-0.5">e.g. <span class="font-mono"><%= p.example %></span></span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div :if={ep.request_body} class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                Request body
+                <span :if={ep.request_body.schema} class="normal-case tracking-normal font-normal text-gray-400">· <span class="font-mono"><%= ep.request_body.schema %></span> · application/json</span>
+              </p>
+              <p class="text-sm text-gray-700 mb-2"><%= ep.request_body.description %></p>
+              <div class="relative">
+                <.copy_button target_id={"#{ep.id}-body"} class="absolute top-2 right-2" />
+                <pre id={"#{ep.id}-body"} class="text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto max-h-80"><%= pretty_json(ep.request_body.example) %></pre>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Responses</p>
+              <ul class="space-y-1 text-sm">
+                <li :for={r <- ep.responses} class="flex flex-wrap items-baseline gap-2">
+                  <span class={["font-mono text-xs px-1.5 py-0.5 rounded", status_class(r.status)]}><%= r.status %></span>
+                  <span class="text-gray-700"><%= r.description %></span>
+                  <span class="text-xs text-gray-400 font-mono"><%= r.media %><%= if r.schema, do: " · #{r.schema}" %></span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Example</p>
+              <div class="relative">
+                <.copy_button target_id={"#{ep.id}-curl"} class="absolute top-2 right-2" />
+                <pre id={"#{ep.id}-curl"} class="text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto"><%= ApiDocs.curl_example(ep, @base_url) %></pre>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="text-xs text-gray-500 pb-4">
+        Schemas referenced above are defined in the <a href="/stac/api/v1/openapi.json" class="text-blue-600 hover:underline">OpenAPI document</a>
+        under <span class="font-mono">components.schemas</span>. Load that URL in Swagger UI, Redoc or Postman for an interactive client.
+      </section>
+    </div>
+  </div>
+</div>

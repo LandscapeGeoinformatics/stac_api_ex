@@ -47,14 +47,25 @@ defmodule StacApiWeb.Router do
     get "/search", SearchController, :index
     post "/search", SearchController, :index
     get "/catalog/:id", RootController, :catalog
-    get "/openapi.json", RootController, :openapi
-    get "/docs", RootController, :docs
 
     # OGC API Features / STAC collections + items
     get "/collections", CollectionsController, :index
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items
     get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
+  end
+
+  # API documentation, generated from one catalogue (StacApiWeb.ApiDocs).
+  # Both routes are session-aware so a browser unlocked with a read-write key
+  # (lock icon) also sees the Management API; API clients use X-API-Key.
+  scope "/stac/api/v1", StacApiWeb do
+    pipe_through :browser
+    get "/docs", RootController, :docs
+  end
+
+  scope "/stac/api/v1", StacApiWeb do
+    pipe_through [:api_with_session, :read_auth]
+    get "/openapi.json", RootController, :openapi
   end
 
   # ---------------------------------------------------------------------------
@@ -106,7 +117,6 @@ defmodule StacApiWeb.Router do
     pipe_through :api_with_session
     get "/search/api", StacBrowserController, :search_api
   end
-
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:stac_api, :dev_routes) do

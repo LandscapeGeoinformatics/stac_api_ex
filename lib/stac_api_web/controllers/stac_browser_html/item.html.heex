@@ -37,7 +37,7 @@
           <%= if index == length(@breadcrumbs) - 1 do %>
             <span class="text-gray-600 font-medium"><%= breadcrumb.name %></span>
           <% else %>
-            <a href={"/stac/web/browse/#{breadcrumb.path}"} 
+            <a href={"/stac/web/browse/#{breadcrumb.path}"}
                class="text-blue-600 hover:text-blue-800 hover:underline">
               <%= breadcrumb.name %>
             </a>
@@ -47,218 +47,106 @@
     </ol>
   </nav>
 
-  <div class="grid grid-cols-1 lg:grid-cols-1 pb-6">
-    <%!-- <div class="lg:col-span-4 space-y-6"> --%>
-    <div class="grid grid-cols-1 lg:grid-cols-5 pb-4">
-
-      <div class="lg:col-span-2 lg:mr-2 mb-4 lg:mb-0 bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">Item Information</h2>
-          <a href={"/stac/api/v1/collections/#{@item.collection}/items/#{@item.id}"}
-             target="_blank" rel="noopener noreferrer"
-             title="View API JSON"
-             class="text-xs font-mono font-medium text-white hover:text-primary border border-black rounded px-2 py-0.5 bg-secondary transition-transform duration-200 hover:scale-110 shadow-lg shadow-black/20">
-            { } JSON
-          </a>
-        </div>
-
-        <dl class="grid grid-cols-1 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-gray-500">ID</dt>
-            <dd class="mt-1 text-sm text-gray-900 font-mono"><%= @item.id %></dd>
-          </div>
-
-          <div>
-            <dt class="text-sm font-medium text-gray-500">STAC Version</dt>
-            <dd class="mt-1 text-sm text-gray-900"><%= @item.stac_version %></dd>
-          </div>
-
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Collection</dt>
-            <dd class="mt-1 text-sm text-gray-900">
-              <a href={"/stac/web/browse/collection/#{@item.collection}"} 
-                 class="text-blue-600 hover:underline">
-                <%= @item.collection %>
-              </a>
-            </dd>
-          </div>
-
-          <%= if @item.stac_extensions && length(@item.stac_extensions) > 0 do %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500">STAC Extensions</dt>
-              <dd class="mt-1">
-                <%= for ext <- @item.stac_extensions do %>
-                  <span class="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded mr-2 mb-1">
-                    <%= ext %>
-                  </span>
-                <% end %>
-              </dd>
-            </div>
-          <% end %>
-
-          <div class="border-t border-gray-100 pt-3 grid grid-cols-2 gap-4">
-            <%= if @current_entity.inserted_at do %>
-              <div>
-                <dt class="text-xs font-medium text-gray-400">Record created</dt>
-                <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= Calendar.strftime(@current_entity.inserted_at, "%Y-%m-%d %H:%M:%S") %> UTC</dd>
-              </div>
-            <% end %>
-            <%= if @current_entity.updated_at do %>
-              <div>
-                <dt class="text-xs font-medium text-gray-400">Record updated</dt>
-                <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= Calendar.strftime(@current_entity.updated_at, "%Y-%m-%d %H:%M:%S") %> UTC</dd>
-              </div>
-            <% end %>
-          </div>
-        </dl>
-      </div>
-
-      <%!-- Map visualization for item geometry/footprint --%>
-      <%= if @item.geometry do %>
-        <div class="lg:col-span-3 lg:ml-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-100 rounded-lg p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Footprint / Geometry</h2>
-          <.stac_map map_id="item-geometry-map" geometry={@item.geometry} properties={@item.properties || %{}} />
-        </div>
-      <% end %>
-
+  <%!-- Title bar: title, kind, temporal coverage --%>
+  <div class="mb-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <h2 class="text-2xl font-semibold text-secondary break-all">
+        <%= (is_binary(@props["title"]) && @props["title"]) || @item.id %>
+      </h2>
+      <.kind_badge kind={@item_kind} assets={@item.assets} />
+      <.temporal_badge range={@temporal} />
     </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-5">
-
-      <div class="mb-4 lg:col-span-2 lg:mr-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">
-          Assets (<%= if @item.assets, do: map_size(@item.assets), else: 0 %>)
-        </h2>
-        <%= if @item.assets && map_size(@item.assets) > 0 do %>
-          <div class="space-y-4">
-            <%= for {key, asset} <- @item.assets do %>
-              <div class="border border-gray-200 rounded-lg p-4">
-                <%!-- Header row: key + media type badge --%>
-                <div class="flex items-start justify-between mb-2">
-                  <h3 class="font-medium text-gray-900"><%= key %></h3>
-                  <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded ml-2 flex-shrink-0">
-                    <%= asset["type"] || "n/a" %>
-                  </span>
-                </div>
-
-                <%!-- Title --%>
-                <p class="text-sm text-gray-600 mb-2">
-                  <%= asset["title"] || raw("<span class=\"text-gray-400 italic\">n/a</span>") %>
-                </p>
-
-                <%!-- HTTPS href --%>
-                <div class="text-sm mb-1">
-                  <span class="text-gray-500">URL:</span>
-                  <%= if asset["href"] do %>
-                    <a href={asset["href"]} target="_blank" rel="noopener noreferrer"
-                       class="text-blue-600 hover:underline break-all ml-1">
-                      <%= asset["href"] %>
-                    </a>
-                  <% else %>
-                    <span class="text-gray-400 italic ml-1">n/a</span>
-                  <% end %>
-                </div>
-
-                <%!-- Roles --%>
-                <div class="flex items-center gap-2 mt-2">
-                  <span class="text-xs text-gray-500">Roles:</span>
-                  <%= if asset["roles"] && length(asset["roles"]) > 0 do %>
-                    <%= for role <- asset["roles"] do %>
-                      <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded"><%= role %></span>
-                    <% end %>
-                  <% else %>
-                    <span class="text-xs text-gray-400 italic">n/a</span>
-                  <% end %>
-                </div>
-
-                <%!-- File size --%>
-                <div class="text-xs text-gray-500 mt-2">
-                  <span>File size:</span>
-                  <%= if asset["file:size"] do %>
-                    <span class="font-mono ml-1">
-                      <%= Float.round(asset["file:size"] / 1_000_000, 1) %> MB
-                    </span>
-                  <% else %>
-                    <span class="text-gray-400 italic ml-1">n/a</span>
-                  <% end %>
-                </div>
-
-                <%!-- Raster bands --%>
-                <%= if bands = asset["raster:bands"] do %>
-                  <div class="mt-3 border-t border-gray-100 pt-2">
-                    <p class="text-xs font-medium text-gray-500 mb-1">Raster bands</p>
-                    <%= for band <- bands do %>
-                      <div class="text-xs text-gray-600 grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono bg-gray-50 rounded px-2 py-1 mt-1">
-                        <span>data_type: <%= band["data_type"] || "n/a" %></span>
-                        <span>nodata: <%= band["nodata"] || "n/a" %></span>
-                        <span>scale: <%= band["scale"] || "n/a" %></span>
-                        <span>resolution: <%= band["spatial_resolution"] || "n/a" %> <%= band["unit"] || "" %></span>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-
-                <%!-- Alternate hrefs --%>
-                <%= if alt = asset["alternate"] do %>
-                  <div class="mt-3 border-t border-gray-100 pt-2">
-                    <p class="text-xs font-medium text-gray-500 mb-1">Alternate access</p>
-                    <%= for {alt_key, alt_val} <- alt do %>
-                      <div class="text-xs mt-1">
-                        <span class="inline-block bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono mr-1"><%= alt_key %></span>
-                        <%= if alt_val["href"] do %>
-                          <span class="text-gray-700 break-all font-mono"><%= alt_val["href"] %></span>
-                        <% else %>
-                          <span class="text-gray-400 italic">n/a</span>
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        <% else %>
-          <p class="text-sm text-gray-500 italic">No assets available</p>
-        <% end %>
-      </div>
-
-      <div class="mb-4 lg:col-span-2 lg:mr-2 lg:ml-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Properties</h2>
-        <%= if @item.properties && map_size(@item.properties) > 0 do %>
-          <dl class="grid grid-cols-1 gap-3">
-            <%= for {key, value} <- @item.properties do %>
-              <div class="border-b border-gray-100 pb-2">
-                <dt class="text-sm font-medium text-gray-500"><%= key %></dt>
-                <dd class="mt-1 text-sm text-gray-900 break-all">
-                  <%= cond do %>
-                    <% is_nil(value) -> %><span class="text-gray-400 italic">n/a</span>
-                    <% is_binary(value) -> %><%= value %>
-                    <% is_number(value) -> %><%= value %>
-                    <% is_boolean(value) -> %><%= to_string(value) %>
-                    <% is_list(value) or is_map(value) -> %>
-                      <pre class="text-xs bg-gray-50 p-2 rounded mt-1 overflow-x-auto"><%= Jason.encode!(value, pretty: true) %></pre>
-                    <% true -> %><%= inspect(value) %>
-                  <% end %>
-                </dd>
-              </div>
-            <% end %>
-          </dl>
-        <% else %>
-          <p class="text-sm text-gray-500 italic">No properties available</p>
-        <% end %>
-      </div>
-
-      <div class="mb-4 lg:ml-2 bg-gray-50 shadow-sm shadow-black/20 border border-gray-200 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Raw JSON</h2>
-        <div class="relative">
-          <button onclick="navigator.clipboard.writeText(document.getElementById('item-json').textContent)"
-                  class="absolute top-2 right-2 px-3 py-1 text-xs bg-gray-700 text-white rounded hover:bg-gray-800">
-            Copy
-          </button>
-          <pre id="item-json" class="text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto max-h-96"><%= Jason.encode!(@item, pretty: true) %></pre>
-        </div>
-      </div>
-
-    </div>
+    <p :if={is_binary(@props["description"])} class="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
+      <%= @props["description"] %>
+    </p>
   </div>
+
+  <%!-- Row A: overview + footprint map --%>
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
+    <.section
+      title="Overview"
+      class="lg:col-span-2"
+      json_href={"/stac/api/v1/collections/#{@item.collection}/items/#{@item.id}"}
+    >
+      <.kv_grid>
+        <.kv label="ID" value={@item.id} mono span />
+        <.kv label="Collection">
+          <a href={"/stac/web/browse/collection/#{@item.collection}"} class="text-blue-600 hover:underline break-all">
+            <%= @item.collection %>
+          </a>
+        </.kv>
+        <.kv label="STAC version" value={@item.stac_version} mono />
+        <.kv label="Bbox (WGS 84)" raw_key="bbox" span>
+          <.bbox_table bbox={@item.bbox} />
+        </.kv>
+        <.kv :if={is_list(@item.stac_extensions) and @item.stac_extensions != []} label="Extensions" raw_key="stac_extensions" span>
+          <div class="flex flex-wrap gap-1">
+            <.extension_chip :for={ext <- @item.stac_extensions} url={to_string(ext)} />
+          </div>
+        </.kv>
+      </.kv_grid>
+
+      <div class="border-t border-gray-100 pt-3 mt-4 grid grid-cols-2 gap-4">
+        <%= if @current_entity.inserted_at do %>
+          <div>
+            <dt class="text-xs font-medium text-gray-400">Record created</dt>
+            <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= Calendar.strftime(@current_entity.inserted_at, "%Y-%m-%d %H:%M:%S") %> UTC</dd>
+          </div>
+        <% end %>
+        <%= if @current_entity.updated_at do %>
+          <div>
+            <dt class="text-xs font-medium text-gray-400">Record updated</dt>
+            <dd class="mt-0.5 text-xs text-gray-500 font-mono"><%= Calendar.strftime(@current_entity.updated_at, "%Y-%m-%d %H:%M:%S") %> UTC</dd>
+          </div>
+        <% end %>
+      </div>
+    </.section>
+
+    <.section :if={@item.geometry} title="Footprint / Geometry" class="lg:col-span-3">
+      <.stac_map map_id="item-geometry-map" geometry={@item.geometry} properties={@item.properties || %{}} />
+    </.section>
+  </div>
+
+  <%!-- Row B: projection and table schema (each renders nothing when absent) --%>
+  <div :if={@proj_present or @table_present} class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <.projection_card props={@props} />
+    <.table_schema_card props={@props} />
+  </div>
+
+  <%!-- Row C: assets --%>
+  <.section title="Assets" count={if is_map(@item.assets), do: map_size(@item.assets), else: 0} class="mb-4">
+    <%= if @primary_assets == [] and @aux_assets == [] do %>
+      <p class="text-sm text-gray-500 italic">No assets available</p>
+    <% else %>
+      <.asset_group
+        title={if @aux_assets != [], do: "Data", else: nil}
+        assets={@primary_assets}
+        columns={asset_columns(@primary_assets)}
+      />
+      <.asset_group
+        title={auxiliary_group_label(@aux_assets)}
+        assets={@aux_assets}
+        columns={asset_columns(@aux_assets)}
+      />
+    <% end %>
+  </.section>
+
+  <%!-- Row D: remaining properties, grouped by extension --%>
+  <.section :if={@property_groups != []} title="Properties" class="mb-4">
+    <div class="space-y-5">
+      <div :for={{group, entries} <- @property_groups}>
+        <h3 class="text-sm font-semibold text-secondary uppercase tracking-wide mb-2 border-b border-gray-200 pb-1">
+          <%= group %>
+        </h3>
+        <.kv_grid>
+          <.kv :for={{k, v} <- entries} label={humanize_key(k)} raw_key={k} value={v} span={not scalar?(v)} />
+        </.kv_grid>
+      </div>
+    </div>
+  </.section>
+
+  <%!-- Raw JSON, collapsed --%>
+  <.section title="Raw JSON">
+    <.json_details id="item-json" data={@item} summary="Show item JSON" />
+  </.section>
 </div>

@@ -2,7 +2,8 @@ defmodule StacApiWeb.StacBrowserController do
   use StacApiWeb, :controller
   require Logger
   alias StacApi.Repo
-  alias StacApi.Data.{Catalog, Collection, Item, Search}
+  alias StacApi.Data.{Catalog, Collection, Item, ItemAsset, Search}
+  alias StacApiWeb.StacBrowserHelpers, as: Helpers
   import Ecto.Query
 
   plug :assign_browse_authenticated
@@ -279,14 +280,20 @@ defmodule StacApiWeb.StacBrowserController do
             conn
 
           {:ok, _conn} ->
+            # Items describing a range have datetime == nil, so order on the
+            # first instant we know about; nulls (no temporal info) go last.
             items_query =
               from(i in Item,
                 where: i.collection_id == ^collection_id,
-                order_by: [desc: i.datetime],
+                order_by: [
+                  desc_nulls_last: fragment("coalesce(?, ?)", i.datetime, i.start_datetime),
+                  asc: i.id
+                ],
                 limit: 100
               )
 
             items = Repo.all(items_query)
+            asset_counts = asset_counts_for(Enum.map(items, & &1.id))
 
             item_entries =
               items
@@ -299,6 +306,9 @@ defmodule StacApiWeb.StacBrowserController do
                   path: "#{path}/item/#{item.id}",
                   is_directory: false,
                   datetime: item.datetime,
+                  start_datetime: item.start_datetime,
+                  end_datetime: item.end_datetime,
+                  asset_count: Map.get(asset_counts, item.id, 0),
                   properties: item.properties
                 }
               end)
@@ -312,6 +322,7 @@ defmodule StacApiWeb.StacBrowserController do
             |> assign(:collection_path, collection_id)
             |> assign(:current_type, :collection)
             |> assign(:current_entity, collection)
+            |> assign(:collection_stats, collection_stat_entries(collection))
             |> render(:index)
         end
     end
@@ -338,6 +349,7 @@ defmodule StacApiWeb.StacBrowserController do
 
             {:ok, _conn} ->
               assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+              props = if is_map(item.properties), do: item.properties, else: %{}
 
               item_data = %{
                 type: "Feature",
@@ -346,15 +358,29 @@ defmodule StacApiWeb.StacBrowserController do
                 id: item.id,
                 geometry: item.geometry,
                 bbox: item.bbox,
-                properties: item.properties || %{},
+                properties: props,
                 assets: assets,
                 collection: item.collection_id
               }
+
+              {primary_assets, aux_assets} = Helpers.split_assets(assets)
+
+              # title/description are shown in the page header, the temporal and
+              # projection/table keys by dedicated components.
+              skip_keys = Helpers.dedicated_property_keys() ++ ["title", "description"]
 
               breadcrumbs = build_breadcrumbs_from_item(item, collection)
 
               conn
               |> assign(:item, item_data)
+              |> assign(:props, props)
+              |> assign(:temporal, Helpers.temporal_range(item))
+              |> assign(:item_kind, Helpers.item_kind(assets))
+              |> assign(:primary_assets, primary_assets)
+              |> assign(:aux_assets, aux_assets)
+              |> assign(:proj_present, Helpers.proj_present?(Helpers.proj_summary(props)))
+              |> assign(:table_present, Helpers.table_present?(props))
+              |> assign(:property_groups, Helpers.group_properties(props, skip: skip_keys))
               |> assign(:current_path, path)
               |> assign(:breadcrumbs, breadcrumbs)
               |> assign(:collection_path, collection_id)
@@ -400,6 +426,88 @@ defmodule StacApiWeb.StacBrowserController do
 
     collection_breadcrumbs ++
       [%{name: item_title, path: "collection/#{collection.id}/item/#{item.id}"}]
+  end
+
+  # Number of normalized assets per item, for the collection listing.
+  defp asset_counts_for([]), do: %{}
+
+  defp asset_counts_for(item_ids) do
+    from(a in ItemAsset,
+      where: a.item_id in ^item_ids,
+      group_by: a.item_id,
+      select: {a.item_id, count(a.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  # `{label, value}` facts for the collection header: total items, temporal
+  # coverage of the items (falling back to the declared extent), asset count
+  # and media types. Four cheap aggregate queries.
+  defp collection_stat_entries(%Collection{id: collection_id} = collection) do
+    item_query = from(i in Item, where: i.collection_id == ^collection_id)
+    item_count = Repo.aggregate(item_query, :count, :id)
+
+    {first, last} =
+      Repo.one(
+        from(i in item_query,
+          select:
+            {min(fragment("coalesce(?, ?)", i.datetime, i.start_datetime)),
+             max(fragment("coalesce(?, ?)", i.datetime, i.end_datetime))}
+        )
+      ) || {nil, nil}
+
+    asset_query =
+      from(a in ItemAsset,
+        join: i in Item,
+        on: a.item_id == i.id,
+        where: i.collection_id == ^collection_id
+      )
+
+    asset_count = Repo.aggregate(asset_query, :count, :id)
+    asset_types = Repo.all(from(a in asset_query, distinct: true, select: a.type))
+
+    coverage =
+      case {Helpers.parse_datetime(first), Helpers.parse_datetime(last)} do
+        {nil, nil} ->
+          case Helpers.temporal_extent(collection.extent) do
+            {:range, s, e} -> coverage_string(s, e)
+            _ -> "n/a"
+          end
+
+        {s, e} ->
+          coverage_string(s, e)
+      end
+
+    type_labels =
+      asset_types
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&Helpers.media_type_label/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+      |> Enum.join(", ")
+
+    assets_value =
+      cond do
+        asset_count == 0 -> "none"
+        type_labels == "" -> Helpers.format_int(asset_count)
+        true -> "#{Helpers.format_int(asset_count)} · #{type_labels}"
+      end
+
+    [
+      {"Items", Helpers.format_int(item_count)},
+      {"Coverage", coverage},
+      {"Assets", assets_value}
+    ]
+  end
+
+  defp coverage_string(s, e) do
+    fmt = fn
+      nil -> "…"
+      dt -> Helpers.format_dt(dt)
+    end
+
+    "#{fmt.(s)} → #{fmt.(e)}"
   end
 
   defp reconstruct_item_assets(item_id, stac_extensions) do
@@ -483,23 +591,43 @@ defmodule StacApiWeb.StacBrowserController do
   def authenticate(conn, params) do
     api_key = Map.get(params, "api_key", "")
     return_to = safe_local_path(Map.get(params, "return_to", "/stac/web/browse"))
-    valid_keys = get_valid_browse_keys()
 
-    if api_key in valid_keys do
-      conn
-      |> put_session(:browse_authenticated, true)
-      |> put_flash(:info, "Browse unlocked")
-      |> redirect(to: return_to)
-    else
-      conn
-      |> put_flash(:error, "Invalid API key")
-      |> redirect(to: return_to)
+    case browse_key_level(api_key) do
+      nil ->
+        conn
+        |> put_flash(:error, "Invalid API key")
+        |> redirect(to: return_to)
+
+      level ->
+        conn
+        |> put_session(:browse_authenticated, true)
+        |> put_session(:browse_auth_level, level)
+        |> put_flash(:info, "Browse unlocked")
+        |> redirect(to: return_to)
     end
   end
 
-  # Prevent open redirects by allowing only local STAC browser paths.
+  # `:read_write`, `:read_only` or nil. The level is kept in the session so
+  # pages can show write-related content (e.g. the Management API docs) only to
+  # sessions unlocked with a read-write key.
+  defp browse_key_level(api_key) when is_binary(api_key) and api_key != "" do
+    api_keys = Application.get_env(:stac_api, :api_keys, %{})
+    read_write = Map.get(api_keys, :read_write, []) || []
+    read_only = Map.get(api_keys, :read_only, []) || []
+
+    cond do
+      Enum.any?(read_write, &Plug.Crypto.secure_compare(api_key, &1)) -> :read_write
+      Enum.any?(read_only, &Plug.Crypto.secure_compare(api_key, &1)) -> :read_only
+      true -> nil
+    end
+  end
+
+  defp browse_key_level(_), do: nil
+
+  # Prevent open redirects by allowing only local STAC browser paths (plus the
+  # API docs page, which carries the same lock control).
   defp safe_local_path(path) when is_binary(path) do
-    if Regex.match?(~r{\A/stac/web(/|\z)}, path) do
+    if Regex.match?(~r{\A/stac/web(/|\z)}, path) or path == "/stac/api/v1/docs" do
       path
     else
       "/stac/web/browse"
@@ -508,21 +636,15 @@ defmodule StacApiWeb.StacBrowserController do
 
   defp safe_local_path(_), do: "/stac/web/browse"
 
-  defp get_valid_browse_keys do
-    api_keys = Application.get_env(:stac_api, :api_keys, %{})
-    read_write = Map.get(api_keys, :read_write, []) || []
-    read_only = Map.get(api_keys, :read_only, []) || []
-    read_write ++ read_only
-  end
-
   @doc """
   Ends the private browsing session and returns the user to the browser root.
   """
-  def logout(conn, _params) do
+  def logout(conn, params) do
     conn
     |> delete_session(:browse_authenticated)
+    |> delete_session(:browse_auth_level)
     |> put_flash(:info, "Private browsing locked")
-    |> redirect(to: "/stac/web/browse")
+    |> redirect(to: safe_local_path(Map.get(params, "return_to", "/stac/web/browse")))
   end
 
   defp assign_browse_authenticated(conn, _opts) do
