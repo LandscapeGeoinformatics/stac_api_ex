@@ -230,7 +230,7 @@ defmodule StacApiWeb.ItemsCrudController do
         case validate_item_params_partial(params) do
           {:ok, item_attrs} ->
             case update_item_partial(item, item_attrs) do
-              {:ok, updated_item} ->
+              {:ok, _updated_item} ->
                 reloaded_item = Repo.get(Item, id)
                 
                 if Map.has_key?(params, "assets") do
@@ -390,9 +390,7 @@ defmodule StacApiWeb.ItemsCrudController do
 
   # Private helper functions
 
-  @doc """
-  Validate item params for PUT (full replacement - all required fields must be present)
-  """
+  # Validate item params for PUT (full replacement - all required fields must be present)
   defp validate_item_params_full(params, url_id) do
     # Use URL ID if body ID is not provided, otherwise validate they match
     body_id = params["id"]
@@ -451,9 +449,7 @@ defmodule StacApiWeb.ItemsCrudController do
     end
   end
 
-  @doc """
-  Validate item params for PATCH (partial update - only validate provided fields)
-  """
+  # Validate item params for PATCH (partial update - only validate provided fields)
   defp validate_item_params_partial(params) do
     # For PATCH, we validate only what's provided
     # Must have id, but other fields are optional
@@ -660,24 +656,14 @@ defmodule StacApiWeb.ItemsCrudController do
     end
   end
 
-  defp update_item(item, attrs) do
-    item
-    |> Item.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Replace entire item (PUT) - replaces all fields
-  """
+  # Replace entire item (PUT) - replaces all fields
   defp replace_item(item, attrs) do
     item
     |> Item.changeset(attrs)
     |> Repo.update()
   end
 
-  @doc """
-  Partially update item (PATCH) - only updates provided fields
-  """
+  # Partially update item (PATCH) - only updates provided fields
   defp update_item_partial(item, attrs) do
     item
     |> Item.changeset(attrs)
@@ -692,9 +678,7 @@ defmodule StacApiWeb.ItemsCrudController do
     end)
   end
 
-  @doc """
-  Normalize assets from STAC format into separate table
-  """
+  # Normalize assets from STAC format into separate table
   defp normalize_item_assets(item_id, assets) when is_map(assets) do
     Repo.delete_all(from a in ItemAsset, where: a.item_id == ^item_id)
 
@@ -709,10 +693,8 @@ defmodule StacApiWeb.ItemsCrudController do
     end)
   end
 
-  @doc """
-  Reconstruct assets from normalized table back to STAC format
-  """
-  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
+  # Reconstruct assets from normalized table back to STAC format
+  defp reconstruct_item_assets(item_id, stac_extensions) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
 
     Enum.reduce(assets, %{}, fn asset, acc ->
@@ -721,11 +703,9 @@ defmodule StacApiWeb.ItemsCrudController do
     end)
   end
 
-  @doc """
-  Update collection extent based on items' geometries and datetime values.
-  Calculates spatial extent using PostGIS: Box2D(ST_Envelope(st_extent(i.geometry::geometry)))
-  and temporal extent from min/max datetime values.
-  """
+  # Update collection extent based on items' geometries and datetime values.
+  # Calculates spatial extent using PostGIS: Box2D(ST_Envelope(st_extent(i.geometry::geometry)))
+  # and temporal extent from min/max datetime values.
   defp update_collection_extent(collection_id) when is_binary(collection_id) do
     # Calculate spatial extent using PostGIS
     spatial_bbox_sql = """

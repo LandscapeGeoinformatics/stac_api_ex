@@ -74,17 +74,6 @@ defp parse_geometry(geojson_string) when is_binary(geojson_string) do
 end
 defp parse_geometry(geometry), do: geometry
 
-defp convert_geojson_geometry(%{geometry: geojson_string} = item) when is_binary(geojson_string) do
-  case Jason.decode(geojson_string) do
-    {:ok, geometry} ->
-      case Geo.JSON.decode(geometry) do
-        {:ok, geo_struct} -> Map.put(item, :geometry, geo_struct)
-        _ -> Map.put(item, :geometry, geometry)
-      end
-    {:error, _} -> Map.put(item, :geometry, nil)
-  end
-end
-defp convert_geojson_geometry(item), do: item
 
 
 
@@ -311,7 +300,7 @@ defp convert_coords(other), do: other
     |> deep_serialize_tuples()
     |> Map.put("datetime", serialize_datetime(datetime))
   end
-  defp serialize_properties(properties, datetime), do: %{"datetime" => serialize_datetime(datetime)}
+  defp serialize_properties(_properties, datetime), do: %{"datetime" => serialize_datetime(datetime)}
 
   defp serialize_assets(nil), do: %{}
   defp serialize_assets(assets) when is_map(assets) do
@@ -346,9 +335,7 @@ defp convert_coords(other), do: other
   end
   defp deep_serialize_tuples(value), do: value
 
-  @doc """
-  Reconstruct assets for multiple items efficiently
-  """
+  # Reconstruct assets for multiple items efficiently
   defp reconstruct_assets_for_items(items) do
     item_ids = Enum.map(items, & &1.id)
     
@@ -371,10 +358,8 @@ defp convert_coords(other), do: other
     end)
   end
 
-  @doc """
-  Reconstruct assets from normalized table back to STAC format for a single item
-  """
-  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
+  # Reconstruct assets from normalized table back to STAC format for a single item
+  defp reconstruct_item_assets(item_id, stac_extensions) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
     
     Enum.reduce(assets, %{}, fn asset, acc ->

@@ -32,20 +32,22 @@ defmodule StacApi.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.7.14"},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:swoosh, "~> 1.5"},
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tidewave, "~> 0.5", only: :dev},
+      {:tidewave, "~> 0.9", only: [:dev]},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"},
+      {:bandit, "~> 1.10"},
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
-      {:phoenix_ecto, "~> 4.4"},  # This provides Ecto integration with Phoenix
+      # This provides Ecto integration with Phoenix
+      {:phoenix_ecto, "~> 4.4"},
       {:geo_postgis, "~> 3.4"},
       {:geo, "~> 3.4"},
       {:phoenix_html_helpers, "~> 1.0"},
@@ -62,11 +64,16 @@ defmodule StacApi.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
+      #  "run priv/repo/seeds.exs"
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
-      "ecto.setup": ["ecto.create", "ecto.migrate"], #  "run priv/repo/seeds.exs"
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing", "cmd npm install --prefix assets"],
+      "assets.setup": [
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing",
+        "cmd npm install --prefix assets"
+      ],
       "assets.build": ["tailwind stac_api", "esbuild stac_api"],
       "assets.deploy": ["tailwind stac_api --minify", "esbuild stac_api --minify", "phx.digest"]
     ]

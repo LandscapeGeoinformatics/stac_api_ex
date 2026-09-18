@@ -2,6 +2,7 @@ defmodule StacApiWeb.StacBrowserHTML do
   use StacApiWeb, :html
 
   import StacApiWeb.StacBrowserHelpers
+  import StacApiWeb.StacBrowserComponents
 
   embed_templates "stac_browser_html/*"
 
@@ -37,34 +38,24 @@ defmodule StacApiWeb.StacBrowserHTML do
     """
   end
 
-  # Convert PostGIS Geo.* objects to GeoJSON format
-  defp convert_geography_to_geojson(%Geo.Polygon{coordinates: coords}) do
-    # Convert tuples to lists recursively
-    coordinates = convert_tuples_to_lists(coords)
-    %{"type" => "Polygon", "coordinates" => coordinates}
+  # Convert any Geo.* struct (Polygon, MultiPolygon, Point, ...) to a GeoJSON map.
+  # Returns nil for anything Geo.JSON cannot encode so the map is simply skipped.
+  defp convert_geography_to_geojson(%{__struct__: mod} = geo) when is_atom(mod) do
+    case Geo.JSON.encode(geo) do
+      {:ok, geojson} -> geojson
+      _ -> nil
+    end
   end
 
-  defp convert_geography_to_geojson(%Geo.Point{coordinates: {lon, lat}}) do
-    %{"type" => "Point", "coordinates" => [lon, lat]}
-  end
-
+  defp convert_geography_to_geojson(%{"type" => _} = geojson), do: geojson
   defp convert_geography_to_geojson(_), do: nil
 
-  # Recursively convert tuples to lists for JSON encoding
-  defp convert_tuples_to_lists(data) when is_tuple(data) do
-    data |> Tuple.to_list() |> convert_tuples_to_lists()
-  end
-
-  defp convert_tuples_to_lists(data) when is_list(data) do
-    Enum.map(data, &convert_tuples_to_lists/1)
-  end
-
-  defp convert_tuples_to_lists(data), do: data
-
   # Convert extent JSON to GeoJSON feature
-  defp convert_extent_to_geojson(%{"spatial" => %{"bbox" => [bbox_list | _]}} = _extent) do
-    [min_lon, min_lat, max_lon, max_lat] = bbox_list
-
+  defp convert_extent_to_geojson(%{
+         "spatial" => %{"bbox" => [[min_lon, min_lat, max_lon, max_lat] | _]}
+       })
+       when is_number(min_lon) and is_number(min_lat) and is_number(max_lon) and
+              is_number(max_lat) do
     %{
       "type" => "Feature",
       "geometry" => %{
@@ -96,13 +87,13 @@ defmodule StacApiWeb.StacBrowserHTML do
           <span class="px-2 py-0.5 text-xs font-medium rounded text-primary bg-secondary border border-black">Private: ON</span>
           <form action="/stac/web/logout" method="post" class="inline">
     <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-    
+
     <input
       type="hidden"
       name="return_to"
       value={@current_path}
     />
-    
+
     <button
       type="submit"
       class="btn btn-sm bg-secondary text-primary border-black shadow-sm shadow-black/20"

@@ -3,7 +3,6 @@ defmodule StacApiWeb.CatalogsCrudController do
   alias StacApi.Repo
   alias StacApi.Data.Catalog
   alias StacApi.Data.Collection
-  alias StacApi.Data.Item
   alias StacApiWeb.CatalogJSON
   alias StacApiWeb.DynamicLinkGenerator
   import Ecto.Query
@@ -141,7 +140,7 @@ defmodule StacApiWeb.CatalogsCrudController do
         case validate_catalog_params_partial(params) do
           {:ok, catalog_attrs} ->
             case update_catalog_partial(catalog, catalog_attrs) do
-              {:ok, updated_catalog} ->
+              {:ok, _updated_catalog} ->
                 reloaded_catalog = Repo.get(Catalog, id)
                 
                 links = if Map.has_key?(params, "links") do
@@ -358,26 +357,6 @@ defmodule StacApiWeb.CatalogsCrudController do
     %Catalog{}
     |> Catalog.changeset(attrs)
     |> Repo.insert()
-  end
-
-  defp upsert_catalog(attrs) do
-    case Repo.get(Catalog, attrs["id"]) do
-      nil ->
-        %Catalog{}
-        |> Catalog.changeset(attrs)
-        |> Repo.insert()
-
-      existing_catalog ->
-        existing_catalog
-        |> Catalog.changeset(attrs)
-        |> Repo.update()
-    end
-  end
-
-  defp update_catalog(catalog, attrs) do
-    catalog
-    |> Catalog.changeset(attrs)
-    |> Repo.update()
   end
 
   defp replace_catalog(catalog, attrs) do

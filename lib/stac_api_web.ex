@@ -66,7 +66,7 @@ defmodule StacApiWeb do
         layouts: [html: StacApiWeb.Layouts]
 
       import Plug.Conn
-      import StacApiWeb.Gettext
+      use Gettext, backend: StacApiWeb.Gettext
 
       unquote(verified_routes())
     end

@@ -297,10 +297,8 @@ defmodule StacApiWeb.CollectionsController do
     }
   end
 
-  @doc """
-  Reconstruct assets from normalized table back to STAC format
-  """
-  defp reconstruct_item_assets(item_id, stac_extensions \\ []) do
+  # Reconstruct assets from normalized table back to STAC format
+  defp reconstruct_item_assets(item_id, stac_extensions) do
     assets = Repo.all(from a in ItemAsset, where: a.item_id == ^item_id)
     
     Enum.reduce(assets, %{}, fn asset, acc ->
