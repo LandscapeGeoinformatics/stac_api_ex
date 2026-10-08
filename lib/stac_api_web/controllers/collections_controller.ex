@@ -121,7 +121,7 @@ defmodule StacApiWeb.CollectionsController do
         {:error, parameter, reason} ->
           conn
           |> put_status(:bad_request)
-          |> json(%{error: "Invalid #{parameter} parameter: #{reason}"})
+          |> json(%{error: "Invalid #{parameter} parameter: it #{reason}"})
 
         {:ok, filters} ->
           case Repo.get(Collection, collection_id) do

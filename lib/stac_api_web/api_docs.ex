@@ -187,7 +187,7 @@ defmodule StacApiWeb.ApiDocs do
       query(
         "bbox",
         "string",
-        "Bounding box west,south,east,north in WGS 84 (4 numbers, or 6 with elevation).",
+        "Bounding box west,south,east,north in WGS 84 (4 numbers; a 6-value box with elevation is rejected with 400). west may be greater than east for a box crossing the antimeridian.",
         example: "21.6,57.4,28.3,59.9"
       ),
       query(
@@ -315,7 +315,7 @@ defmodule StacApiWeb.ApiDocs do
           query(
             "bbox",
             "string",
-            "Bounding box west,south,east,north in WGS 84 (4 numbers, or 6 with elevation).",
+            "Bounding box west,south,east,north in WGS 84 (4 numbers; a 6-value box with elevation is rejected with 400). west may be greater than east for a box crossing the antimeridian.",
             example: "21.6,57.4,28.3,59.9"
           ),
           query(

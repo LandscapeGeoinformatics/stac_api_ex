@@ -27,7 +27,7 @@ defmodule StacApiWeb.SearchController do
       {:error, parameter, reason} ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"error" => "Invalid #{parameter} parameter: #{reason}"})
+        |> json(%{"error" => "Invalid #{parameter} parameter: it #{reason}"})
     end
   end
 

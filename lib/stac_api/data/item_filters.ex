@@ -92,7 +92,7 @@ defmodule StacApi.Data.ItemFilters do
        do: :ok
 
   defp validate_bbox(_, _, _, _),
-    do: {:error, :bbox, "coordinates must be within WGS84 bounds"}
+    do: {:error, :bbox, "must stay within WGS84 bounds, with south not greater than north"}
 
   defp filter_by_datetime(query, nil), do: query
 
@@ -127,13 +127,41 @@ defmodule StacApi.Data.ItemFilters do
 
   defp filter_by_bbox(query, nil), do: query
 
-  defp filter_by_bbox(query, {west, south, east, north}) do
-    bbox_wkt =
-      "POLYGON((#{west} #{south}, #{east} #{south}, #{east} #{north}, #{west} #{north}, #{west} #{south}))"
-
+  # A bbox is a rectangle in lon/lat, so it is compared as planar geometry. Cast to
+  # geography its edges become great-circle arcs that take the shorter way round:
+  # wide boxes then miss items, and a whole-world box raises in PostGIS.
+  defp filter_by_bbox(query, {west, south, east, north}) when west <= east do
     from(i in query,
       where:
-        fragment("ST_Intersects(?, ST_GeomFromText(?, 4326)::geography)", i.geometry, ^bbox_wkt)
+        fragment(
+          "ST_Intersects(?::geometry, ST_MakeEnvelope(?, ?, ?, ?, 4326))",
+          i.geometry,
+          ^west,
+          ^south,
+          ^east,
+          ^north
+        )
+    )
+  end
+
+  # west > east means the box crosses the antimeridian, so it is split at 180 degrees.
+  defp filter_by_bbox(query, {west, south, east, north}) do
+    from(i in query,
+      where:
+        fragment(
+          "ST_Intersects(?::geometry, ST_MakeEnvelope(?, ?, 180, ?, 4326))",
+          i.geometry,
+          ^west,
+          ^south,
+          ^north
+        ) or
+          fragment(
+            "ST_Intersects(?::geometry, ST_MakeEnvelope(-180, ?, ?, ?, 4326))",
+            i.geometry,
+            ^south,
+            ^east,
+            ^north
+          )
     )
   end
 end

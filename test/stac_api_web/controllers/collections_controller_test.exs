@@ -276,6 +276,34 @@ defmodule StacApiWeb.CollectionsControllerTest do
       assert feature_ids(response) == ["filter-date-line"]
     end
 
+    test "matches Search for bounding boxes wider than 180 degrees", %{conn: conn} do
+      estonian_ids = ["filter-new", "filter-old", "filter-range"]
+
+      bbox_cases = [
+        {"-180,-90,180,90", ["filter-date-line" | estonian_ids]},
+        {"-170,50,170,65", estonian_ids},
+        {"170,50,30,65", ["filter-date-line" | estonian_ids]}
+      ]
+
+      Enum.each(bbox_cases, fn {bbox, expected_ids} ->
+        collection_response =
+          conn
+          |> get(~p"/stac/api/v1/collections/collection-filter-test/items", %{"bbox" => bbox})
+          |> json_response(200)
+
+        search_response =
+          build_conn()
+          |> get(~p"/stac/api/v1/search", %{
+            "collections" => "collection-filter-test",
+            "bbox" => bbox
+          })
+          |> json_response(200)
+
+        assert feature_ids(collection_response) == expected_ids
+        assert feature_ids(collection_response) == feature_ids(search_response)
+      end)
+    end
+
     test "returns 400 from both endpoints for malformed datetime and bbox filters", %{conn: conn} do
       Enum.each([{"datetime", "not-a-date"}, {"bbox", "21,57,not-a-number,59"}], fn {parameter,
                                                                                      value} ->
@@ -292,8 +320,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
           })
           |> json_response(400)
 
-        assert collection_response["error"] =~ parameter
-        assert search_response["error"] =~ parameter
+        assert collection_response["error"] =~ "Invalid #{parameter} parameter: it "
+        assert search_response["error"] == collection_response["error"]
       end)
     end
 
