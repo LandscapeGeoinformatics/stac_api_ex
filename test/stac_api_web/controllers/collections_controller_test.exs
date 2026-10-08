@@ -3,12 +3,13 @@ defmodule StacApiWeb.CollectionsControllerTest do
 
   setup %{conn: conn} do
     auth_conn = authenticated_conn(conn)
-    
+
     catalog_params = %{
       "id" => "test-catalog",
       "title" => "Test Catalog",
       "description" => "Test"
     }
+
     post(auth_conn, ~p"/stac/manage/v1/catalogs", catalog_params)
 
     collection_params = %{
@@ -22,6 +23,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "temporal" => %{"interval" => [["2020-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
       }
     }
+
     post(auth_conn, ~p"/stac/manage/v1/collections", collection_params)
 
     {:ok, conn: auth_conn}
@@ -80,7 +82,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
 
       # Check required STAC properties
       assert response["stac_version"]
-      assert response["stac_extensions"] || true  # Can be empty array or not present
+      # Can be empty array or not present
+      assert response["stac_extensions"] || true
       assert response["type"] == "Collection"
       assert response["id"]
       assert response["title"]
@@ -146,6 +149,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "description" => "No items",
         "license" => "CC-BY-4.0"
       }
+
       post(conn, ~p"/stac/manage/v1/collections", empty_params)
 
       conn = get(conn, ~p"/stac/api/v1/collections/empty-collection/items")
@@ -222,7 +226,9 @@ defmodule StacApiWeb.CollectionsControllerTest do
       Enum.each(datetime_cases, fn {datetime, expected_ids} ->
         collection_response =
           conn
-          |> get(~p"/stac/api/v1/collections/collection-filter-test/items", %{"datetime" => datetime})
+          |> get(~p"/stac/api/v1/collections/collection-filter-test/items", %{
+            "datetime" => datetime
+          })
           |> json_response(200)
 
         search_response =
@@ -271,7 +277,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
 
     test "returns 400 from both endpoints for malformed datetime and bbox filters", %{conn: conn} do
-      Enum.each([{"datetime", "not-a-date"}, {"bbox", "21,57,not-a-number,59"}], fn {parameter, value} ->
+      Enum.each([{"datetime", "not-a-date"}, {"bbox", "21,57,not-a-number,59"}], fn {parameter,
+                                                                                     value} ->
         collection_response =
           conn
           |> get(~p"/stac/api/v1/collections/collection-filter-test/items", %{parameter => value})
@@ -320,7 +327,11 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "collection_id" => "test-collection",
         "geometry" => %{"type" => "Point", "coordinates" => [5, 5]},
         "bbox" => [4, 4, 6, 6],
-        "properties" => %{"datetime" => "2024-01-15T12:00:00Z", "description" => "Specific test item", "source" => "test"}
+        "properties" => %{
+          "datetime" => "2024-01-15T12:00:00Z",
+          "description" => "Specific test item",
+          "source" => "test"
+        }
       }
 
       post(conn, ~p"/stac/manage/v1/items", item_params)
@@ -423,7 +434,9 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
 
     test "POST /search — excludes private items from unauthenticated search" do
-      conn = post(build_conn(), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      conn =
+        post(build_conn(), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+
       response = json_response(conn, 200)
       ids = Enum.map(response["features"], & &1["id"])
       refute "private-item" in ids
@@ -446,7 +459,9 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
 
     test "GET /collections/:id/items — returns items from private collection with RO key" do
-      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items")
+      conn =
+        get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items")
+
       response = json_response(conn, 200)
       assert response["type"] == "FeatureCollection"
       ids = Enum.map(response["features"], & &1["id"])
@@ -454,14 +469,23 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
 
     test "GET /collections/:collection_id/items/:item_id — returns private item with RO key" do
-      conn = get(read_only_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items/private-item")
+      conn =
+        get(
+          read_only_conn(build_conn()),
+          ~p"/stac/api/v1/collections/private-collection/items/private-item"
+        )
+
       response = json_response(conn, 200)
       assert response["id"] == "private-item"
       assert response["type"] == "Feature"
     end
 
     test "POST /search — includes private items with RO key" do
-      conn = post(read_only_conn(build_conn()), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      conn =
+        post(read_only_conn(build_conn()), ~p"/stac/api/v1/search", %{
+          "collections" => ["private-collection"]
+        })
+
       response = json_response(conn, 200)
       ids = Enum.map(response["features"], & &1["id"])
       assert "private-item" in ids
@@ -477,26 +501,42 @@ defmodule StacApiWeb.CollectionsControllerTest do
     end
 
     test "GET /collections/:id — returns private collection with RW key" do
-      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection")
+      conn =
+        get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection")
+
       response = json_response(conn, 200)
       assert response["id"] == "private-collection"
     end
 
     test "GET /collections/:id/items — returns items from private collection with RW key" do
-      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items")
+      conn =
+        get(
+          authenticated_conn(build_conn()),
+          ~p"/stac/api/v1/collections/private-collection/items"
+        )
+
       response = json_response(conn, 200)
       ids = Enum.map(response["features"], & &1["id"])
       assert "private-item" in ids
     end
 
     test "GET /collections/:collection_id/items/:item_id — returns private item with RW key" do
-      conn = get(authenticated_conn(build_conn()), ~p"/stac/api/v1/collections/private-collection/items/private-item")
+      conn =
+        get(
+          authenticated_conn(build_conn()),
+          ~p"/stac/api/v1/collections/private-collection/items/private-item"
+        )
+
       response = json_response(conn, 200)
       assert response["id"] == "private-item"
     end
 
     test "POST /search — includes private items with RW key" do
-      conn = post(authenticated_conn(build_conn()), ~p"/stac/api/v1/search", %{"collections" => ["private-collection"]})
+      conn =
+        post(authenticated_conn(build_conn()), ~p"/stac/api/v1/search", %{
+          "collections" => ["private-collection"]
+        })
+
       response = json_response(conn, 200)
       ids = Enum.map(response["features"], & &1["id"])
       assert "private-item" in ids
@@ -507,16 +547,18 @@ defmodule StacApiWeb.CollectionsControllerTest do
     test "collection response must not contain a top-level properties field", %{conn: conn} do
       conn = get(conn, ~p"/stac/api/v1/collections/test-collection")
       response = json_response(conn, 200)
+
       refute Map.has_key?(response, "properties"),
-        "STAC Collections must not have a top-level 'properties' field"
+             "STAC Collections must not have a top-level 'properties' field"
     end
 
     test "collections list must not contain properties on any collection", %{conn: conn} do
       conn = get(conn, ~p"/stac/api/v1/collections")
       response = json_response(conn, 200)
+
       Enum.each(response["collections"], fn col ->
         refute Map.has_key?(col, "properties"),
-          "Collection #{col["id"]} must not expose 'properties'"
+               "Collection #{col["id"]} must not expose 'properties'"
       end)
     end
   end
@@ -536,8 +578,9 @@ defmodule StacApiWeb.CollectionsControllerTest do
       response = json_response(conn, 200)
       parent_link = Enum.find(response["links"], &(&1["rel"] == "parent"))
       assert parent_link, "Collection must have a parent link"
+
       refute String.contains?(parent_link["href"], "/catalog/"),
-        "parent link must not use non-standard /catalog/ path, got: #{parent_link["href"]}"
+             "parent link must not use non-standard /catalog/ path, got: #{parent_link["href"]}"
     end
   end
 
@@ -550,16 +593,19 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "license" => "CC0-1.0",
         "catalog_id" => "test-catalog",
         "keywords" => ["ndvi", "sentinel-2", "estonia"],
-        "providers" => [%{
-          "name" => "University of Tartu HPC",
-          "roles" => ["producer"],
-          "url" => "https://hpc.ut.ee"
-        }],
+        "providers" => [
+          %{
+            "name" => "University of Tartu HPC",
+            "roles" => ["producer"],
+            "url" => "https://hpc.ut.ee"
+          }
+        ],
         "extent" => %{
           "spatial" => %{"bbox" => [[21.7, 57.5, 28.2, 59.9]]},
           "temporal" => %{"interval" => [["2017-01-01T00:00:00Z", nil]]}
         }
       }
+
       post(conn, ~p"/stac/manage/v1/collections", params)
       :ok
     end
@@ -589,6 +635,7 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "license" => "CC0-1.0",
         "catalog_id" => "test-catalog"
       }
+
       post(conn, ~p"/stac/manage/v1/collections", col_params)
 
       # Item 1: polygon in Estonia-ish area, spring 2017
@@ -597,10 +644,13 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "collection_id" => "extent-test-collection",
         "geometry" => %{
           "type" => "Polygon",
-          "coordinates" => [[[21.0, 57.0], [22.0, 57.0], [22.0, 58.0], [21.0, 58.0], [21.0, 57.0]]]
+          "coordinates" => [
+            [[21.0, 57.0], [22.0, 57.0], [22.0, 58.0], [21.0, 58.0], [21.0, 57.0]]
+          ]
         },
         "bbox" => [21.0, 57.0, 22.0, 58.0],
-        "properties" => %{"datetime" => nil, 
+        "properties" => %{
+          "datetime" => nil,
           "start_datetime" => "2017-04-01T00:00:00Z",
           "end_datetime" => "2017-05-31T23:59:59Z"
         }
@@ -612,10 +662,13 @@ defmodule StacApiWeb.CollectionsControllerTest do
         "collection_id" => "extent-test-collection",
         "geometry" => %{
           "type" => "Polygon",
-          "coordinates" => [[[26.0, 58.0], [28.0, 58.0], [28.0, 60.0], [26.0, 60.0], [26.0, 58.0]]]
+          "coordinates" => [
+            [[26.0, 58.0], [28.0, 58.0], [28.0, 60.0], [26.0, 60.0], [26.0, 58.0]]
+          ]
         },
         "bbox" => [26.0, 58.0, 28.0, 60.0],
-        "properties" => %{"datetime" => nil, 
+        "properties" => %{
+          "datetime" => nil,
           "start_datetime" => "2024-09-01T00:00:00Z",
           "end_datetime" => "2024-10-31T23:59:59Z"
         }
@@ -652,11 +705,11 @@ defmodule StacApiWeb.CollectionsControllerTest do
 
       # start must be <= 2017-04-01 (earliest start_datetime)
       assert start_dt <= "2017-04-01T00:00:00Z",
-        "temporal start should be at or before 2017-04-01, got #{start_dt}"
+             "temporal start should be at or before 2017-04-01, got #{start_dt}"
 
       # end must be >= 2024-10-31 (latest end_datetime)
       assert end_dt >= "2024-10-31T23:59:59Z",
-        "temporal end should be at or after 2024-10-31, got #{end_dt}"
+             "temporal end should be at or after 2024-10-31, got #{end_dt}"
     end
 
     test "temporal extent timestamps have no microseconds (.000000Z)", %{conn: conn} do
