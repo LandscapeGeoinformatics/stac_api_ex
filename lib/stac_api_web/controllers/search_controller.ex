@@ -1,93 +1,85 @@
 defmodule StacApiWeb.SearchController do
   use StacApiWeb, :controller
-  alias StacApi.Data.Search
+  alias StacApi.Data.{ItemFilters, Search}
   alias StacApiWeb.LinkResolver
   alias StacApi.Data.Item
 
   def index(conn, params) do
     # Handle both GET (query params) and POST (body params)
-    search_params = case conn.method do
-      "POST" ->
+    search_params =
+      case conn.method do
+        "POST" ->
+          case conn.body_params do
+            %{} = body_params -> normalize_params(body_params)
+            _ -> normalize_params(params)
+          end
 
-        case conn.body_params do
-          %{} = body_params -> normalize_params(body_params)
-          _ -> normalize_params(params)
-        end
-      _ ->
-     
-        normalize_params(params)
-    end
+        _ ->
+          normalize_params(params)
+      end
 
-  authenticated = conn.assigns[:authenticated] || false
+    authenticated = conn.assigns[:authenticated] || false
 
-  case validate_datetime_param(search_params) do
-    :ok -> run_search(conn, search_params, authenticated)
-    {:error, reason} ->
-      conn
-      |> put_status(:bad_request)
-      |> json(%{"error" => "Invalid datetime parameter: it #{reason}"})
-  end
-  end
+    case ItemFilters.parse(search_params) do
+      {:ok, filters} ->
+        run_search(conn, search_params, authenticated, filters)
 
-  # A datetime the server cannot parse must not be silently dropped — that would
-  # answer a narrow query with the whole catalogue.
-  defp validate_datetime_param(params) do
-    case params[:datetime] || params["datetime"] do
-      nil -> :ok
-      "" -> :ok
-      value ->
-        case StacApi.Temporal.parse_datetime_param(value) do
-          {:ok, _parsed} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+      {:error, parameter, reason} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{"error" => "Invalid #{parameter} parameter: it #{reason}"})
     end
   end
 
-  defp run_search(conn, search_params, authenticated) do
-  items =
-    Search.search(search_params, authenticated)
-    |> Enum.map(&ensure_item_struct/1)
+  # Both API paths pass the same parsed filters to Search, preventing silent
+  # fallbacks to an unfiltered result set.
+  defp run_search(conn, search_params, authenticated, filters) do
+    items =
+      Search.search(search_params, authenticated, filters)
+      |> Enum.map(&ensure_item_struct/1)
 
-  total_count = Search.count_search_results(search_params, authenticated)
+    total_count = Search.count_search_results(search_params, authenticated, filters)
 
-  features = Enum.map(items, fn item ->
-    serialized = Search.serialize_item_for_api(item)
-    Map.put(serialized, "links", LinkResolver.resolve_links(serialized["links"] || []))
-  end)
+    features =
+      Enum.map(items, fn item ->
+        serialized = Search.serialize_item_for_api(item)
+        Map.put(serialized, "links", LinkResolver.resolve_links(serialized["links"] || []))
+      end)
 
-  response = %{
-    "type" => "FeatureCollection",
-    "features" => features,
-    "links" => LinkResolver.create_search_links(conn, search_params, total_count),
-    "context" => %{
-      "returned" => length(features),
-      "matched" => total_count,
-      "limit" => parse_int(search_params["limit"] || "10")
+    response = %{
+      "type" => "FeatureCollection",
+      "features" => features,
+      "links" => LinkResolver.create_search_links(conn, search_params, total_count),
+      "context" => %{
+        "returned" => length(features),
+        "matched" => total_count,
+        "limit" => parse_int(search_params["limit"] || "10")
+      }
     }
-  }
 
-  conn
-  |> put_resp_content_type("application/geo+json")
-  |> json(response)
-end
+    conn
+    |> put_resp_content_type("application/geo+json")
+    |> json(response)
+  end
 
-defp ensure_item_struct(%Item{} = item), do: item
-defp ensure_item_struct(item) when is_map(item) do
-  %Item{
-    id: item["id"] || item[:id],
-    stac_version: item["stac_version"] || item[:stac_version],
-    stac_extensions: item["stac_extensions"] || item[:stac_extensions] || [],
-    geometry: item["geometry"] || item[:geometry],
-    bbox: item["bbox"] || item[:bbox],
-    datetime: item["datetime"] || item[:datetime],
-    properties: item["properties"] || item[:properties] || %{},
-    assets: item["assets"] || item[:assets] || %{},
-    links: item["links"] || item[:links] || [],
-    collection_id: item["collection_id"] || item[:collection_id],
-    inserted_at: item["inserted_at"] || item[:inserted_at],
-    updated_at: item["updated_at"] || item[:updated_at]
-  }
-end
+  defp ensure_item_struct(%Item{} = item), do: item
+
+  defp ensure_item_struct(item) when is_map(item) do
+    %Item{
+      id: item["id"] || item[:id],
+      stac_version: item["stac_version"] || item[:stac_version],
+      stac_extensions: item["stac_extensions"] || item[:stac_extensions] || [],
+      geometry: item["geometry"] || item[:geometry],
+      bbox: item["bbox"] || item[:bbox],
+      datetime: item["datetime"] || item[:datetime],
+      properties: item["properties"] || item[:properties] || %{},
+      assets: item["assets"] || item[:assets] || %{},
+      links: item["links"] || item[:links] || [],
+      collection_id: item["collection_id"] || item[:collection_id],
+      inserted_at: item["inserted_at"] || item[:inserted_at],
+      updated_at: item["updated_at"] || item[:updated_at]
+    }
+  end
 
   defp normalize_params(params) do
     params
@@ -97,14 +89,13 @@ end
     end)
   end
 
-
-
   defp parse_int(str) when is_binary(str) do
     case Integer.parse(str) do
       {num, _} -> num
       :error -> 0
     end
   end
+
   defp parse_int(num) when is_integer(num), do: num
   defp parse_int(_), do: 0
 end
