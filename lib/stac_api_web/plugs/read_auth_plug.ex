@@ -6,6 +6,10 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   """
   
   import Plug.Conn
+  import Ecto.Query
+
+  alias StacApi.Repo
+  alias StacApi.Data.ApiKey
 
   defp get_api_keys do
     Application.get_env(:stac_api, :api_keys) ||
@@ -47,14 +51,23 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
       cond do
         Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
           {:ok, :read_write}
-        
+
         Enum.any?(ro_keys, &secure_compare(api_key, &1)) ->
           {:ok, :read_only}
-        
+
+        issued_key_valid?(api_key) ->
+          {:ok, :read_only}
+
         true ->
           {:error, "Invalid API key"}
       end
     end
+  end
+
+  # Personalized keys issued via /stac/manage/v1/api-keys. Looked up by the
+  # SHA-256 hash of the raw secret, which is what's actually stored.
+  defp issued_key_valid?(api_key) do
+    Repo.exists?(from k in ApiKey, where: k.key_hash == ^ApiKey.hash(api_key))
   end
 
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do

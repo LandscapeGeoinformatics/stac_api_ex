@@ -99,6 +99,14 @@ defmodule StacApiWeb.Router do
     put "/items/:id", ItemsCrudController, :update
     patch "/items/:id", ItemsCrudController, :patch
     delete "/items/:id", ItemsCrudController, :delete
+
+    # API key management (personalized, read-only keys for the public STAC API)
+    get "/api-keys", ApiKeysCrudController, :index
+    get "/api-keys/:id", ApiKeysCrudController, :show
+    post "/api-keys", ApiKeysCrudController, :create
+    patch "/api-keys/:id", ApiKeysCrudController, :update
+    post "/api-keys/:id/rotate", ApiKeysCrudController, :rotate
+    delete "/api-keys/:id", ApiKeysCrudController, :delete
   end
 
   # Web/GUI interface endpoints
