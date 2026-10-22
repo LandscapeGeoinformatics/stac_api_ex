@@ -1,8 +1,7 @@
 defmodule StacApiWeb.SearchController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{ItemFilters, Search}
+  alias StacApi.Data.{Item, ItemFields, ItemFilters, Search}
   alias StacApiWeb.LinkResolver
-  alias StacApi.Data.Item
 
   def index(conn, params) do
     # Handle both GET (query params) and POST (body params)
@@ -20,10 +19,10 @@ defmodule StacApiWeb.SearchController do
 
     authenticated = conn.assigns[:authenticated] || false
 
-    case ItemFilters.parse(search_params) do
-      {:ok, filters} ->
-        run_search(conn, search_params, authenticated, filters)
-
+    with {:ok, filters} <- ItemFilters.parse(search_params),
+         {:ok, fields} <- ItemFields.parse(search_params, request_kind(conn.method)) do
+      run_search(conn, search_params, authenticated, filters, fields)
+    else
       {:error, parameter, reason} ->
         conn
         |> put_status(:bad_request)
@@ -33,7 +32,7 @@ defmodule StacApiWeb.SearchController do
 
   # Both API paths pass the same parsed filters to Search, preventing silent
   # fallbacks to an unfiltered result set.
-  defp run_search(conn, search_params, authenticated, filters) do
+  defp run_search(conn, search_params, authenticated, filters, fields) do
     items =
       Search.search(search_params, authenticated, filters)
       |> Enum.map(&ensure_item_struct/1)
@@ -43,7 +42,10 @@ defmodule StacApiWeb.SearchController do
     features =
       Enum.map(items, fn item ->
         serialized = Search.serialize_item_for_api(item)
-        Map.put(serialized, "links", LinkResolver.resolve_links(serialized["links"] || []))
+
+        serialized
+        |> Map.put("links", LinkResolver.resolve_links(serialized["links"] || []))
+        |> ItemFields.project(fields)
       end)
 
     response = %{
@@ -51,7 +53,12 @@ defmodule StacApiWeb.SearchController do
       "features" => features,
       "numberMatched" => total_count,
       "numberReturned" => length(features),
-      "links" => LinkResolver.create_search_links(conn, search_params, total_count),
+      "links" =>
+        LinkResolver.create_search_links(
+          conn,
+          ItemFields.pagination_params(search_params, fields),
+          total_count
+        ),
       "context" => %{
         "returned" => length(features),
         "matched" => total_count,
@@ -90,6 +97,9 @@ defmodule StacApiWeb.SearchController do
       {key, value} -> {key, value}
     end)
   end
+
+  defp request_kind("POST"), do: :post
+  defp request_kind(_method), do: :get
 
   defp parse_int(str) when is_binary(str) do
     case Integer.parse(str) do

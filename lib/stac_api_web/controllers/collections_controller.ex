@@ -1,6 +1,6 @@
 defmodule StacApiWeb.CollectionsController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{Collection, ItemAsset, Catalog}
+  alias StacApi.Data.{Catalog, Collection, ItemAsset, ItemFields}
   alias StacApi.Repo
   alias StacApiWeb.LinkResolver
   import Ecto.Query
@@ -117,145 +117,153 @@ defmodule StacApiWeb.CollectionsController do
       limit = parse_int(params["limit"] || "10") |> max(1) |> min(10_000)
       offset = parse_int(params["offset"] || "0") |> max(0)
 
-      case StacApi.Data.ItemFilters.parse(params) do
+      with {:ok, filters} <- StacApi.Data.ItemFilters.parse(params),
+           {:ok, fields} <- ItemFields.parse(params, :get) do
+        case Repo.get(Collection, collection_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> json(%{error: "Collection not found"})
+
+          collection ->
+            # Check if collection is in a private catalog
+            catalog_check =
+              if collection.catalog_id do
+                case Repo.get(Catalog, collection.catalog_id) do
+                  nil ->
+                    :ok
+
+                  catalog ->
+                    catalog_private = catalog.private == true
+
+                    if catalog_private && !authenticated do
+                      :private
+                    else
+                      :ok
+                    end
+                end
+              else
+                :ok
+              end
+
+            if catalog_check == :private do
+              conn
+              |> put_status(:not_found)
+              |> json(%{error: "Collection not found"})
+            else
+              base_query =
+                from(i in StacApi.Data.Item,
+                  where: i.collection_id == ^collection_id,
+                  order_by: [desc: i.datetime]
+                )
+
+              base_query = StacApi.Data.ItemFilters.apply(base_query, filters)
+              total_count = Repo.aggregate(base_query, :count, :id)
+              items = Repo.all(from(i in base_query, limit: ^limit, offset: ^offset))
+
+              sanitized_items =
+                Enum.map(items, fn item ->
+                  sanitized = sanitize_item(item)
+                  assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+                  sanitized = Map.put(sanitized, :assets, assets)
+
+                  custom_links = item.links || []
+
+                  links =
+                    StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
+
+                  sanitized
+                  |> Map.put(:links, links)
+                  |> ItemFields.project(fields)
+                end)
+
+              base_url = Application.get_env(:stac_api, :base_url, "")
+              items_base = "#{base_url}/stac/api/v1/collections/#{collection_id}/items"
+              pagination_params = ItemFields.pagination_params(params, fields)
+
+              page_url = fn page_offset ->
+                page_params = [{"limit", limit}, {"offset", page_offset}]
+
+                page_params =
+                  if pagination_params["datetime"],
+                    do: page_params ++ [{"datetime", pagination_params["datetime"]}],
+                    else: page_params
+
+                page_params =
+                  if pagination_params["bbox"],
+                    do: page_params ++ [{"bbox", pagination_params["bbox"]}],
+                    else: page_params
+
+                page_params =
+                  if Map.has_key?(pagination_params, "fields"),
+                    do: page_params ++ [{"fields", pagination_params["fields"]}],
+                    else: page_params
+
+                "#{items_base}?#{URI.encode_query(page_params)}"
+              end
+
+              pagination_links =
+                [
+                  %{
+                    "rel" => "self",
+                    "href" => page_url.(offset),
+                    "type" => "application/geo+json"
+                  },
+                  %{
+                    "rel" => "root",
+                    "href" => "#{base_url}/stac/api/v1/",
+                    "type" => "application/json"
+                  },
+                  %{
+                    "rel" => "collection",
+                    "href" => "#{base_url}/stac/api/v1/collections/#{collection_id}",
+                    "type" => "application/json"
+                  }
+                ] ++
+                  if offset + limit < total_count do
+                    [
+                      %{
+                        "rel" => "next",
+                        "href" => page_url.(offset + limit),
+                        "type" => "application/geo+json"
+                      }
+                    ]
+                  else
+                    []
+                  end ++
+                  if offset > 0 do
+                    [
+                      %{
+                        "rel" => "prev",
+                        "href" => page_url.(max(offset - limit, 0)),
+                        "type" => "application/geo+json"
+                      }
+                    ]
+                  else
+                    []
+                  end
+
+              conn
+              |> put_resp_content_type("application/geo+json")
+              |> json(%{
+                type: "FeatureCollection",
+                features: sanitized_items,
+                numberMatched: total_count,
+                numberReturned: length(sanitized_items),
+                links: pagination_links,
+                context: %{
+                  returned: length(sanitized_items),
+                  matched: total_count,
+                  limit: limit
+                }
+              })
+            end
+        end
+      else
         {:error, parameter, reason} ->
           conn
           |> put_status(:bad_request)
           |> json(%{error: "Invalid #{parameter} parameter: it #{reason}"})
-
-        {:ok, filters} ->
-          case Repo.get(Collection, collection_id) do
-            nil ->
-              conn
-              |> put_status(:not_found)
-              |> json(%{error: "Collection not found"})
-
-            collection ->
-              # Check if collection is in a private catalog
-              catalog_check =
-                if collection.catalog_id do
-                  case Repo.get(Catalog, collection.catalog_id) do
-                    nil ->
-                      :ok
-
-                    catalog ->
-                      catalog_private = catalog.private == true
-
-                      if catalog_private && !authenticated do
-                        :private
-                      else
-                        :ok
-                      end
-                  end
-                else
-                  :ok
-                end
-
-              if catalog_check == :private do
-                conn
-                |> put_status(:not_found)
-                |> json(%{error: "Collection not found"})
-              else
-                base_query =
-                  from(i in StacApi.Data.Item,
-                    where: i.collection_id == ^collection_id,
-                    order_by: [desc: i.datetime]
-                  )
-
-                base_query = StacApi.Data.ItemFilters.apply(base_query, filters)
-                total_count = Repo.aggregate(base_query, :count, :id)
-                items = Repo.all(from(i in base_query, limit: ^limit, offset: ^offset))
-
-                sanitized_items =
-                  Enum.map(items, fn item ->
-                    sanitized = sanitize_item(item)
-                    assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
-                    sanitized = Map.put(sanitized, :assets, assets)
-
-                    custom_links = item.links || []
-
-                    links =
-                      StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
-
-                    Map.put(sanitized, :links, links)
-                  end)
-
-                base_url = Application.get_env(:stac_api, :base_url, "")
-                items_base = "#{base_url}/stac/api/v1/collections/#{collection_id}/items"
-
-                page_url = fn page_offset ->
-                  page_params = [{"limit", limit}, {"offset", page_offset}]
-
-                  page_params =
-                    if params["datetime"],
-                      do: page_params ++ [{"datetime", params["datetime"]}],
-                      else: page_params
-
-                  page_params =
-                    if params["bbox"],
-                      do: page_params ++ [{"bbox", params["bbox"]}],
-                      else: page_params
-
-                  "#{items_base}?#{URI.encode_query(page_params)}"
-                end
-
-                pagination_links =
-                  [
-                    %{
-                      "rel" => "self",
-                      "href" => page_url.(offset),
-                      "type" => "application/geo+json"
-                    },
-                    %{
-                      "rel" => "root",
-                      "href" => "#{base_url}/stac/api/v1/",
-                      "type" => "application/json"
-                    },
-                    %{
-                      "rel" => "collection",
-                      "href" => "#{base_url}/stac/api/v1/collections/#{collection_id}",
-                      "type" => "application/json"
-                    }
-                  ] ++
-                    if offset + limit < total_count do
-                      [
-                        %{
-                          "rel" => "next",
-                          "href" => page_url.(offset + limit),
-                          "type" => "application/geo+json"
-                        }
-                      ]
-                    else
-                      []
-                    end ++
-                    if offset > 0 do
-                      [
-                        %{
-                          "rel" => "prev",
-                          "href" => page_url.(max(offset - limit, 0)),
-                          "type" => "application/geo+json"
-                        }
-                      ]
-                    else
-                      []
-                    end
-
-                conn
-                |> put_resp_content_type("application/geo+json")
-                |> json(%{
-                  type: "FeatureCollection",
-                  features: sanitized_items,
-                  numberMatched: total_count,
-                  numberReturned: length(sanitized_items),
-                  links: pagination_links,
-                  context: %{
-                    returned: length(sanitized_items),
-                    matched: total_count,
-                    limit: limit
-                  }
-                })
-              end
-          end
       end
     rescue
       error ->
