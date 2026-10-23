@@ -10,7 +10,7 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
     2. a static read-only key (`STAC_API_KEY_RO`) -> `:read_only`
     3. a personalized key issued through the API key management endpoints
        (stored hashed in the `api_keys` table, see `StacApi.Data.ApiKey`)
-       -> `:read_only`
+       -> `:read_only`; each use refreshes the key's `last_used_at`
 
   Assigns on the conn:
 
@@ -22,9 +22,7 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   """
   
   import Plug.Conn
-  import Ecto.Query
 
-  alias StacApi.Repo
   alias StacApi.Data.ApiKey
 
   defp get_api_keys do
@@ -86,10 +84,17 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   end
 
   # Returns true if `api_key` belongs to a personalized key issued via
-  # /stac/manage/v1/api-keys. Looked up by the SHA-256 hash of the raw secret,
-  # which is the only thing stored. Issued keys only ever grant read access.
+  # /stac/manage/v1/api-keys, and records the use (throttled to once an hour).
+  # Issued keys only ever grant read access.
   defp issued_key_valid?(api_key) do
-    Repo.exists?(from k in ApiKey, where: k.key_hash == ^ApiKey.hash(api_key))
+    case ApiKey.get_by_secret(api_key) do
+      nil ->
+        false
+
+      issued ->
+        ApiKey.touch_last_used(issued)
+        true
+    end
   end
 
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do

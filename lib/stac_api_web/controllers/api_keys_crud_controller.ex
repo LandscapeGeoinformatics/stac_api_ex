@@ -12,8 +12,11 @@ defmodule StacApiWeb.ApiKeysCrudController do
   once, under `data.key`, by `create/2` and `rotate/2`; every other response
   exposes just the non-secret `key_prefix`.
 
-  Responses use `404` for unknown ids (including non-numeric ones) and `422`
-  with a `details` map for validation errors.
+  Names are trimmed, 1-100 characters and unique. Responses use `404` for
+  unknown ids (including non-numeric ones) and `422` with a `details` map
+  (`%{field => [message]}`) for validation errors, e.g. a blank or duplicate
+  name. Each key reports `last_used_at` (`null` if never used, otherwise
+  accurate to about an hour).
   """
   use StacApiWeb, :controller
   alias StacApi.Repo
@@ -55,7 +58,7 @@ defmodule StacApiWeb.ApiKeysCrudController do
         |> put_status(:created)
         |> json(%{
           success: true,
-          message: "API key created successfully",
+          message: "API key created successfully. Store the key now; it cannot be shown again.",
           data: to_json(api_key, raw_secret)
         })
 
@@ -107,7 +110,7 @@ defmodule StacApiWeb.ApiKeysCrudController do
           {:ok, updated} ->
             json(conn, %{
               success: true,
-              message: "API key rotated successfully",
+              message: "API key rotated successfully. Store the new key now; it cannot be shown again, and the old one no longer works.",
               data: to_json(updated, raw_secret)
             })
 
@@ -160,6 +163,7 @@ defmodule StacApiWeb.ApiKeysCrudController do
       id: api_key.id,
       name: api_key.name,
       key_prefix: api_key.key_prefix,
+      last_used_at: api_key.last_used_at,
       inserted_at: api_key.inserted_at,
       updated_at: api_key.updated_at
     }
