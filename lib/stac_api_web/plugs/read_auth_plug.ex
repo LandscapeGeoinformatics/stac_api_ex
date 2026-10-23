@@ -3,6 +3,22 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   Optional authentication plug for read endpoints.
   Checks for read-only or read-write API key via X-API-Key header.
   Sets authentication context without blocking requests.
+
+  A key is accepted if it matches, in order:
+
+    1. a static read-write key (`STAC_API_KEY`) -> `:read_write`
+    2. a static read-only key (`STAC_API_KEY_RO`) -> `:read_only`
+    3. a personalized key issued through the API key management endpoints
+       (stored hashed in the `api_keys` table, see `StacApi.Data.ApiKey`)
+       -> `:read_only`
+
+  Assigns on the conn:
+
+    * `:auth_level` - `:read_write`, `:read_only`, or `nil`
+    * `:authenticated` - `true` or `false`
+
+  A missing or invalid key never halts the request; it just leaves the conn
+  unauthenticated so public content is still served.
   """
   
   import Plug.Conn
@@ -19,8 +35,13 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
       """
   end
 
+  @doc "Plug callback; no options are used."
   def init(opts), do: opts
 
+  @doc """
+  Reads the `x-api-key` header and assigns `:auth_level` and `:authenticated`
+  on the conn. Never halts the request.
+  """
   def call(conn, _opts) do
     case authenticate(conn) do
       {:ok, :read_write} ->
@@ -64,8 +85,9 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
     end
   end
 
-  # Personalized keys issued via /stac/manage/v1/api-keys. Looked up by the
-  # SHA-256 hash of the raw secret, which is what's actually stored.
+  # Returns true if `api_key` belongs to a personalized key issued via
+  # /stac/manage/v1/api-keys. Looked up by the SHA-256 hash of the raw secret,
+  # which is the only thing stored. Issued keys only ever grant read access.
   defp issued_key_valid?(api_key) do
     Repo.exists?(from k in ApiKey, where: k.key_hash == ^ApiKey.hash(api_key))
   end

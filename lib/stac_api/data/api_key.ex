@@ -22,6 +22,14 @@ defmodule StacApi.Data.ApiKey do
     timestamps()
   end
 
+  @doc """
+  Builds a changeset for creating or updating an API key.
+
+  Casts `:name`, `:key_hash` and `:key_prefix`, requires all three, and
+  enforces uniqueness of `:key_hash`. Callers building a key from user input
+  should only pass `:name` from the request and take the hash/prefix from
+  `generate_secret/0`.
+  """
   def changeset(api_key, attrs) do
     api_key
     |> cast(attrs, [:name, :key_hash, :key_prefix])
