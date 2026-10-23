@@ -217,6 +217,23 @@ All endpoints under this namespace require the `X-API-Key` header with a **read-
 - `PATCH /stac/manage/v1/items/:id` - Partial update of an item
 - `DELETE /stac/manage/v1/items/:id` - Delete an item
 
+#### API Keys (personal read-only keys)
+
+- `GET /stac/manage/v1/api-keys` - List keys (never includes secrets)
+- `GET /stac/manage/v1/api-keys/:id` - Get a specific key
+- `POST /stac/manage/v1/api-keys` - Create a key from a `name`; the secret is returned once, under `data.key`
+- `PATCH /stac/manage/v1/api-keys/:id` - Rename a key (the secret is unchanged)
+- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret; the old one stops working immediately
+- `DELETE /stac/manage/v1/api-keys/:id` - Permanently delete a key
+
+Fields returned for a key: `id`, `name`, `key_prefix`, `last_used_at`, `inserted_at`,
+`updated_at`, and `key` (create and rotate only). See
+[Personalized read-only keys](#personalized-read-only-keys) for how they authenticate.
+
+Errors: `404` for an unknown or non-numeric id; `422` with `{"error": "Validation failed",
+"details": {"name": [...]}}` for a blank, over-long (more than 100 characters) or duplicate
+name. Names are trimmed.
+
 #### Management API Response Fields
 
 Beyond the STAC fields, Management API responses carry:
@@ -402,6 +419,29 @@ API keys are configured in the application config and can be set via environment
 
 - `STAC_API_KEY` - Sets the read-write API key
 - `STAC_API_KEY_RO` - Sets the read-only API key
+
+#### Personalized read-only keys
+
+On top of the two static keys, read-write users can issue any number of named, read-only
+keys through the API key endpoints (see [API Keys](#api-keys-personal-read-only-keys)).
+They are meant for giving individual people or scripts their own key that can be
+revoked or rotated on its own.
+
+- **Access:** the same as the static read-only key. They unlock private catalogs through
+  `ReadAuthPlug` and through the web browser unlock form. They are rejected by `AuthPlug`,
+  so they can never write or manage keys.
+- **Storage:** the `api_keys` table keeps only a SHA-256 hash of each key (`key_hash`),
+  a short non-secret `key_prefix` for display, the `name`, and `last_used_at`. The raw
+  key (`stac_ro_` followed by random characters) is shown once on creation or rotation
+  and cannot be recovered; rotate to replace it.
+- **Check order:** `ReadAuthPlug` tries the static read-write keys, then the static
+  read-only keys, then looks the hash up in `api_keys`. Only a request with a key that
+  matches none of the static keys costs a database query.
+- **`last_used_at`:** refreshed on use by one conditional `UPDATE`, at most once an hour
+  per key, so it is approximate.
+- **Browser sessions:** the key is checked when the browse session is unlocked. A session
+  that is already unlocked stays unlocked if its key is deleted later, until the session
+  ends or the lock is used.
 
 #### Request Headers
 

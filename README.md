@@ -554,6 +554,7 @@ stac_data_path:  System.get_env("STAC_DATA_PATH") || "priv/stac_data"
 
 - Full CRUD for catalogs, collections, and items
 - Bulk item import (`POST /stac/manage/v1/items/import`)
+- Personal read-only API keys (`/stac/manage/v1/api-keys`, see [below](#personal-read-only-api-keys))
 
 Responses here carry two fields beyond the STAC ones:
 
@@ -589,6 +590,62 @@ bin/stac_api eval 'StacApi.Release.backfill_temporal()'
 ```
 
 See [Deployment order](PROJECT_DOCUMENTATION.md#deployment-order).
+
+#### Personal read-only API keys
+
+Besides the two keys set through `STAC_API_KEY` and `STAC_API_KEY_RO`, you can hand out
+your own read-only keys, for example one per colleague or per script. That way you can see
+who uses what, and cut off one person without changing the key everyone else uses.
+
+A personal key works like the read-only key: it is sent in the `X-API-Key` header, it
+unlocks private catalogs (also in the web browser), and it can never write or manage keys.
+Only the read-write key can create, change or delete them.
+
+Create a key by giving it a name:
+
+```bash
+curl -X POST http://localhost:4000/stac/manage/v1/api-keys \
+  -H "X-API-Key: $STAC_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Anna - field data"}'
+```
+
+```json
+{
+  "success": true,
+  "message": "API key created successfully. Store the key now; it cannot be shown again.",
+  "data": {
+    "id": 1,
+    "name": "Anna - field data",
+    "key": "stac_ro_Qm3...",
+    "key_prefix": "stac_ro_Qm3",
+    "last_used_at": null
+  }
+}
+```
+
+**Copy the `key` right away.** Only a hash is stored, so the key is shown this one time and
+cannot be looked up later. If it gets lost, rotate it to get a new one.
+
+| Request | What it does |
+|---|---|
+| `GET /stac/manage/v1/api-keys` | List all keys (name, `key_prefix`, `last_used_at`; never the secret) |
+| `GET /stac/manage/v1/api-keys/:id` | Show one key |
+| `POST /stac/manage/v1/api-keys` | Create a key from a `name` |
+| `PATCH /stac/manage/v1/api-keys/:id` | Rename a key; the secret stays the same |
+| `POST /stac/manage/v1/api-keys/:id/rotate` | Issue a new secret; the old one stops working immediately |
+| `DELETE /stac/manage/v1/api-keys/:id` | Delete a key; it stops working immediately |
+
+A few things that are good to know:
+
+- Names are trimmed, up to 100 characters, and must be unique. Otherwise you get a `422`
+  that says what is wrong.
+- `key_prefix` is the first characters of the key. Use it to tell which key is which in the
+  list.
+- `last_used_at` shows when a key was last used, which helps to find keys nobody uses
+  anymore. It is `null` for a key that was never used, and it is only updated about once
+  an hour, so treat it as approximate.
+- After you run `mix ecto.migrate`, the keys live in the `api_keys` table.
 
 ### Browser Interface
 
