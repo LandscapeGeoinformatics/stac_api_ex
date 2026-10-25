@@ -71,6 +71,22 @@ defmodule StacApiWeb.SearchControllerTest do
       response = json_response(conn, 200)
       assert ids(response) == ["item-2023"]
       assert response["context"]["matched"] == 1
+      assert response["numberMatched"] == response["context"]["matched"]
+      assert response["numberReturned"] == response["context"]["returned"]
+    end
+
+    test "reports total matches separately from the current page", %{conn: conn} do
+      conn =
+        get(conn, ~p"/stac/api/v1/search", %{
+          "collections" => "search-test-collection",
+          "limit" => "2"
+        })
+
+      response = json_response(conn, 200)
+      assert response["numberMatched"] == 3
+      assert response["numberReturned"] == 2
+      assert response["numberMatched"] == response["context"]["matched"]
+      assert response["numberReturned"] == response["context"]["returned"]
     end
 
     test "open-ended start (../end) filters items", %{conn: conn} do

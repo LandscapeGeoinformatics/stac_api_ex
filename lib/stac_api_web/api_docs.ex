@@ -23,7 +23,7 @@ defmodule StacApiWeb.ApiDocs do
   @conformance_classes [
     "https://api.stacspec.org/v1.0.0/core",
     "https://api.stacspec.org/v1.0.0/item-search",
-    "https://api.stacspec.org/v1.0.0/item-search#context",
+    "https://api.stacspec.org/v1.0.0-rc.2/item-search#context",
     "https://api.stacspec.org/v1.0.0/ogcapi-features",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",

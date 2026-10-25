@@ -49,6 +49,8 @@ defmodule StacApiWeb.SearchController do
     response = %{
       "type" => "FeatureCollection",
       "features" => features,
+      "numberMatched" => total_count,
+      "numberReturned" => length(features),
       "links" => LinkResolver.create_search_links(conn, search_params, total_count),
       "context" => %{
         "returned" => length(features),

@@ -245,6 +245,8 @@ defmodule StacApiWeb.CollectionsController do
                 |> json(%{
                   type: "FeatureCollection",
                   features: sanitized_items,
+                  numberMatched: total_count,
+                  numberReturned: length(sanitized_items),
                   links: pagination_links,
                   context: %{
                     returned: length(sanitized_items),

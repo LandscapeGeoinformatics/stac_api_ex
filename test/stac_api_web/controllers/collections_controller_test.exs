@@ -242,6 +242,8 @@ defmodule StacApiWeb.CollectionsControllerTest do
         assert feature_ids(collection_response) == expected_ids
         assert feature_ids(collection_response) == feature_ids(search_response)
         assert collection_response["context"]["matched"] == length(expected_ids)
+        assert collection_response["numberMatched"] == collection_response["context"]["matched"]
+        assert collection_response["numberReturned"] == collection_response["context"]["returned"]
       end)
     end
 
@@ -345,6 +347,10 @@ defmodule StacApiWeb.CollectionsControllerTest do
       assert query["bbox"] == bbox
       assert query["limit"] == "1"
       assert query["offset"] == "1"
+      assert response["numberMatched"] == 3
+      assert response["numberReturned"] == 1
+      assert response["numberMatched"] == response["context"]["matched"]
+      assert response["numberReturned"] == response["context"]["returned"]
     end
   end
 
