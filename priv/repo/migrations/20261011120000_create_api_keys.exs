@@ -10,6 +10,14 @@ defmodule StacApi.Repo.Migrations.CreateApiKeys do
   non-secret slice of the raw secret kept only so `GET /api-keys` can show
   which key is which without ever re-exposing the secret.
 
+  `last_used_at` records when the key last authenticated a request, so stale
+  keys can be spotted and deleted. It is written at most once per hour per key
+  (see `StacApi.Data.ApiKey.touch_last_used/1`), so it is approximate. NULL
+  means the key has never been used.
+
+  `name` is unique because keys are told apart by name in listings, so
+  duplicates would be indistinguishable.
+
   Uses `timestamptz` directly (not `timestamps()`'s default) per the lesson
   in StacApi.Schema and the 20260806080000 migration: `:utc_datetime_usec`
   needs a `timestamptz` column to round-trip correctly.
@@ -21,10 +29,12 @@ defmodule StacApi.Repo.Migrations.CreateApiKeys do
       add :name, :string, null: false
       add :key_hash, :string, null: false
       add :key_prefix, :string, null: false
+      add :last_used_at, :timestamptz
 
       timestamps(type: :timestamptz)
     end
 
     create unique_index(:api_keys, [:key_hash])
+    create unique_index(:api_keys, [:name])
   end
 end

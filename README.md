@@ -617,9 +617,11 @@ curl -X POST http://localhost:4000/stac/manage/v1/api-keys \
   "data": {
     "id": 1,
     "name": "Anna - field data",
-    "key": "stac_ro_Qm3...",
-    "key_prefix": "stac_ro_Qm3",
-    "last_used_at": null
+    "key": "stac_ro_Qm3xT7...",
+    "key_prefix": "stac_ro_Qm3x",
+    "last_used_at": null,
+    "inserted_at": "2026-10-23T11:02:41.318204Z",
+    "updated_at": "2026-10-23T11:02:41.318204Z"
   }
 }
 ```

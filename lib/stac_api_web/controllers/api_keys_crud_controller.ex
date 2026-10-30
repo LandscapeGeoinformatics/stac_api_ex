@@ -110,7 +110,9 @@ defmodule StacApiWeb.ApiKeysCrudController do
           {:ok, updated} ->
             json(conn, %{
               success: true,
-              message: "API key rotated successfully. Store the new key now; it cannot be shown again, and the old one no longer works.",
+              message:
+                "API key rotated successfully. Store the new key now; " <>
+                  "it cannot be shown again, and the old one no longer works.",
               data: to_json(updated, raw_secret)
             })
 

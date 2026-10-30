@@ -19,7 +19,8 @@ defmodule StacApiWeb.ApiKeysCrudControllerTest do
   end
 
   # A fresh connection authenticated with `secret` (ignores the setup conn's key).
-  defp with_key(_conn, secret), do: put_req_header(Phoenix.ConnTest.build_conn(), "x-api-key", secret)
+  defp with_key(_conn, secret),
+    do: put_req_header(Phoenix.ConnTest.build_conn(), "x-api-key", secret)
 
   describe "authorization" do
     test "management endpoints reject requests without a key" do
