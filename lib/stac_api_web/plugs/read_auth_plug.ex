@@ -20,7 +20,7 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   A missing or invalid key never halts the request; it just leaves the conn
   unauthenticated so public content is still served.
   """
-  
+
   import Plug.Conn
 
   alias StacApi.Data.ApiKey
@@ -61,12 +61,12 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
 
   defp authenticate(conn) do
     api_key = get_req_header(conn, "x-api-key") |> List.first()
-    
+
     if is_nil(api_key) || api_key == "" do
       {:error, "No API key provided"}
     else
       %{read_write: rw_keys, read_only: ro_keys} = get_api_keys()
-      
+
       cond do
         Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
           {:ok, :read_write}
@@ -100,6 +100,6 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
     Plug.Crypto.secure_compare(a, b)
   end
-  
+
   defp secure_compare(_, _), do: false
 end
