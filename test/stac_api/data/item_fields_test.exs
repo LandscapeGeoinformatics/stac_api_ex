@@ -64,4 +64,17 @@ defmodule StacApi.Data.ItemFieldsTest do
     assert {:error, :fields, _reason} =
              ItemFields.parse(%{"fields" => %{"include" => [1]}}, :post)
   end
+
+  test "POST null preserves the full Item and an empty include behaves as missing" do
+    assert {:ok, all} = ItemFields.parse(%{"fields" => nil}, :post)
+    assert ItemFields.project(@item, all) == @item
+
+    assert {:ok, excluded} =
+             ItemFields.parse(%{"fields" => %{"include" => [], "exclude" => ["assets"]}}, :post)
+
+    excluded_item = ItemFields.project(@item, excluded)
+    refute Map.has_key?(excluded_item, "assets")
+    assert excluded_item["properties"]["description"] == "full response"
+    assert ItemFields.pagination_params(%{}, excluded) == %{"fields" => "-assets"}
+  end
 end

@@ -215,5 +215,63 @@ defmodule StacApiWeb.FieldsExtensionTest do
       query = next_link["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
       assert query["fields"] == "id"
     end)
+
+    empty_paginated_responses = [
+      get(build_conn(), ~p"/stac/api/v1/search", %{
+        "collections" => "fields-collection",
+        "fields" => "",
+        "limit" => "1"
+      }),
+      post(build_conn(), ~p"/stac/api/v1/search", %{
+        "collections" => ["fields-collection"],
+        "fields" => %{},
+        "limit" => 1
+      }),
+      get(build_conn(), ~p"/stac/api/v1/collections/fields-collection/items", %{
+        "fields" => "",
+        "limit" => "1"
+      })
+    ]
+
+    Enum.each(empty_paginated_responses, fn response ->
+      next_link = json_response(response, 200)["links"] |> Enum.find(&(&1["rel"] == "next"))
+      query = next_link["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+      assert query["fields"] == ""
+    end)
+  end
+
+  test "POST search treats an empty include as missing and null fields as the full Item", %{
+    conn: conn
+  } do
+    excluded_response =
+      conn
+      |> post(~p"/stac/api/v1/search", %{
+        "collections" => ["fields-collection"],
+        "fields" => %{"include" => [], "exclude" => ["assets"]},
+        "limit" => 1
+      })
+      |> json_response(200)
+
+    Enum.each(excluded_response["features"], fn feature ->
+      refute Map.has_key?(feature, "assets")
+      assert feature["properties"]["description"]
+    end)
+
+    excluded_next = Enum.find(excluded_response["links"], &(&1["rel"] == "next"))
+
+    excluded_query =
+      excluded_next["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+    assert excluded_query["fields"] == "-assets"
+
+    null_response =
+      build_conn()
+      |> post(~p"/stac/api/v1/search", %{
+        "collections" => ["fields-collection"],
+        "fields" => nil
+      })
+      |> json_response(200)
+
+    assert hd(null_response["features"])["properties"]["table:columns"]
   end
 end

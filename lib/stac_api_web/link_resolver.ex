@@ -251,7 +251,10 @@ defmodule StacApiWeb.LinkResolver do
 
   defp build_query_string(params) do
     params
-    |> Enum.reject(fn {_, v} -> is_nil(v) or v == "" end)
+    |> Enum.reject(fn
+      {key, ""} when key in ["fields", :fields] -> false
+      {_, value} -> is_nil(value) or value == ""
+    end)
     |> Enum.map(fn {k, v} ->
       value = case v do
         list when is_list(list) -> Enum.join(list, ",")

@@ -26,8 +26,9 @@ defmodule StacApi.Data.ItemFields do
   @doc """
   Parses a Fields value from either a GET query map or a POST search body.
 
-  A missing parameter preserves the complete item. An empty parameter selects
-  the minimal default STAC Item fields. Exclude-only requests retain the full
+  A missing or null parameter preserves the complete item. An empty parameter
+  selects the minimal default STAC Item fields; an empty POST include list is
+  treated as missing. Exclude-only requests retain the full
   item except for the requested paths, matching this API's documented behavior.
   """
   @spec parse(map(), :get | :post) :: {:ok, selection()} | {:error, :fields, String.t()}
@@ -46,7 +47,7 @@ defmodule StacApi.Data.ItemFields do
         {:ok, %{mode: :all, include: [], exclude: []}}
 
       {:ok, nil} ->
-        {:ok, %{mode: :default, include: [], exclude: []}}
+        {:ok, %{mode: :all, include: [], exclude: []}}
 
       {:ok, fields} when is_map(fields) ->
         parse_post_value(fields)
@@ -127,7 +128,7 @@ defmodule StacApi.Data.ItemFields do
         {:ok, :empty}
 
       {:ok, []} ->
-        {:ok, :empty}
+        {:ok, :missing}
 
       {:ok, values} when is_list(values) ->
         if Enum.all?(values, &valid_path?/1),

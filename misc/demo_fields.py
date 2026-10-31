@@ -2,7 +2,7 @@
 """Demonstrate the STAC API Fields extension against one collection.
 
 Example:
-  python misc/demo_fields.py --collection estonia-sentinel2-ndvi
+  python misc/demo_fields.py --collection estonia-research-tabular
 
 The script fetches one full Item and then repeats the request while excluding
 ``properties.table:columns``. It prints response sizes and verifies that the
