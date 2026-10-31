@@ -24,7 +24,9 @@ defmodule StacApiWeb.ApiDocs do
     "https://api.stacspec.org/v1.0.0/core",
     "https://api.stacspec.org/v1.0.0/item-search",
     "https://api.stacspec.org/v1.0.0-rc.2/item-search#context",
+    "https://api.stacspec.org/v1.0.0/item-search#fields",
     "https://api.stacspec.org/v1.0.0/ogcapi-features",
+    "https://api.stacspec.org/v1.0.0/ogcapi-features#fields",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
@@ -65,8 +67,14 @@ defmodule StacApiWeb.ApiDocs do
       String.contains?(uri, "item-search#context") ->
         "STAC API – Item Search: Context extension"
 
+      String.contains?(uri, "item-search#fields") ->
+        "STAC API – Item Search: Fields extension"
+
       String.contains?(uri, "item-search") ->
         "STAC API – Item Search"
+
+      String.contains?(uri, "ogcapi-features#fields") ->
+        "STAC API – Features: Fields extension"
 
       String.contains?(uri, "stacspec.org") and String.contains?(uri, "ogcapi-features") ->
         "STAC API – Features"
@@ -178,6 +186,15 @@ defmodule StacApiWeb.ApiDocs do
   defp offset_param,
     do: query("offset", "integer", "Number of results to skip (default 0).", example: "0")
 
+  defp fields_param do
+    query(
+      "fields",
+      "string",
+      "Comma-separated field paths. Use -path to exclude a path; without fields the full Item is returned, and fields= returns the default STAC Item fields. Exclude-only requests return the full Item except for the excluded paths.",
+      example: "id,collection,properties.datetime"
+    )
+  end
+
   defp search_params(:get) do
     [
       query("collections", "string", "Comma-separated collection ids to search in.",
@@ -197,6 +214,7 @@ defmodule StacApiWeb.ApiDocs do
           "Items whose datetime, or start/end range, overlaps the interval match. Unparseable values return 400.",
         example: "2020-01-01T00:00:00Z/2021-12-31T23:59:59Z"
       ),
+      fields_param(),
       query(
         "intersects",
         "string",
@@ -324,6 +342,7 @@ defmodule StacApiWeb.ApiDocs do
             "RFC 3339 instant or interval start/end. Either end may be open with '..'. Items whose datetime, or start/end range, overlaps the interval match.",
             example: "2020-01-01T00:00:00Z/2021-12-31T23:59:59Z"
           ),
+          fields_param(),
           limit_param(10, 10_000),
           offset_param()
         ],
@@ -331,7 +350,7 @@ defmodule StacApiWeb.ApiDocs do
         example_query: "datetime=2020-01-01T00:00:00Z/2021-12-31T23:59:59Z&limit=2",
         responses: [
           ok(@geojson, "Item collection", "ItemCollection"),
-          err(400, "Invalid datetime or bbox parameter"),
+          err(400, "Invalid datetime, bbox, or fields parameter"),
           err(404, "Collection not found")
         ]
       },
@@ -364,7 +383,7 @@ defmodule StacApiWeb.ApiDocs do
           "collections=estonia-sentinel2-ndvi&datetime=2020-04-01T00:00:00Z/2020-10-31T23:59:59Z&limit=5",
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime or bbox parameter")
+          err(400, "Invalid datetime, bbox, or fields parameter")
         ]
       },
       %{
@@ -380,7 +399,7 @@ defmodule StacApiWeb.ApiDocs do
         request_body: search_body(),
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime or bbox parameter")
+          err(400, "Invalid datetime, bbox, or fields parameter")
         ]
       },
       %{
@@ -1016,6 +1035,14 @@ defmodule StacApiWeb.ApiDocs do
             description: "RFC 3339 instant or start/end interval, '..' for open ends"
           },
           intersects: %{type: "object", description: "GeoJSON geometry"},
+          fields: %{
+            type: "object",
+            description: "Fields extension selection; include wins over exclude.",
+            properties: %{
+              include: %{type: "array", items: %{type: "string"}},
+              exclude: %{type: "array", items: %{type: "string"}}
+            }
+          },
           limit: %{type: "integer", minimum: 1, maximum: 100, default: 10},
           offset: %{type: "integer", minimum: 0, default: 0}
         }
