@@ -474,7 +474,110 @@ defmodule StacApiWeb.ApiDocs do
         collection_example,
         "estonia-soil"
       ) ++
-      items_crud(item_example)
+      items_crud(item_example) ++
+      api_keys_endpoints()
+  end
+
+  defp api_keys_endpoints do
+    base = "/stac/manage/v1/api-keys"
+    id_param = path_param("id", "Numeric API key id", "1")
+    unauthorized = err(401, "Missing or non-RW key")
+
+    [
+      %{
+        id: "manage-api-keys-list",
+        method: "GET",
+        path: base,
+        summary: "List API keys",
+        description:
+          "All issued read-only keys, newest first. Only the non-secret key_prefix is shown; " <>
+            "last_used_at is null for keys that were never used and accurate to about an hour otherwise.",
+        auth: :rw,
+        params: [],
+        request_body: nil,
+        responses: [ok(@json, "API key list", "ApiKeyList"), unauthorized]
+      },
+      %{
+        id: "manage-api-keys-show",
+        method: "GET",
+        path: "#{base}/{id}",
+        summary: "Get API key",
+        description: "A single issued key. The secret is never returned.",
+        auth: :rw,
+        params: [id_param],
+        request_body: nil,
+        responses: [ok(@json, "API key", "ApiKeyResult"), unauthorized, err(404, "Not found")]
+      },
+      %{
+        id: "manage-api-keys-create",
+        method: "POST",
+        path: base,
+        summary: "Issue API key",
+        description:
+          "Issues a personal read-only key. The raw secret is returned once, under data.key, " <>
+            "and cannot be retrieved again (only rotated). Names are trimmed, 1-100 characters and unique.",
+        auth: :rw,
+        params: [],
+        request_body: %{
+          description: "Name of the key",
+          schema: "ApiKeyBody",
+          example: %{"name" => "Alice (soil project)"}
+        },
+        responses: [
+          created("Issued key including its one-time secret", "ApiKeyResult"),
+          unauthorized,
+          err(422, "Validation failed (blank, too long or duplicate name)")
+        ]
+      },
+      %{
+        id: "manage-api-keys-update",
+        method: "PATCH",
+        path: "#{base}/{id}",
+        summary: "Rename API key",
+        description: "Changes the name. The secret is untouched; use rotate for that.",
+        auth: :rw,
+        params: [id_param],
+        request_body: %{
+          description: "New name",
+          schema: "ApiKeyBody",
+          example: %{"name" => "Alice (thesis)"}
+        },
+        responses: [
+          ok(@json, "Updated key", "ApiKeyResult"),
+          unauthorized,
+          err(404, "Not found"),
+          err(422, "Validation failed")
+        ]
+      },
+      %{
+        id: "manage-api-keys-rotate",
+        method: "POST",
+        path: "#{base}/{id}/rotate",
+        summary: "Rotate API key",
+        description:
+          "Issues a new secret for the same key (same id and name). The old secret stops " <>
+            "working immediately. The new secret is returned once, under data.key.",
+        auth: :rw,
+        params: [id_param],
+        request_body: nil,
+        responses: [
+          ok(@json, "Key with its new one-time secret", "ApiKeyResult"),
+          unauthorized,
+          err(404, "Not found")
+        ]
+      },
+      %{
+        id: "manage-api-keys-delete",
+        method: "DELETE",
+        path: "#{base}/{id}",
+        summary: "Delete API key",
+        description: "Permanently deletes the key; it stops authenticating immediately.",
+        auth: :rw,
+        params: [id_param],
+        request_body: nil,
+        responses: [ok(@json, "Deleted", nil), unauthorized, err(404, "Not found")]
+      }
+    ]
   end
 
   defp crud(plural, singular, schema, list_schema, example, example_id) do
@@ -845,7 +948,16 @@ defmodule StacApiWeb.ApiDocs do
 
   defp schema_ref(name), do: %{"$ref" => "#/components/schemas/#{name}"}
 
-  @management_only_schemas [:CatalogList, :ItemList, :BulkImportBody, :BulkImportResult]
+  @management_only_schemas [
+    :CatalogList,
+    :ItemList,
+    :BulkImportBody,
+    :BulkImportResult,
+    :ApiKey,
+    :ApiKeyBody,
+    :ApiKeyList,
+    :ApiKeyResult
+  ]
 
   defp schemas(include_management) do
     if include_management,
@@ -1033,6 +1145,38 @@ defmodule StacApiWeb.ApiDocs do
           imported: %{type: "integer"},
           failed: %{type: "integer"},
           total: %{type: "integer"}
+        }
+      },
+      ApiKey: %{
+        type: "object",
+        properties: %{
+          id: %{type: "integer"},
+          name: %{type: "string"},
+          key_prefix: %{type: "string", description: "First 12 characters of the secret"},
+          last_used_at: %{type: "string", format: "date-time", nullable: true},
+          inserted_at: %{type: "string", format: "date-time"},
+          updated_at: %{type: "string", format: "date-time"},
+          key: %{
+            type: "string",
+            description: "Raw secret; present only in create and rotate responses"
+          }
+        }
+      },
+      ApiKeyBody: %{
+        type: "object",
+        required: ["name"],
+        properties: %{name: %{type: "string", minLength: 1, maxLength: 100}}
+      },
+      ApiKeyList: %{
+        type: "object",
+        properties: %{data: %{type: "array", items: schema_ref("ApiKey")}}
+      },
+      ApiKeyResult: %{
+        type: "object",
+        properties: %{
+          success: %{type: "boolean"},
+          message: %{type: "string"},
+          data: schema_ref("ApiKey")
         }
       }
     }
