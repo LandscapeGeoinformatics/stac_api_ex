@@ -28,9 +28,20 @@ defmodule StacApi.Data.Item do
 
   def changeset(item, attrs) do
     item
-    |> cast(attrs, [:id, :stac_version, :stac_extensions, :geometry, :bbox,
-                    :datetime, :start_datetime, :end_datetime,
-                    :properties, :assets, :links, :collection_id])
+    |> cast(attrs, [
+      :id,
+      :stac_version,
+      :stac_extensions,
+      :geometry,
+      :bbox,
+      :datetime,
+      :start_datetime,
+      :end_datetime,
+      :properties,
+      :assets,
+      :links,
+      :collection_id
+    ])
     |> validate_required([:id, :geometry, :collection_id])
     |> foreign_key_constraint(:collection_id)
   end
