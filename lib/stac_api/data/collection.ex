@@ -26,8 +26,20 @@ defmodule StacApi.Data.Collection do
 
   def changeset(collection, attrs) do
     collection
-    |> cast(attrs, [:id, :title, :description, :license, :extent, :summaries,
-                    :keywords, :providers, :stac_version, :stac_extensions, :links, :catalog_id])
+    |> cast(attrs, [
+      :id,
+      :title,
+      :description,
+      :license,
+      :extent,
+      :summaries,
+      :keywords,
+      :providers,
+      :stac_version,
+      :stac_extensions,
+      :links,
+      :catalog_id
+    ])
     |> validate_required([:id])
     |> unique_constraint(:id)
     |> foreign_key_constraint(:catalog_id)
