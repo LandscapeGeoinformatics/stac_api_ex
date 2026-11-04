@@ -27,8 +27,8 @@ defmodule StacApi.Data.ItemFields do
   Parses a Fields value from either a GET query map or a POST search body.
 
   A missing or null parameter preserves the complete item. An empty parameter
-  selects the minimal default STAC Item fields; an empty POST include list is
-  treated as missing. Exclude-only requests retain the full
+  selects the minimal default STAC Item fields; an empty or null POST include
+  or exclude list is treated as missing. Exclude-only requests retain the full
   item except for the requested paths, matching this API's documented behavior.
   """
   @spec parse(map(), :get | :post) :: {:ok, selection()} | {:error, :fields, String.t()}
@@ -125,7 +125,7 @@ defmodule StacApi.Data.ItemFields do
         {:ok, :missing}
 
       {:ok, nil} ->
-        {:ok, :empty}
+        {:ok, :missing}
 
       {:ok, []} ->
         {:ok, :missing}
@@ -133,10 +133,10 @@ defmodule StacApi.Data.ItemFields do
       {:ok, values} when is_list(values) ->
         if Enum.all?(values, &valid_path?/1),
           do: {:ok, {:paths, values}},
-          else: {:error, :fields, "#{key} must be an array of non-empty strings"}
+          else: {:error, :fields, "must have #{key} as an array of non-empty strings"}
 
       {:ok, _value} ->
-        {:error, :fields, "#{key} must be an array of strings"}
+        {:error, :fields, "must have #{key} as an array of strings"}
     end
   end
 
@@ -165,19 +165,7 @@ defmodule StacApi.Data.ItemFields do
   defp selection_from_states(:missing, {:paths, exclude}),
     do: {:ok, %{mode: :exclude, include: [], exclude: exclude}}
 
-  defp selection_from_states(:empty, :missing),
-    do: {:ok, %{mode: :default, include: [], exclude: []}}
-
-  defp selection_from_states(:empty, :empty),
-    do: {:ok, %{mode: :default, include: [], exclude: []}}
-
-  defp selection_from_states(:empty, {:paths, exclude}),
-    do: {:ok, %{mode: :default, include: [], exclude: exclude}}
-
   defp selection_from_states({:paths, include}, :missing),
-    do: {:ok, %{mode: :include, include: include, exclude: []}}
-
-  defp selection_from_states({:paths, include}, :empty),
     do: {:ok, %{mode: :include, include: include, exclude: []}}
 
   defp selection_from_states({:paths, include}, {:paths, exclude}),
