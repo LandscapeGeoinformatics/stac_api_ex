@@ -24,6 +24,11 @@ defmodule StacApiWeb.Router do
     plug StacApiWeb.Plugs.AuthPlug
   end
 
+  # Static read-write key only; used for API key management.
+  pipeline :admin_auth do
+    plug StacApiWeb.Plugs.AuthPlug, admin_only: true
+  end
+
   pipeline :read_auth do
     plug StacApiWeb.Plugs.ReadAuthPlug
   end
@@ -69,7 +74,8 @@ defmodule StacApiWeb.Router do
   end
 
   # ---------------------------------------------------------------------------
-  # Management API — internal CRUD, requires RW key (X-API-Key: <rw-value>)
+  # Management API — internal CRUD, requires a RW key (X-API-Key: <rw-value>):
+  # the static one or an issued read_write key.
   # Not STAC-spec conformant; for administrative tooling only.
   # ---------------------------------------------------------------------------
   scope "/stac/manage/v1", StacApiWeb do
@@ -99,8 +105,13 @@ defmodule StacApiWeb.Router do
     put "/items/:id", ItemsCrudController, :update
     patch "/items/:id", ItemsCrudController, :patch
     delete "/items/:id", ItemsCrudController, :delete
+  end
 
-    # API key management (personalized, read-only keys for the public STAC API)
+  # API key management: only the static RW key (STAC_API_KEY), never an issued
+  # key, otherwise any RW key could mint more RW keys.
+  scope "/stac/manage/v1", StacApiWeb do
+    pipe_through [:api, :admin_auth]
+
     get "/api-keys", ApiKeysCrudController, :index
     get "/api-keys/:id", ApiKeysCrudController, :show
     post "/api-keys", ApiKeysCrudController, :create

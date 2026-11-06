@@ -1,10 +1,30 @@
 defmodule StacApiWeb.Plugs.AuthPlug do
   @moduledoc """
   Authentication plug for write endpoints (POST, PUT, PATCH, DELETE).
-  Requires read-write API key via X-API-Key header.
+  Requires a read-write API key via X-API-Key header.
+
+  A key is accepted if it is
+
+    1. a static read-write key (`STAC_API_KEY`), or
+    2. an issued key with the `read_write` role (see `StacApi.Data.ApiKey`),
+       unless the plug is used with `admin_only: true`.
+
+  Use `plug StacApiWeb.Plugs.AuthPlug, admin_only: true` for endpoints that
+  only the static read-write key may call (API key management), so an issued
+  read-write key can never mint or change keys.
+
+  Assigns on success:
+
+    * `:auth_level` - `:read_write`
+    * `:authenticated` - `true`
+    * `:api_key` - the issued `StacApi.Data.ApiKey`, or `nil` for a static key
+
+  Responds with 401 and halts otherwise. An expired issued key is invalid.
   """
-  
+
   import Plug.Conn
+
+  alias StacApi.Data.ApiKey
 
   defp get_api_keys do
     Application.get_env(:stac_api, :api_keys) ||
@@ -14,14 +34,20 @@ defmodule StacApiWeb.Plugs.AuthPlug do
       """
   end
 
+  @doc "Plug callback; `admin_only: true` restricts access to the static read-write key."
   def init(opts), do: opts
 
-  def call(conn, _opts) do
-    case authenticate_rw(conn) do
-      {:ok, :read_write} ->
+  @doc """
+  Checks the `x-api-key` header and assigns `:auth_level`, `:authenticated`
+  and `:api_key`, or halts with 401.
+  """
+  def call(conn, opts) do
+    case authenticate_rw(conn, Keyword.get(opts, :admin_only, false)) do
+      {:ok, api_key} ->
         conn
         |> assign(:auth_level, :read_write)
         |> assign(:authenticated, true)
+        |> assign(:api_key, api_key)
 
       {:error, reason} ->
         conn
@@ -32,25 +58,44 @@ defmodule StacApiWeb.Plugs.AuthPlug do
     end
   end
 
-  defp authenticate_rw(conn) do
+  defp authenticate_rw(conn, admin_only) do
     api_key = get_req_header(conn, "x-api-key") |> List.first()
-    
+
     if is_nil(api_key) || api_key == "" do
       {:error, "Missing X-API-Key header"}
     else
       %{read_write: rw_keys} = get_api_keys()
-      
-      if Enum.any?(rw_keys, &secure_compare(api_key, &1)) do
-        {:ok, :read_write}
-      else
-        {:error, "Invalid API key. Write operations require read-write (RW) key"}
+
+      cond do
+        Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
+          {:ok, nil}
+
+        admin_only ->
+          {:error, "Invalid API key. Key management requires the static read-write key"}
+
+        issued = issued_rw_key(api_key) ->
+          {:ok, issued}
+
+        true ->
+          {:error, "Invalid API key. Write operations require read-write (RW) key"}
       end
+    end
+  end
+
+  # An unexpired issued key with the read_write role; records the use.
+  defp issued_rw_key(api_key) do
+    with %ApiKey{} = issued <- ApiKey.get_by_secret(api_key),
+         :read_write <- ApiKey.auth_level(issued) do
+      ApiKey.touch_last_used(issued)
+      issued
+    else
+      _ -> nil
     end
   end
 
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
     Plug.Crypto.secure_compare(a, b)
   end
-  
+
   defp secure_compare(_, _), do: false
 end

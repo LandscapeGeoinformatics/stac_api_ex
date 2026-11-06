@@ -112,6 +112,12 @@ defmodule StacApi.Data.ApiKey do
   def get_by_secret(_), do: nil
 
   @doc """
+  The access level an issued key grants: `:read_write` or `:read_only`.
+  """
+  def auth_level(%__MODULE__{role: "read_write"}), do: :read_write
+  def auth_level(%__MODULE__{}), do: :read_only
+
+  @doc """
   Records that `api_key` was just used, at most once per hour.
 
   Skips the write when the loaded `last_used_at` is recent. Otherwise it is a
