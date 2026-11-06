@@ -554,7 +554,7 @@ stac_data_path:  System.get_env("STAC_DATA_PATH") || "priv/stac_data"
 
 - Full CRUD for catalogs, collections, and items
 - Bulk item import (`POST /stac/manage/v1/items/import`)
-- Personal read-only API keys (`/stac/manage/v1/api-keys`, see [below](#personal-read-only-api-keys))
+- Personal API keys (`/stac/manage/v1/api-keys`, see [below](#personal-api-keys))
 
 Responses here carry two fields beyond the STAC ones:
 
@@ -591,15 +591,28 @@ bin/stac_api eval 'StacApi.Release.backfill_temporal()'
 
 See [Deployment order](PROJECT_DOCUMENTATION.md#deployment-order).
 
-#### Personal read-only API keys
+#### Personal API keys
 
 Besides the two keys set through `STAC_API_KEY` and `STAC_API_KEY_RO`, you can hand out
-your own read-only keys, for example one per colleague or per script. That way you can see
+your own keys, for example one per colleague, student or script. That way you can see
 who uses what, and cut off one person without changing the key everyone else uses.
 
-A personal key works like the read-only key: it is sent in the `X-API-Key` header, it
-unlocks private catalogs (also in the web browser), and it can never write or manage keys.
-Only the read-write key can create, change or delete them.
+A personal key has a **role**, chosen when it is created and never changed afterwards:
+
+- `read_only` (default): works like the read-only key. It is sent in the `X-API-Key`
+  header and unlocks private catalogs (also in the web browser). The key starts with
+  `stac_ro_`.
+- `read_write`: can additionally create, update and delete catalogs, collections and
+  items (and bulk import), also in the web browser's Management API docs. The key starts
+  with `stac_rw_`.
+
+Personal keys, even read-write ones, can never manage keys. Only the static
+`STAC_API_KEY` can create, list, change, rotate or delete them; the other keys get `401`
+on `/api-keys`. The static keys keep working as before, so you cannot lock yourself out.
+
+A key can also have an `expires_at` (it stops working at that time, everywhere: public
+API, management API and browser unlock), a `contact` and a `note`, so you still know in a
+year whose key it is and what it is for.
 
 Create a key by giving it a name:
 
@@ -607,7 +620,9 @@ Create a key by giving it a name:
 curl -X POST http://localhost:4000/stac/manage/v1/api-keys \
   -H "X-API-Key: $STAC_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"name": "Anna - field data"}'
+  -d '{"name": "Anna - field data", "role": "read_write",
+       "expires_at": "2027-02-28T23:59:59Z",
+       "contact": "anna@example.org", "note": "Thesis uploads"}'
 ```
 
 ```json
@@ -617,8 +632,12 @@ curl -X POST http://localhost:4000/stac/manage/v1/api-keys \
   "data": {
     "id": 1,
     "name": "Anna - field data",
-    "key": "stac_ro_Qm3xT7...",
-    "key_prefix": "stac_ro_Qm3x",
+    "role": "read_write",
+    "expires_at": "2027-02-28T23:59:59.000000Z",
+    "contact": "anna@example.org",
+    "note": "Thesis uploads",
+    "key": "stac_rw_Qm3xT7...",
+    "key_prefix": "stac_rw_Qm3x",
     "last_used_at": null,
     "inserted_at": "2026-10-23T11:02:41.318204Z",
     "updated_at": "2026-10-23T11:02:41.318204Z"
@@ -631,23 +650,30 @@ cannot be looked up later. If it gets lost, rotate it to get a new one.
 
 | Request | What it does |
 |---|---|
-| `GET /stac/manage/v1/api-keys` | List all keys (name, `key_prefix`, `last_used_at`; never the secret) |
+| `GET /stac/manage/v1/api-keys` | List all keys (name, role, expiry, contact, note, `key_prefix`, `last_used_at`; never the secret) |
 | `GET /stac/manage/v1/api-keys/:id` | Show one key |
-| `POST /stac/manage/v1/api-keys` | Create a key from a `name` |
-| `PATCH /stac/manage/v1/api-keys/:id` | Rename a key; the secret stays the same |
-| `POST /stac/manage/v1/api-keys/:id/rotate` | Issue a new secret; the old one stops working immediately |
+| `POST /stac/manage/v1/api-keys` | Create a key from a `name`, optional `role`, `expires_at`, `contact`, `note` |
+| `PATCH /stac/manage/v1/api-keys/:id` | Change `name`, `expires_at`, `contact` or `note`; the secret and the role stay the same |
+| `POST /stac/manage/v1/api-keys/:id/rotate` | Issue a new secret (same role); the old one stops working immediately |
 | `DELETE /stac/manage/v1/api-keys/:id` | Delete a key; it stops working immediately |
 
 A few things that are good to know:
 
 - Names are trimmed, up to 100 characters, and must be unique. Otherwise you get a `422`
   that says what is wrong.
+- The role cannot be changed. A `PATCH` that contains `role` gets a `422`; to change a
+  role, create a new key and delete the old one. This way a leaked read-only key can never
+  become a write key.
+- `expires_at` must lie in the future when you set it (`422` otherwise). `"expires_at": null`
+  in a `PATCH` removes the expiry, and a new date renews an expired key. A browser session
+  that is already unlocked stays unlocked until it ends, even after its key expired.
 - `key_prefix` is the first characters of the key. Use it to tell which key is which in the
   list.
 - `last_used_at` shows when a key was last used, which helps to find keys nobody uses
   anymore. It is `null` for a key that was never used, and it is only updated about once
   an hour, so treat it as approximate.
-- After you run `mix ecto.migrate`, the keys live in the `api_keys` table.
+- After you run `mix ecto.migrate`, the keys live in the `api_keys` table. Keys created
+  before roles existed become `read_only`.
 
 ### Browser Interface
 
