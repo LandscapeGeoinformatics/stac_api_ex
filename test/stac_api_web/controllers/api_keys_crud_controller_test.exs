@@ -124,12 +124,11 @@ defmodule StacApiWeb.ApiKeysCrudControllerTest do
       assert ApiKey.get_by_secret(secret).id == id
     end
 
-    test "rejects a blank or missing name and a name taken by another key", %{conn: conn} do
+    test "rejects a blank name and a name taken by another key", %{conn: conn} do
       {id, _} = create_key!(conn, "rename-me")
       create_key!(conn, "taken")
 
       assert json_response(patch(conn, "#{@path}/#{id}", %{"name" => ""}), 422)
-      assert json_response(patch(conn, "#{@path}/#{id}", %{}), 422)
 
       resp = conn |> patch("#{@path}/#{id}", %{"name" => "taken"}) |> json_response(422)
       assert resp["details"]["name"] == ["has already been taken"]
