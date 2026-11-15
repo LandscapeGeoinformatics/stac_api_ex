@@ -139,6 +139,27 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       assert resp["data"]["expires_at"] == nil
     end
 
+    test "null clears contact and note, a missing key leaves them alone", %{conn: conn} do
+      {id, _} =
+        create_key!(conn, "null-vs-missing", %{
+          "expires_at" => future(),
+          "contact" => "owner@example.org",
+          "note" => "keep me"
+        })
+
+      # Only `contact` is sent: `note` and `expires_at` are missing, so they stay.
+      resp = conn |> patch("#{@path}/#{id}", %{"contact" => nil}) |> json_response(200)
+      assert resp["data"]["contact"] == nil
+      assert resp["data"]["note"] == "keep me"
+      assert resp["data"]["expires_at"] != nil
+
+      # Now `note` is cleared and `contact` (missing) stays cleared.
+      resp = conn |> patch("#{@path}/#{id}", %{"note" => nil}) |> json_response(200)
+      assert resp["data"]["note"] == nil
+      assert resp["data"]["contact"] == nil
+      assert resp["data"]["expires_at"] != nil
+    end
+
     test "rejects an expires_at in the past", %{conn: conn} do
       {id, _} = create_key!(conn, "too-late")
 
