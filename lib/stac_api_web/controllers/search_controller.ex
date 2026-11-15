@@ -48,17 +48,20 @@ defmodule StacApiWeb.SearchController do
         |> ItemFields.project(fields)
       end)
 
+    # POST links repeat the request body as it was sent; only GET links need
+    # the comma-separated form of fields.
+    link_params =
+      case request_kind(conn.method) do
+        :post -> search_params
+        :get -> ItemFields.pagination_params(search_params, fields)
+      end
+
     response = %{
       "type" => "FeatureCollection",
       "features" => features,
       "numberMatched" => total_count,
       "numberReturned" => length(features),
-      "links" =>
-        LinkResolver.create_search_links(
-          conn,
-          ItemFields.pagination_params(search_params, fields),
-          total_count
-        ),
+      "links" => LinkResolver.create_search_links(conn, link_params, total_count),
       "context" => %{
         "returned" => length(features),
         "matched" => total_count,

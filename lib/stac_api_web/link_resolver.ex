@@ -1,7 +1,7 @@
 defmodule StacApiWeb.LinkResolver do
   @moduledoc """
   Handles resolution of relative URLs to absolute URLs for STAC API responses.
-  
+
   This module provides a centralized way to manage URLs across the application,
   allowing for flexible deployment across different environments while keeping
   relative URLs in the database.
@@ -9,33 +9,36 @@ defmodule StacApiWeb.LinkResolver do
 
   @doc """
   Resolves a relative URL to an absolute URL using the configured base URL.
-  
+
   ## Examples
-  
+
       iex> resolve_url("/stac/api/v1/collections/test")
       "http://localhost:4000/stac/api/v1/collections/test"
-      
+
       iex> resolve_url("http://example.com/absolute")
       "http://example.com/absolute"
   """
   def resolve_url(url) when is_binary(url) do
     case String.starts_with?(url, ["http://", "https://"]) do
-      true -> url  # Already absolute
-      false -> 
+      # Already absolute
+      true ->
+        url
+
+      false ->
         # Fix malformed relative URLs
         normalized_url = normalize_relative_url(url)
         "#{base_url()}#{normalized_url}"
     end
   end
-  
+
   # Handle nil links gracefully
   def resolve_url(nil), do: nil
 
   @doc """
   Resolves a list of links, converting relative hrefs to absolute URLs.
-  
+
   ## Examples
-  
+
       iex> resolve_links([%{"rel" => "self", "href" => "/stac/api/v1/"}])
       [%{"rel" => "self", "href" => "http://localhost:4000/stac/api/v1/"}]
   """
@@ -44,8 +47,10 @@ defmodule StacApiWeb.LinkResolver do
       case link do
         %{"href" => href} = link_map ->
           Map.put(link_map, "href", resolve_url(href))
+
         %{href: href} = link_map ->
           Map.put(link_map, :href, resolve_url(href))
+
         link ->
           link
       end
@@ -61,9 +66,11 @@ defmodule StacApiWeb.LinkResolver do
         %{"href" => href} = link_map ->
           resolved_href = resolve_url_with_context(href, context)
           Map.put(link_map, "href", resolved_href)
+
         %{href: href} = link_map ->
           resolved_href = resolve_url_with_context(href, context)
           Map.put(link_map, :href, resolved_href)
+
         link ->
           link
       end
@@ -76,20 +83,27 @@ defmodule StacApiWeb.LinkResolver do
   """
   def resolve_links_from_conn(conn, links) when is_list(links) do
     base_url = get_base_url_from_conn(conn)
+
     Enum.map(links, fn link ->
       case link do
         %{"href" => href} = link_map ->
-          resolved_href = case String.starts_with?(href, ["http://", "https://"]) do
-            true -> href
-            false -> "#{base_url}#{href}"
-          end
+          resolved_href =
+            case String.starts_with?(href, ["http://", "https://"]) do
+              true -> href
+              false -> "#{base_url}#{href}"
+            end
+
           Map.put(link_map, "href", resolved_href)
+
         %{href: href} = link_map ->
-          resolved_href = case String.starts_with?(href, ["http://", "https://"]) do
-            true -> href
-            false -> "#{base_url}#{href}"
-          end
+          resolved_href =
+            case String.starts_with?(href, ["http://", "https://"]) do
+              true -> href
+              false -> "#{base_url}#{href}"
+            end
+
           Map.put(link_map, :href, resolved_href)
+
         link ->
           link
       end
@@ -105,7 +119,8 @@ defmodule StacApiWeb.LinkResolver do
       "href" => resolve_url(href),
       "type" => Keyword.get(opts, :type, "application/json"),
       "title" => Keyword.get(opts, :title),
-      "method" => Keyword.get(opts, :method)
+      "method" => Keyword.get(opts, :method),
+      "body" => Keyword.get(opts, :body)
     }
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
     |> Map.new()
@@ -118,8 +133,9 @@ defmodule StacApiWeb.LinkResolver do
     [
       create_link("self", "/stac/api/v1/collections/#{collection_id}"),
       create_link("root", "/stac/api/v1/"),
-      create_link("items", "/stac/api/v1/collections/#{collection_id}/items", 
-                  type: "application/geo+json")
+      create_link("items", "/stac/api/v1/collections/#{collection_id}/items",
+        type: "application/geo+json"
+      )
     ]
   end
 
@@ -131,41 +147,55 @@ defmodule StacApiWeb.LinkResolver do
       create_link("collection", "/stac/api/v1/collections/#{collection_id}"),
       create_link("root", "/stac/api/v1/"),
       create_link("self", "/stac/api/v1/collections/#{collection_id}/items",
-                  type: "application/geo+json")
+        type: "application/geo+json"
+      )
     ]
   end
 
   @doc """
   Creates a list of standard STAC links for search results.
+
+  A GET search answers with GET links. A POST search answers with POST links
+  (`"method": "POST"`) that carry the full request body with the new `offset`
+  as `"body"`, without `merge`, so a client repeats the POST as it is.
   """
-  def create_search_links(_conn, params, total_count) do
+  def create_search_links(conn, params, total_count) do
     current_limit = parse_int(params["limit"] || "10")
     current_offset = parse_int(params["offset"] || "0")
 
     links = [
-      create_link("self", "/stac/api/v1/search?#{build_query_string(params)}",
-                  type: "application/geo+json"),
+      search_link(conn, "self", params),
       create_link("root", "/stac/api/v1/")
     ]
 
     links =
       if current_offset > 0 do
-        prev_params = Map.put(params, "offset", to_string(max(0, current_offset - current_limit)))
-        prev_link = create_link("prev", "/stac/api/v1/search?#{build_query_string(prev_params)}",
-                               type: "application/geo+json")
-        [prev_link | links]
+        prev_params = Map.put(params, "offset", max(0, current_offset - current_limit))
+        [search_link(conn, "prev", prev_params) | links]
       else
         links
       end
 
     if current_offset + current_limit < total_count do
-      next_params = Map.put(params, "offset", to_string(current_offset + current_limit))
-      next_link = create_link("next", "/stac/api/v1/search?#{build_query_string(next_params)}",
-                             type: "application/geo+json")
-      [next_link | links]
+      next_params = Map.put(params, "offset", current_offset + current_limit)
+      [search_link(conn, "next", next_params) | links]
     else
       links
     end
+  end
+
+  defp search_link(%{method: "POST"}, rel, params) do
+    create_link(rel, "/stac/api/v1/search",
+      type: "application/geo+json",
+      method: "POST",
+      body: params
+    )
+  end
+
+  defp search_link(_conn, rel, params) do
+    create_link(rel, "/stac/api/v1/search?#{build_query_string(params)}",
+      type: "application/geo+json"
+    )
   end
 
   # Private functions
@@ -176,8 +206,11 @@ defmodule StacApiWeb.LinkResolver do
 
   defp resolve_url_with_context(url, context) do
     case String.starts_with?(url, ["http://", "https://"]) do
-      true -> url  # Already absolute
-      false -> 
+      # Already absolute
+      true ->
+        url
+
+      false ->
         normalized_url = normalize_relative_url_with_context(url, context)
         "#{base_url()}#{normalized_url}"
     end
@@ -189,13 +222,10 @@ defmodule StacApiWeb.LinkResolver do
       String.contains?(url, "../../../catalog.json") -> "/stac/api/v1/"
       String.contains?(url, "../catalog.json") -> "/stac/api/v1/"
       String.contains?(url, "catalog.json") -> "/stac/api/v1/"
-      
       # Handle malformed collection self links
       String.contains?(url, "collection.json") -> "/stac/api/v1/collections"
-      
       # Handle malformed items links
       url == "items" -> "/stac/api/v1/collections/items"
-      
       # Ensure proper leading slash for other relative URLs
       String.starts_with?(url, "/") -> url
       true -> "/#{url}"
@@ -204,39 +234,52 @@ defmodule StacApiWeb.LinkResolver do
 
   defp normalize_relative_url_with_context(url, context) do
     collection_id = Map.get(context, :collection_id)
-    
+
     cond do
       # Handle malformed root links
-      String.contains?(url, "../../../catalog.json") -> "/stac/api/v1/"
-      String.contains?(url, "../catalog.json") -> "/stac/api/v1/"
-      String.contains?(url, "catalog.json") -> "/stac/api/v1/"
-      
+      String.contains?(url, "../../../catalog.json") ->
+        "/stac/api/v1/"
+
+      String.contains?(url, "../catalog.json") ->
+        "/stac/api/v1/"
+
+      String.contains?(url, "catalog.json") ->
+        "/stac/api/v1/"
+
       # Handle malformed collection self links
       String.contains?(url, "collection.json") and collection_id ->
         "/stac/api/v1/collections/#{collection_id}"
+
       String.contains?(url, "collection.json") ->
         "/stac/api/v1/collections"
-      
+
       # Handle malformed items links
       url == "items" and collection_id ->
         "/stac/api/v1/collections/#{collection_id}/items"
+
       url == "items" ->
         "/stac/api/v1/collections/items"
-      
+
       # Ensure proper leading slash for other relative URLs
-      String.starts_with?(url, "/") -> url
-      true -> "/#{url}"
+      String.starts_with?(url, "/") ->
+        url
+
+      true ->
+        "/#{url}"
     end
   end
 
   defp get_base_url_from_conn(conn) do
     scheme = if conn.scheme == :https, do: "https", else: "http"
-    port = if (conn.scheme == :https and conn.port == 443) or
-              (conn.scheme == :http and conn.port == 80) do
-      ""
-    else
-      ":#{conn.port}"
-    end
+
+    port =
+      if (conn.scheme == :https and conn.port == 443) or
+           (conn.scheme == :http and conn.port == 80) do
+        ""
+      else
+        ":#{conn.port}"
+      end
+
     "#{scheme}://#{conn.host}#{port}"
   end
 
@@ -246,6 +289,7 @@ defmodule StacApiWeb.LinkResolver do
       _ -> 0
     end
   end
+
   defp parse_int(int) when is_integer(int), do: int
   defp parse_int(_), do: 0
 
@@ -255,13 +299,18 @@ defmodule StacApiWeb.LinkResolver do
       {key, ""} when key in ["fields", :fields] -> false
       {_, value} -> is_nil(value) or value == ""
     end)
-    |> Enum.map(fn {k, v} ->
-      value = case v do
-        list when is_list(list) -> Enum.join(list, ",")
-        other -> to_string(other)
-      end
-      "#{k}=#{URI.encode(value)}"
-    end)
+    |> Enum.map(fn {k, v} -> "#{k}=#{URI.encode(query_value(v))}" end)
     |> Enum.join("&")
   end
+
+  # Scalars and lists of scalars keep their GET form; nested values (eg. a
+  # GeoJSON geometry or a list of sortby objects) are sent as JSON.
+  defp query_value(list) when is_list(list) do
+    if Enum.all?(list, &scalar?/1), do: Enum.join(list, ","), else: Jason.encode!(list)
+  end
+
+  defp query_value(map) when is_map(map), do: Jason.encode!(map)
+  defp query_value(value), do: to_string(value)
+
+  defp scalar?(value), do: is_binary(value) or is_number(value) or is_atom(value)
 end

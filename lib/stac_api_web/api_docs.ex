@@ -393,7 +393,9 @@ defmodule StacApiWeb.ApiDocs do
         summary: "Search items (POST)",
         description:
           "Same as the GET search with the filters in a JSON body. Use this form for GeoJSON " <>
-            "intersects geometries and long id lists.",
+            "intersects geometries and long id lists. The self / next / prev links are POST " <>
+            "links: same href, \"method\": \"POST\", and the full request body with the new " <>
+            "offset as \"body\" (no merge, so post the body as it is).",
         auth: :optional,
         params: [],
         request_body: search_body(),
@@ -993,7 +995,8 @@ defmodule StacApiWeb.ApiDocs do
         href: %{type: "string"},
         type: %{type: "string"},
         title: %{type: "string"},
-        method: %{type: "string"}
+        method: %{type: "string"},
+        body: %{type: "object", description: "Request body to send with a POST link"}
       }
     }
 
