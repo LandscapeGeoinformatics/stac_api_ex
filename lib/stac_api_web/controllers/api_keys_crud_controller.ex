@@ -117,8 +117,12 @@ defmodule StacApiWeb.ApiKeysCrudController do
   @doc """
   POST /stac/manage/v1/api-keys/:id/rotate
   Issues a new secret for an existing key: same id, same name and role (so the
-  prefix still matches), old secret immediately stops working. The new raw secret is returned once, under
-  `data.key`.
+  prefix still matches), old secret immediately stops working. The new raw
+  secret is returned once, under `data.key`.
+
+  `expires_at` is the admin's final date and no rotation moves it: an expired
+  key can be rotated, but the new secret is expired as well. The response
+  returns `expires_at`; to revive the key, PATCH it to a future date.
   """
   def rotate(conn, %{"id" => id}) do
     case fetch(id) do

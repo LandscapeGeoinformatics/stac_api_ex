@@ -223,7 +223,7 @@ All endpoints under this namespace require the `X-API-Key` header with a **read-
 - `GET /stac/manage/v1/api-keys/:id` - Get a specific key
 - `POST /stac/manage/v1/api-keys` - Create a key from a `name` and optional `role` (`read_only` default, or `read_write`), `expires_at`, `contact`, `note`; the secret is returned once, under `data.key`
 - `PATCH /stac/manage/v1/api-keys/:id` - Change `name`, `expires_at`, `contact` or `note` (the secret is unchanged; a `role` in the body gives 422)
-- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret with the same role; the old one stops working immediately
+- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret with the same role; the old one stops working immediately. `expires_at` is returned and never moved by a rotation, so an expired key stays expired until `PATCH` sets a future `expires_at`
 - `DELETE /stac/manage/v1/api-keys/:id` - Permanently delete a key
 
 Fields returned for a key: `id`, `name`, `role`, `expires_at`, `contact`, `note`,

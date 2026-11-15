@@ -591,7 +591,9 @@ defmodule StacApiWeb.ApiDocs do
         summary: "Rotate API key",
         description:
           "Issues a new secret for the same key (same id, name and role). The old secret stops " <>
-            "working immediately. The new secret is returned once, under data.key.",
+            "working immediately. The new secret is returned once, under data.key. Rotation never " <>
+            "moves expires_at, which is returned in the response: an expired key can be rotated " <>
+            "but stays expired. To revive it, PATCH expires_at to a future date.",
         auth: :rw,
         params: [id_param],
         request_body: nil,

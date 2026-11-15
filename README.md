@@ -654,7 +654,7 @@ cannot be looked up later. If it gets lost, rotate it to get a new one.
 | `GET /stac/manage/v1/api-keys/:id` | Show one key |
 | `POST /stac/manage/v1/api-keys` | Create a key from a `name`, optional `role`, `expires_at`, `contact`, `note` |
 | `PATCH /stac/manage/v1/api-keys/:id` | Change `name`, `expires_at`, `contact` or `note`; the secret and the role stay the same |
-| `POST /stac/manage/v1/api-keys/:id/rotate` | Issue a new secret (same role); the old one stops working immediately |
+| `POST /stac/manage/v1/api-keys/:id/rotate` | Issue a new secret (same role); the old one stops working immediately. `expires_at` is never moved: rotating an expired key leaves it expired until you `PATCH` a new `expires_at` |
 | `DELETE /stac/manage/v1/api-keys/:id` | Delete a key; it stops working immediately |
 
 A few things that are good to know:
