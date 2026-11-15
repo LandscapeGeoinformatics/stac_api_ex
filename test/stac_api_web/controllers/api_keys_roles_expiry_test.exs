@@ -160,6 +160,28 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       assert resp["data"]["expires_at"] != nil
     end
 
+    test "PATCH {} changes nothing, not even updated_at", %{conn: conn} do
+      {id, _} =
+        create_key!(conn, "no-op", %{
+          "expires_at" => future(),
+          "contact" => "owner@example.org",
+          "note" => "unchanged"
+        })
+
+      # Put updated_at far enough back that any touch would be visible.
+      old = DateTime.add(DateTime.utc_now(), -3600, :second) |> DateTime.truncate(:second)
+      Repo.update_all(from(k in ApiKey, where: k.id == ^id), set: [updated_at: old])
+      before = Repo.get!(ApiKey, id)
+
+      resp = conn |> patch("#{@path}/#{id}", %{}) |> json_response(200)
+
+      assert resp["data"]["name"] == "no-op"
+      assert resp["data"]["contact"] == "owner@example.org"
+      assert resp["data"]["note"] == "unchanged"
+      assert Repo.get!(ApiKey, id).updated_at == before.updated_at
+      assert DateTime.compare(before.updated_at, old) == :eq
+    end
+
     test "rejects an expires_at in the past", %{conn: conn} do
       {id, _} = create_key!(conn, "too-late")
 
