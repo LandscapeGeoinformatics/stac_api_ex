@@ -228,6 +228,36 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       assert resp["data"]["role"] == "read_write"
       assert ApiKey.get_by_secret(old_secret) == nil
     end
+
+    test "returns expires_at and does not move it", %{conn: conn} do
+      {id, _} = create_key!(conn, "rotating-with-expiry", %{"expires_at" => future()})
+      before = Repo.get!(ApiKey, id).expires_at
+
+      resp = conn |> post("#{@path}/#{id}/rotate") |> json_response(200)
+
+      assert {:ok, returned, 0} = DateTime.from_iso8601(resp["data"]["expires_at"])
+      assert DateTime.compare(returned, before) == :eq
+      assert DateTime.compare(Repo.get!(ApiKey, id).expires_at, before) == :eq
+    end
+
+    test "an expired key can be rotated but stays expired until its expires_at is patched",
+         %{conn: conn} do
+      {id, _} = create_key!(conn, "expired-rotate", %{"expires_at" => future()})
+      expire!(id)
+      expired_at = Repo.get!(ApiKey, id).expires_at
+
+      resp = conn |> post("#{@path}/#{id}/rotate") |> json_response(200)
+      new_secret = resp["data"]["key"]
+
+      # Rotation does not bring the key back and reports the unchanged expiry.
+      assert {:ok, returned, 0} = DateTime.from_iso8601(resp["data"]["expires_at"])
+      assert DateTime.compare(returned, expired_at) == :eq
+      assert ApiKey.get_by_secret(new_secret) == nil
+
+      # The admin revives it by moving expires_at to the future.
+      conn |> patch("#{@path}/#{id}", %{"expires_at" => future()}) |> json_response(200)
+      assert ApiKey.get_by_secret(new_secret).id == id
+    end
   end
 
   describe "an issued read-write key" do
