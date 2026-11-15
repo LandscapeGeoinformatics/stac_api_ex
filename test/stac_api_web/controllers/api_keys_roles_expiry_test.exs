@@ -182,6 +182,17 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       assert DateTime.compare(before.updated_at, old) == :eq
     end
 
+    test "rejects a null or empty name and keeps the old one", %{conn: conn} do
+      {id, _} = create_key!(conn, "keep-my-name")
+
+      for name <- [nil, "", "   "] do
+        resp = conn |> patch("#{@path}/#{id}", %{"name" => name}) |> json_response(422)
+        assert resp["details"]["name"] != nil
+      end
+
+      assert Repo.get!(ApiKey, id).name == "keep-my-name"
+    end
+
     test "rejects an expires_at in the past", %{conn: conn} do
       {id, _} = create_key!(conn, "too-late")
 
