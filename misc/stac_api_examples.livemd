@@ -10,370 +10,152 @@ Mix.install([
 
 ## Setup
 
-Configure your STAC API base URL and API key:
+Configure the STAC API base URL and the two static keys. Point `STAC_BASE_URL` at another
+deployment to run the read-only parts against it; the write examples are meant for a local
+dev server.
 
 ```elixir
-base_url = "http://localhost:4000"
+base_url = System.get_env("STAC_BASE_URL") || "https://metadata.geokuup.ee" # "http://localhost:4000"
 api_version = "/stac/api/v1"
 manage_version = "/stac/manage/v1"
 
-read_write_api_key = System.get_env("STAC_API_KEY") || "dev-api-key-2024"
-read_only_api_key = System.get_env("STAC_API_KEY_RO") || "dev-read-only-key-2024"
+# The two static keys from the server config (STAC_API_KEY / STAC_API_KEY_RO).
+# STAC_API_KEY is the admin key: the only one that can manage personal API keys.
+read_write_api_key = System.get_env("LB_STAC_API_KEY_RW") || "dev-api-key-2024"
+read_only_api_key = System.get_env("LB_STAC_API_KEY_RO") || "dev-read-only-key-2024"
 
-# STAC API read client — public endpoints, no auth required
-# Pass X-API-Key here to unlock private catalogs/collections/items
+# STAC API read client: public endpoints, no auth required.
+# Add an X-API-Key header to unlock private catalogs, collections and items.
 req = Req.new(base_url: base_url <> api_version)
 
-# Management API client — all CRUD operations require the RW key
-manage_req = Req.new(
-  base_url: base_url <> manage_version,
-  headers: [{"x-api-key", read_write_api_key}]
-)
+# Management API client: all CRUD needs a read-write key.
+manage_req =
+  Req.new(
+    base_url: base_url <> manage_version,
+    headers: [{"x-api-key", read_write_api_key}]
+  )
+
+%{stac_api: base_url <> api_version, manage_api: base_url <> manage_version}
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-%Req.Request{
-  method: :get,
-  url: URI.parse(""),
-  headers: %{},
-  body: nil,
-  options: %{base_url: "http://localhost:4000/stac/api/v1"},
-  halted: false,
-  adapter: &Req.Steps.run_finch/1,
-  request_steps: [
-    put_user_agent: &Req.Steps.put_user_agent/1,
-    compressed: &Req.Steps.compressed/1,
-    encode_body: &Req.Steps.encode_body/1,
-    put_base_url: &Req.Steps.put_base_url/1,
-    auth: &Req.Steps.auth/1,
-    put_params: &Req.Steps.put_params/1,
-    put_path_params: &Req.Steps.put_path_params/1,
-    put_range: &Req.Steps.put_range/1,
-    cache: &Req.Steps.cache/1,
-    put_plug: &Req.Steps.put_plug/1,
-    compress_body: &Req.Steps.compress_body/1,
-    checksum: &Req.Steps.checksum/1,
-    put_aws_sigv4: &Req.Steps.put_aws_sigv4/1
-  ],
-  response_steps: [
-    retry: &Req.Steps.retry/1,
-    handle_http_errors: &Req.Steps.handle_http_errors/1,
-    redirect: &Req.Steps.redirect/1,
-    http_digest: &Req.Steps.handle_http_digest/1,
-    decompress_body: &Req.Steps.decompress_body/1,
-    verify_checksum: &Req.Steps.verify_checksum/1,
-    decode_body: &Req.Steps.decode_body/1,
-    output: &Req.Steps.output/1
-  ],
-  error_steps: [retry: &Req.Steps.retry/1],
-  private: %{}
+%{
+  stac_api: "https://metadata.geokuup.ee/stac/api/v1",
+  manage_api: "https://metadata.geokuup.ee/stac/manage/v1"
 }
 ```
 
-```elixir
-read_only_api_key
-```
+## Example 1: Exploring the API
 
-<!-- livebook:{"output":true} -->
-
-```
-"dev-read-only-key-2024"
-```
-
-## Example 1: Exploring Catalogs
-
-Catalogs are managed via the Management API (`/stac/manage/v1`) and always require authentication.
-Collections and items can also be browsed via the public STAC API (`/stac/api/v1`).
+Catalogs are listed through the Management API (`/stac/manage/v1`), which always needs a
+read-write key. Collections and items are also readable through the public STAC API
+(`/stac/api/v1`).
 
 ```elixir
-# Get all catalogs (management endpoint — requires RW key)
-{:ok, response} = Req.get(manage_req, url: "/catalogs")
+# Root landing page: conformance classes and links
+{:ok, response} = Req.get(req, url: "/")
 
 IO.puts("Status: #{response.status}")
-IO.puts("\nCatalogs:")
-IO.inspect(response.body["catalogs"], pretty: true)
+IO.puts("Title: #{response.body["title"]}")
+IO.puts("conformsTo: #{length(response.body["conformsTo"])} classes")
+
+Enum.map(response.body["links"], &{&1["rel"], &1["href"]})
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 200
-
-Catalogs:
-[]
+Title: Geokuup STAC API
+conformsTo: 9 classes
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-[]
+[
+  {"self", "https://metadata.geokuup.ee/stac/api/v1/"},
+  {"root", "https://metadata.geokuup.ee/stac/api/v1/"},
+  {"conformance", "https://metadata.geokuup.ee/stac/api/v1/conformance"},
+  {"service-desc", "https://metadata.geokuup.ee/stac/api/v1/openapi.json"},
+  {"service-doc", "https://metadata.geokuup.ee/stac/api/v1/docs"},
+  {"data", "https://metadata.geokuup.ee/stac/api/v1/collections"},
+  {"search", "https://metadata.geokuup.ee/stac/api/v1/search"},
+  {"search", "https://metadata.geokuup.ee/stac/api/v1/search"},
+  {"browser", "https://metadata.geokuup.ee/stac/web/browse"},
+  {"child", "https://metadata.geokuup.ee/stac/api/v1/catalog/geokuup"}
+]
 ```
 
 ```elixir
-# Get a specific catalog by ID (management endpoint)
-{:ok, response} = Req.get(manage_req, url: "/catalogs/my-test-catalog")
+# All catalogs (management endpoint, RW key)
+{:ok, response} = Req.get(manage_req, url: "/catalogs")
 
-IO.puts("Catalog Details:")
-IO.inspect(response.body, pretty: true)
+IO.puts("Status: #{response.status}")
+
+Enum.map(response.body["catalogs"], &Map.take(&1, ["id", "title"]))
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-Catalog Details:
-%{
-  "description" => "A catalog for testing purposes",
-  "extent" => nil,
-  "id" => "my-test-catalog",
-  "links" => [
-    %{
-      "href" => "/stac/api/v1/catalog/my-test-catalog",
-      "rel" => "self",
-      "type" => "application/json"
-    },
-    %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
-    %{
-      "href" => "/stac/api/v1/",
-      "rel" => "parent",
-      "type" => "application/json"
-    },
-    %{
-      "href" => "https://creativecommons.org/licenses/by/4.0/",
-      "rel" => "license",
-      "title" => "CC BY 4.0"
-    }
-  ],
-  "stac_version" => "1.0.0",
-  "title" => "My Test Catalog",
-  "type" => "Catalog"
-}
+Status: 200
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-%{
-  "description" => "A catalog for testing purposes",
-  "extent" => nil,
-  "id" => "my-test-catalog",
-  "links" => [
-    %{
-      "href" => "/stac/api/v1/catalog/my-test-catalog",
-      "rel" => "self",
-      "type" => "application/json"
-    },
-    %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
-    %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
-    %{
-      "href" => "https://creativecommons.org/licenses/by/4.0/",
-      "rel" => "license",
-      "title" => "CC BY 4.0"
-    }
-  ],
-  "stac_version" => "1.0.0",
-  "title" => "My Test Catalog",
-  "type" => "Catalog"
-}
+[
+  %{"id" => "geokuup", "title" => "Geokuup"},
+  %{"id" => "estonia", "title" => "Estonia"},
+  %{"id" => "estonia_review", "title" => "Estonia Review"},
+  %{"id" => "baltics", "title" => "Baltics"},
+  %{"id" => "isaac_shared", "title" => "Google isaac_shared"},
+  %{"id" => "estonia_goog", "title" => "Estonia (Google)"},
+  %{"id" => "baltics_goog", "title" => "Baltics (Google)"},
+  %{"id" => "europe_goog", "title" => "Europe (Google)"},
+  %{"id" => "europe_working_goog", "title" => "Europe Working (Google)"},
+  %{"id" => "europe", "title" => "Europe"},
+  %{"id" => "global_goog", "title" => "Global (Google)"},
+  %{"id" => "global_working_goog", "title" => "Global Working (Google)"},
+  %{"id" => "estonia_working_goog", "title" => "Estonia Working (Google)"},
+  %{"id" => "baltics_working_goog", "title" => "Baltics Working (Google)"}
+]
 ```
 
 ```elixir
-# Get the root API landing page
-{:ok, response} = Req.get(req, url: "/")
+# Public collections, first five
+{:ok, response} = Req.get(req, url: "/collections")
 
-IO.puts("Root API:")
-IO.inspect(response.body, pretty: true)
+IO.puts("Status: #{response.status}")
+IO.puts("Collections: #{length(response.body["collections"])}")
+
+response.body["collections"] |> Enum.take(5) |> Enum.map(& &1["id"])
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-Root API:
-%{
-  "conformsTo" => ["https://api.stacspec.org/v1.0.0/core",
-   "https://api.stacspec.org/v1.0.0/item-search"],
-  "description" => "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
-  "id" => "geokuup-stac-api",
-  "links" => [
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/",
-      "rel" => "self",
-      "type" => "application/json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/",
-      "rel" => "root",
-      "type" => "application/json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/openapi.json",
-      "rel" => "service-desc",
-      "title" => "OpenAPI service description",
-      "type" => "application/vnd.oai.openapi+json;version=3.0"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/docs",
-      "rel" => "service-doc",
-      "title" => "OpenAPI service documentation",
-      "type" => "text/html"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/collections",
-      "rel" => "data",
-      "title" => "Collections",
-      "type" => "application/json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/search",
-      "method" => "GET",
-      "rel" => "search",
-      "title" => "STAC search",
-      "type" => "application/geo+json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/search",
-      "method" => "POST",
-      "rel" => "search",
-      "title" => "STAC search",
-      "type" => "application/geo+json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/web/browse",
-      "rel" => "browser",
-      "title" => "Web Browser Interface",
-      "type" => "text/html"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/catalog/my-test-catalog",
-      "rel" => "child",
-      "title" => "My Test Catalog",
-      "type" => "application/json"
-    }
-  ],
-  "stac_extensions" => [],
-  "stac_version" => "1.0.0",
-  "title" => "Geokuup STAC API",
-  "type" => "Catalog"
-}
+Status: 200
+Collections: 27
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-%{
-  "conformsTo" => ["https://api.stacspec.org/v1.0.0/core",
-   "https://api.stacspec.org/v1.0.0/item-search"],
-  "description" => "SpatioTemporal Asset Catalog API for geospatial data discovery and access",
-  "id" => "geokuup-stac-api",
-  "links" => [
-    %{"href" => "http://localhost:4000/stac/api/v1/", "rel" => "self", "type" => "application/json"},
-    %{"href" => "http://localhost:4000/stac/api/v1/", "rel" => "root", "type" => "application/json"},
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/openapi.json",
-      "rel" => "service-desc",
-      "title" => "OpenAPI service description",
-      "type" => "application/vnd.oai.openapi+json;version=3.0"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/docs",
-      "rel" => "service-doc",
-      "title" => "OpenAPI service documentation",
-      "type" => "text/html"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/collections",
-      "rel" => "data",
-      "title" => "Collections",
-      "type" => "application/json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/search",
-      "method" => "GET",
-      "rel" => "search",
-      "title" => "STAC search",
-      "type" => "application/geo+json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/search",
-      "method" => "POST",
-      "rel" => "search",
-      "title" => "STAC search",
-      "type" => "application/geo+json"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/web/browse",
-      "rel" => "browser",
-      "title" => "Web Browser Interface",
-      "type" => "text/html"
-    },
-    %{
-      "href" => "http://localhost:4000/stac/api/v1/catalog/my-test-catalog",
-      "rel" => "child",
-      "title" => "My Test Catalog",
-      "type" => "application/json"
-    }
-  ],
-  "stac_extensions" => [],
-  "stac_version" => "1.0.0",
-  "title" => "Geokuup STAC API",
-  "type" => "Catalog"
-}
+["estonia-topo-10m", "estonia-sentinel2-b8", "estonia-landsat-bsi", "estonia-landsat-evi",
+ "estonia-landsat-fvc"]
 ```
 
 ## Example 2: Creating Resources (With Auth)
 
-Creating, updating, and deleting require the RW `X-API-Key` header and go through the
-Management API (`/stac/manage/v1`). Use `manage_req` defined in Setup, or:
+Creating, updating and deleting go through the Management API with a read-write
+`X-API-Key`. Use `manage_req` from Setup.
 
-```elixir
-# Equivalent to manage_req — shown explicitly for clarity
-rw_auth_req = Req.new(
-  base_url: base_url <> manage_version,
-  headers: [{"x-api-key", read_write_api_key}]
-)
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-%Req.Request{
-  method: :get,
-  url: URI.parse(""),
-  headers: %{"x-api-key" => ["dev-api-key-2024"]},
-  body: nil,
-  options: %{base_url: "http://localhost:4000/stac/api/v1"},
-  halted: false,
-  adapter: &Req.Steps.run_finch/1,
-  request_steps: [
-    put_user_agent: &Req.Steps.put_user_agent/1,
-    compressed: &Req.Steps.compressed/1,
-    encode_body: &Req.Steps.encode_body/1,
-    put_base_url: &Req.Steps.put_base_url/1,
-    auth: &Req.Steps.auth/1,
-    put_params: &Req.Steps.put_params/1,
-    put_path_params: &Req.Steps.put_path_params/1,
-    put_range: &Req.Steps.put_range/1,
-    cache: &Req.Steps.cache/1,
-    put_plug: &Req.Steps.put_plug/1,
-    compress_body: &Req.Steps.compress_body/1,
-    checksum: &Req.Steps.checksum/1,
-    put_aws_sigv4: &Req.Steps.put_aws_sigv4/1
-  ],
-  response_steps: [
-    retry: &Req.Steps.retry/1,
-    handle_http_errors: &Req.Steps.handle_http_errors/1,
-    redirect: &Req.Steps.redirect/1,
-    http_digest: &Req.Steps.handle_http_digest/1,
-    decompress_body: &Req.Steps.decompress_body/1,
-    verify_checksum: &Req.Steps.verify_checksum/1,
-    decode_body: &Req.Steps.decode_body/1,
-    output: &Req.Steps.output/1
-  ],
-  error_steps: [retry: &Req.Steps.retry/1],
-  private: %{}
-}
-```
+Write responses are wrapped in `success` / `message` / `data`. Besides the STAC fields
+they carry `created` / `updated` (RFC 3339, UTC), and collections carry `catalog_id`.
 
 ### Create a Root Catalog
 
@@ -393,23 +175,58 @@ catalog_data = %{
   ]
 }
 
-{:ok, response} = Req.post(rw_auth_req, url: "/catalogs", json: catalog_data)
+{:ok, response} = Req.post(manage_req, url: "/catalogs", json: catalog_data)
 
+# 201 on the first run, 409 if the catalog already exists
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-Status: 409
-%{"error" => "Catalog with ID 'my-test-catalog' already exists"}
+Status: 201
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-%{"error" => "Catalog with ID 'my-test-catalog' already exists"}
+%{
+  "data" => %{
+    "created" => "2026-11-16T15:57:52.911070Z",
+    "description" => "A catalog for testing purposes",
+    "extent" => nil,
+    "id" => "my-test-catalog",
+    "links" => [
+      %{
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/catalog/my-test-catalog",
+        "rel" => "self",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/",
+        "rel" => "parent",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "https://creativecommons.org/licenses/by/4.0/",
+        "rel" => "license",
+        "title" => "CC BY 4.0"
+      }
+    ],
+    "stac_version" => "1.0.0",
+    "title" => "My Test Catalog",
+    "type" => "Catalog",
+    "updated" => "2026-11-16T15:57:52.911070Z"
+  },
+  "message" => "Catalog created successfully",
+  "success" => true
+}
 ```
 
 ### Create a Nested Catalog
@@ -424,45 +241,16 @@ nested_catalog_data = %{
   "parent_catalog_id" => "my-test-catalog"
 }
 
-{:ok, response} = Req.post(rw_auth_req, url: "/catalogs", json: nested_catalog_data)
+{:ok, response} = Req.post(manage_req, url: "/catalogs", json: nested_catalog_data)
 
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 201
-%{
-  "data" => %{
-    "description" => "A nested catalog under my-test-catalog",
-    "extent" => nil,
-    "id" => "my-nested-catalog",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "root",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "parent",
-        "type" => "application/json"
-      }
-    ],
-    "stac_version" => "1.0.0",
-    "title" => "My Nested Catalog",
-    "type" => "Catalog"
-  },
-  "message" => "Catalog created successfully",
-  "success" => true
-}
 ```
 
 <!-- livebook:{"output":true} -->
@@ -470,25 +258,31 @@ Status: 201
 ```
 %{
   "data" => %{
+    "created" => "2026-11-16T15:57:52.936913Z",
     "description" => "A nested catalog under my-test-catalog",
     "extent" => nil,
     "id" => "my-nested-catalog",
     "links" => [
       %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/catalog/my-nested-catalog",
         "rel" => "self",
         "type" => "application/json"
       },
-      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
       %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/catalog/my-test-catalog",
         "rel" => "parent",
         "type" => "application/json"
       }
     ],
     "stac_version" => "1.0.0",
     "title" => "My Nested Catalog",
-    "type" => "Catalog"
+    "type" => "Catalog",
+    "updated" => "2026-11-16T15:57:52.936913Z"
   },
   "message" => "Catalog created successfully",
   "success" => true
@@ -496,6 +290,9 @@ Status: 201
 ```
 
 ### Create a Collection
+
+The extent sent here is replaced as soon as items are added: the API recomputes
+`extent.spatial` and `extent.temporal` from the collection's items.
 
 ```elixir
 collection_data = %{
@@ -506,68 +303,21 @@ collection_data = %{
   "catalog_id" => "my-test-catalog",
   "stac_version" => "1.0.0",
   "extent" => %{
-    "spatial" => %{
-      "bbox" => [[-180, -90, 180, 90]]
-    },
-    "temporal" => %{
-      "interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]
-    }
+    "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
+    "temporal" => %{"interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
   }
 }
 
-{:ok, response} = Req.post(rw_auth_req, url: "/collections", json: collection_data)
+{:ok, response} = Req.post(manage_req, url: "/collections", json: collection_data)
 
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 201
-%{
-  "data" => %{
-    "description" => "A collection for testing",
-    "extent" => %{
-      "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
-      "temporal" => %{
-        "interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]
-      }
-    },
-    "id" => "my-test-collection",
-    "license" => "CC-BY-4.0",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/collections/my-test-collection",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "root",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/collections/my-test-collection/items",
-        "rel" => "items",
-        "type" => "application/geo+json"
-      },
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "parent",
-        "type" => "application/json"
-      }
-    ],
-    "properties" => %{},
-    "stac_extensions" => [],
-    "stac_version" => "1.0.0",
-    "summaries" => nil,
-    "title" => "My Test Collection",
-    "type" => "Collection"
-  },
-  "message" => "Collection created successfully",
-  "success" => true
-}
 ```
 
 <!-- livebook:{"output":true} -->
@@ -575,41 +325,118 @@ Status: 201
 ```
 %{
   "data" => %{
+    "catalog_id" => "my-test-catalog",
+    "created" => "2026-11-16T15:57:52.956013Z",
     "description" => "A collection for testing",
     "extent" => %{
       "spatial" => %{"bbox" => [[-180, -90, 180, 90]]},
       "temporal" => %{"interval" => [["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]]}
     },
     "id" => "my-test-collection",
+    "keywords" => nil,
     "license" => "CC-BY-4.0",
     "links" => [
       %{
-        "href" => "/stac/api/v1/collections/my-test-collection",
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/collections/my-test-collection",
         "rel" => "self",
         "type" => "application/json"
       },
-      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
       %{
-        "href" => "/stac/api/v1/collections/my-test-collection/items",
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/",
+        "rel" => "root",
+        "type" => "application/json"
+      },
+      %{
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/collections/my-test-collection/items",
         "rel" => "items",
         "type" => "application/geo+json"
       },
       %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
+        "href" => "https://metadata.geokuup.ee/stac/api/v1/",
         "rel" => "parent",
         "type" => "application/json"
       }
     ],
-    "properties" => %{},
+    "providers" => nil,
     "stac_extensions" => [],
     "stac_version" => "1.0.0",
     "summaries" => nil,
     "title" => "My Test Collection",
-    "type" => "Collection"
+    "type" => "Collection",
+    "updated" => "2026-11-16T15:57:52.956013Z"
   },
   "message" => "Collection created successfully",
   "success" => true
 }
+```
+
+### Create an Item
+
+Temporal values live in `properties` only, as RFC 3339 with an offset. Either
+`datetime` is set, or it is `null` and both `start_datetime` and `end_datetime` are given.
+
+```elixir
+item_data = %{
+  "id" => "my-test-item",
+  "collection_id" => "my-test-collection",
+  "stac_version" => "1.0.0",
+  "geometry" => %{"type" => "Point", "coordinates" => [26.72, 58.38]},
+  "bbox" => [26.72, 58.38, 26.72, 58.38],
+  "properties" => %{"datetime" => "2024-05-01T21:27:48+03:00", "title" => "Tartu"},
+  "assets" => %{
+    "data" => %{
+      "href" => "https://example.com/data/tartu.tif",
+      "type" => "image/tiff; application=geotiff",
+      "roles" => ["data"]
+    }
+  }
+}
+
+{:ok, response} = Req.post(manage_req, url: "/items", json: item_data)
+
+IO.puts("Status: #{response.status}")
+# +03:00 is normalised to UTC; created/updated sit inside properties for items
+response.body["data"]["properties"]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 201
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "created" => "2026-11-16T15:57:52.973965Z",
+  "datetime" => "2024-05-01T18:27:48Z",
+  "title" => "Tartu",
+  "updated" => "2026-11-16T15:57:52.973965Z"
+}
+```
+
+A datetime without an offset is refused with `400`; nothing is silently coerced.
+
+```elixir
+naive_item = %{item_data | "id" => "my-naive-item", "properties" => %{"datetime" => "2024-05-01T18:27:48"}}
+
+{:ok, response} = Req.post(manage_req, url: "/items", json: naive_item)
+
+IO.puts("Status: #{response.status}")
+response.body
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 400
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{"error" => "properties.datetime must carry a UTC offset, e.g. \"2024-05-01T18:27:48Z\""}
 ```
 
 ## Example 3: Updating Resources (With Auth)
@@ -625,202 +452,81 @@ updated_catalog_data = %{
   "stac_version" => "1.0.0"
 }
 
-{:ok, response} = Req.put(rw_auth_req, 
-  url: "/catalogs/my-test-catalog", 
-  json: updated_catalog_data
-)
+{:ok, response} =
+  Req.put(manage_req, url: "/catalogs/my-test-catalog", json: updated_catalog_data)
 
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body["data"] |> Map.take(["id", "title", "description", "created", "updated"])
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 200
-%{
-  "data" => %{
-    "description" => "This catalog has been updated with new information",
-    "extent" => nil,
-    "id" => "my-test-catalog",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "root",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "parent",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
-        "rel" => "child",
-        "title" => "My Nested Catalog",
-        "type" => "application/json"
-      }
-    ],
-    "stac_version" => "1.0.0",
-    "title" => "My Updated Test Catalog",
-    "type" => "Catalog"
-  },
-  "message" => "Catalog replaced successfully",
-  "success" => true
-}
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 %{
-  "data" => %{
-    "description" => "This catalog has been updated with new information",
-    "extent" => nil,
-    "id" => "my-test-catalog",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
-      %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
-      %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
-        "rel" => "child",
-        "title" => "My Nested Catalog",
-        "type" => "application/json"
-      }
-    ],
-    "stac_version" => "1.0.0",
-    "title" => "My Updated Test Catalog",
-    "type" => "Catalog"
-  },
-  "message" => "Catalog replaced successfully",
-  "success" => true
+  "created" => "2026-11-16T15:57:52.911070Z",
+  "description" => "This catalog has been updated with new information",
+  "id" => "my-test-catalog",
+  "title" => "My Updated Test Catalog",
+  "updated" => "2026-11-16T15:57:53.043396Z"
 }
 ```
 
 ### Partial Update (PATCH)
 
 ```elixir
-# Only update the title, keep everything else
-patch_data = %{
-  "id" => "my-test-catalog",
-  "title" => "Partially Updated Catalog"
-}
-
-{:ok, response} = Req.patch(rw_auth_req, 
-  url: "/catalogs/my-test-catalog", 
-  json: patch_data
-)
+# Only change the title, keep everything else
+{:ok, response} =
+  Req.patch(manage_req,
+    url: "/catalogs/my-test-catalog",
+    json: %{"id" => "my-test-catalog", "title" => "Partially Updated Catalog"}
+  )
 
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body["data"] |> Map.take(["id", "title", "description", "updated"])
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 200
-%{
-  "data" => %{
-    "description" => "This catalog has been updated with new information",
-    "extent" => nil,
-    "id" => "my-test-catalog",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "root",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/",
-        "rel" => "parent",
-        "type" => "application/json"
-      },
-      %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
-        "rel" => "child",
-        "title" => "My Nested Catalog",
-        "type" => "application/json"
-      }
-    ],
-    "stac_version" => "1.0.0",
-    "title" => "Partially Updated Catalog",
-    "type" => "Catalog"
-  },
-  "message" => "Catalog updated successfully",
-  "success" => true
-}
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 %{
-  "data" => %{
-    "description" => "This catalog has been updated with new information",
-    "extent" => nil,
-    "id" => "my-test-catalog",
-    "links" => [
-      %{
-        "href" => "/stac/api/v1/catalog/my-test-catalog",
-        "rel" => "self",
-        "type" => "application/json"
-      },
-      %{"href" => "/stac/api/v1/", "rel" => "root", "type" => "application/json"},
-      %{"href" => "/stac/api/v1/", "rel" => "parent", "type" => "application/json"},
-      %{
-        "href" => "/stac/api/v1/catalog/my-nested-catalog",
-        "rel" => "child",
-        "title" => "My Nested Catalog",
-        "type" => "application/json"
-      }
-    ],
-    "stac_version" => "1.0.0",
-    "title" => "Partially Updated Catalog",
-    "type" => "Catalog"
-  },
-  "message" => "Catalog updated successfully",
-  "success" => true
+  "description" => "This catalog has been updated with new information",
+  "id" => "my-test-catalog",
+  "title" => "Partially Updated Catalog",
+  "updated" => "2026-11-16T15:57:53.062003Z"
 }
 ```
 
 ## Example 4: Deleting Resources (With Auth)
 
-⚠️ **Warning**: Deleting a catalog will CASCADE delete all its children (nested catalogs, collections, and items)!
+⚠️ **Warning**: deleting a catalog CASCADE deletes all its children (nested catalogs,
+collections, items and their assets)!
 
 ### Delete a Specific Catalog
 
 ```elixir
-# Delete the nested catalog first (safer)
-{:ok, response} = Req.delete(rw_auth_req, url: "/catalogs/my-nested-catalog")
+# Delete the nested catalog first
+{:ok, response} = Req.delete(manage_req, url: "/catalogs/my-nested-catalog")
 
 IO.puts("Status: #{response.status}")
-IO.inspect(response.body, pretty: true)
+response.body
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 Status: 200
-%{
-  "cascade_deleted" => %{"catalogs" => 0, "collections" => 0, "items" => 0},
-  "message" => "Catalog deleted successfully",
-  "success" => true
-}
 ```
 
 <!-- livebook:{"output":true} -->
@@ -836,12 +542,684 @@ Status: 200
 ### Delete with Cascade
 
 ```elixir
-# This will delete the catalog AND all its children
+# Deletes the catalog AND everything below it (here: the collection and its item)
 {:ok, response} = Req.delete(manage_req, url: "/catalogs/my-test-catalog")
 
 IO.puts("Status: #{response.status}")
-IO.puts("\nCascade Delete Summary:")
-IO.inspect(response.body["cascade_deleted"], pretty: true)
+response.body["cascade_deleted"]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 404
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+nil
+```
+
+## Example 5: Personal API Keys
+
+Besides the two static keys, the admin (the static `STAC_API_KEY`) can issue personal
+keys, eg. one per colleague, student or script. Each one can be renamed, given an expiry
+date, rotated or deleted on its own, without touching the keys everyone else uses.
+
+|                                                     | static `STAC_API_KEY` | issued `read_write` | issued `read_only` / static RO |
+| --------------------------------------------------- | --------------------- | ------------------- | ------------------------------ |
+| read private catalogs (`/stac/api/v1`, web browser) | ✓                   | ✓                 | ✓                            |
+| write catalogs, collections, items                  | ✓                   | ✓                 | 401                            |
+| manage keys (`/stac/manage/v1/api-keys`)            | ✓                   | 401                 | 401                            |
+
+A few rules:
+
+* The **role** (`read_only` or `read_write`) is fixed when the key is created. The secret
+  starts with `stac_ro_` or `stac_rw_`, so `key_prefix` always shows the role.
+* Only a hash is stored. The secret is returned **once**, under `data.key`, on create and
+  rotate. Store it right away; if it is lost, rotate.
+* `expires_at` is optional. An expired key is treated as no key at all: anonymous on the
+  public API, 401 on the Management API, and it does not unlock the web browser.
+* `contact` and `note` are free text, so in a year it is still clear whose key it is.
+
+The cells below use `manage_req` (the static key) as the admin client. To keep secrets out
+of the notebook output, they print only the `key_prefix`.
+
+```elixir
+# Only show the first characters of a secret
+mask = fn key -> String.slice(key, 0, 12) <> "…" end
+
+# A client for each API, authenticated with any key
+stac_client = fn key -> Req.new(base_url: base_url <> api_version, headers: [{"x-api-key", key}]) end
+manage_client = fn key -> Req.new(base_url: base_url <> manage_version, headers: [{"x-api-key", key}]) end
+
+# Unique suffix, so the demo can run more than once
+suffix = System.unique_integer([:positive])
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+### A private catalog to try the keys on
+
+Content in a private catalog is hidden from anonymous requests, which makes it easy to see
+what a key unlocks.
+
+```elixir
+demo_catalog = "keys-demo-#{suffix}"
+demo_collection = "keys-demo-collection-#{suffix}"
+
+{:ok, %{status: 201}} =
+  Req.post(manage_req,
+    url: "/catalogs",
+    json: %{
+      "id" => demo_catalog,
+      "title" => "API key demo (private)",
+      "description" => "Private catalog for the API key examples",
+      "private" => true
+    }
+  )
+
+{:ok, %{status: 201}} =
+  Req.post(manage_req,
+    url: "/collections",
+    json: %{
+      "id" => demo_collection,
+      "title" => "API key demo collection",
+      "description" => "Lives in a private catalog",
+      "license" => "CC-BY-4.0",
+      "catalog_id" => demo_catalog
+    }
+  )
+
+{:ok, %{status: 201}} =
+  Req.post(manage_req,
+    url: "/items",
+    json: %{
+      "id" => "keys-demo-item-#{suffix}",
+      "collection_id" => demo_collection,
+      "geometry" => %{"type" => "Point", "coordinates" => [26.72, 58.38]},
+      "bbox" => [26.72, 58.38, 26.72, 58.38],
+      "properties" => %{"datetime" => "2024-05-01T18:27:48Z"}
+    }
+  )
+
+{:ok, anonymous} = Req.get(req, url: "/collections/#{demo_collection}")
+IO.puts("Anonymous GET /collections/#{demo_collection}: #{anonymous.status}")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Anonymous GET /collections/keys-demo-collection-14022: 404
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+### Issue a read-only key
+
+`role` defaults to `read_only`. `contact` and `note` are optional.
+
+```elixir
+{:ok, response} =
+  Req.post(manage_req,
+    url: "/api-keys",
+    json: %{
+      "name" => "Alex ro demo - field data #{suffix}",
+      "contact" => "alexander.kmoch@ut.ee",
+      "note" => "Reads the private soil collections from QGIS"
+    }
+  )
+
+IO.puts("Status: #{response.status}")
+IO.puts(response.body["message"])
+
+# Keep the secret in a variable; it cannot be fetched again
+ro_key = response.body["data"]["key"]
+ro_key_id = response.body["data"]["id"]
+
+Map.update!(response.body["data"], "key", mask)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 422
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+** (BadMapError) expected a map, got:
+
+    nil
+
+    (erts 16.1.1) :erlang.map_get("key", nil)
+    (elixir 1.19.3) lib/map.ex:323: Map.update!/3
+    #cell:smylpecigjmqw55j:18: (file)
+```
+
+```elixir
+ro_key_id
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+error: undefined variable "ro_key_id"
+└─ dev/build/01_datacube_infra/lgeo_stac_api_ex/misc/stac_api_examples.livemd#cell:zf4rg5t3l7jrwzeb:1
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+** (CompileError) cannot compile cell (errors have been logged)
+```
+
+```elixir
+ro_key
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+error: undefined variable "ro_key"
+└─ dev/build/01_datacube_infra/lgeo_stac_api_ex/misc/stac_api_examples.livemd#cell:mugur6rfgvjd3e3x:1
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+** (CompileError) cannot compile cell (errors have been logged)
+```
+
+### Issue a read-write key with an expiry date
+
+Typical for a student or project key that should end with the semester. `expires_at`
+must lie in the future and carry an offset (`Z` or `+02:00`).
+
+```elixir
+end_of_semester =
+  DateTime.utc_now() |> DateTime.add(90 * 86_400, :second) |> DateTime.truncate(:second)
+
+{:ok, response} =
+  Req.post(manage_req,
+    url: "/api-keys",
+    json: %{
+      "name" => "Upload script #{suffix}",
+      "role" => "read_write",
+      "expires_at" => DateTime.to_iso8601(end_of_semester),
+      "contact" => "student@example.org",
+      "note" => "Nightly item upload, until the end of the semester"
+    }
+  )
+
+IO.puts("Status: #{response.status}")
+
+rw_key = response.body["data"]["key"]
+rw_key_id = response.body["data"]["id"]
+
+Map.update!(response.body["data"], "key", mask)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 201
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "contact" => "student@example.org",
+  "expires_at" => "2027-02-14T15:45:03.000000Z",
+  "id" => 10,
+  "inserted_at" => "2026-11-16T15:45:03.044708Z",
+  "key" => "stac_rw_jnOf…",
+  "key_prefix" => "stac_rw_jnOf",
+  "last_used_at" => nil,
+  "name" => "Upload script 6594",
+  "note" => "Nightly item upload, until the end of the semester",
+  "role" => "read_write",
+  "updated_at" => "2026-11-16T15:45:03.044708Z"
+}
+```
+
+### List and show keys
+
+Listing never returns secrets, only the `key_prefix`. `last_used_at` is `null` until a key
+is used and is updated at most once an hour.
+
+```elixir
+{:ok, response} = Req.get(manage_req, url: "/api-keys")
+
+IO.puts("Status: #{response.status}")
+
+response.body["data"]
+|> Enum.filter(&String.ends_with?(&1["name"], "#{suffix}"))
+|> Enum.map(&Map.take(&1, ["id", "name", "role", "key_prefix", "expires_at", "last_used_at"]))
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{
+    "expires_at" => "2027-02-14T15:45:03.000000Z",
+    "id" => 10,
+    "key_prefix" => "stac_rw_jnOf",
+    "last_used_at" => nil,
+    "name" => "Upload script 6594",
+    "role" => "read_write"
+  },
+  %{
+    "expires_at" => nil,
+    "id" => 9,
+    "key_prefix" => "stac_ro_IOCv",
+    "last_used_at" => nil,
+    "name" => "Anna - field data 6594",
+    "role" => "read_only"
+  }
+]
+```
+
+```elixir
+{:ok, response} = Req.get(manage_req, url: "/api-keys/#{ro_key_id}")
+
+IO.puts("Status: #{response.status}")
+response.body["data"]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "contact" => "anna@example.org",
+  "expires_at" => nil,
+  "id" => 9,
+  "inserted_at" => "2026-11-16T15:45:03.031367Z",
+  "key_prefix" => "stac_ro_IOCv",
+  "last_used_at" => nil,
+  "name" => "Anna - field data 6594",
+  "note" => "Reads the private soil collections from QGIS",
+  "role" => "read_only",
+  "updated_at" => "2026-11-16T15:45:03.031367Z"
+}
+```
+
+### Use the read-only key
+
+On the public STAC API the key unlocks the private catalog. It cannot write.
+
+```elixir
+{:ok, anonymous} = Req.get(req, url: "/collections/#{demo_collection}")
+{:ok, with_ro_key} = Req.get(stac_client.(ro_key), url: "/collections/#{demo_collection}")
+
+{:ok, search} =
+  Req.get(stac_client.(ro_key), url: "/search", params: [collections: demo_collection])
+
+{:ok, write_attempt} =
+  Req.patch(manage_client.(ro_key),
+    url: "/collections/#{demo_collection}",
+    json: %{"title" => "Renamed with a read-only key"}
+  )
+
+%{
+  "anonymous GET collection" => anonymous.status,
+  "read-only key GET collection" => with_ro_key.status,
+  "read-only key search, items found" => search.body["numberMatched"],
+  "read-only key PATCH collection" => {write_attempt.status, write_attempt.body["message"]}
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "anonymous GET collection" => 404,
+  "read-only key GET collection" => 200,
+  "read-only key PATCH collection" => {401,
+   "Invalid API key. Write operations require read-write (RW) key"},
+  "read-only key search, items found" => 1
+}
+```
+
+### Use the read-write key
+
+An issued read-write key works for catalogs, collections, items and bulk import, but it can
+never manage keys, so it cannot mint more keys for itself.
+
+```elixir
+rw = manage_client.(rw_key)
+
+{:ok, created} =
+  Req.post(rw,
+    url: "/items",
+    json: %{
+      "id" => "keys-demo-upload-#{suffix}",
+      "collection_id" => demo_collection,
+      "geometry" => %{"type" => "Point", "coordinates" => [24.75, 59.44]},
+      "bbox" => [24.75, 59.44, 24.75, 59.44],
+      "properties" => %{"datetime" => "2024-06-01T09:00:00Z"}
+    }
+  )
+
+{:ok, patched} =
+  Req.patch(rw,
+    url: "/collections/#{demo_collection}",
+    json: %{"title" => "Renamed with an issued read-write key"}
+  )
+
+{:ok, deleted} = Req.delete(rw, url: "/items/keys-demo-upload-#{suffix}")
+{:ok, list_keys} = Req.get(rw, url: "/api-keys")
+{:ok, mint_key} = Req.post(rw, url: "/api-keys", json: %{"name" => "sneaky #{suffix}"})
+
+%{
+  "POST item" => created.status,
+  "PATCH collection" => {patched.status, patched.body["data"]["title"]},
+  "DELETE item" => deleted.status,
+  "GET /api-keys" => {list_keys.status, list_keys.body["message"]},
+  "POST /api-keys" => mint_key.status
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "DELETE item" => 200,
+  "GET /api-keys" => {401,
+   "Invalid API key. Key management requires the static read-write key"},
+  "PATCH collection" => {200, "Renamed with an issued read-write key"},
+  "POST /api-keys" => 401,
+  "POST item" => 201
+}
+```
+
+```elixir
+# Both keys have been used now
+{:ok, response} = Req.get(manage_req, url: "/api-keys")
+
+response.body["data"]
+|> Enum.filter(&(&1["id"] in [ro_key_id, rw_key_id]))
+|> Enum.map(&Map.take(&1, ["name", "role", "last_used_at"]))
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{
+    "last_used_at" => "2026-11-16T15:45:03.114984Z",
+    "name" => "Upload script 6594",
+    "role" => "read_write"
+  },
+  %{
+    "last_used_at" => "2026-11-16T15:45:03.076538Z",
+    "name" => "Anna - field data 6594",
+    "role" => "read_only"
+  }
+]
+```
+
+### Edit a key (PATCH)
+
+`PATCH` changes `name`, `expires_at`, `contact` and `note`. Fields that are not sent stay
+as they are, and `null` clears a field (`"expires_at": null` removes the expiry). The secret
+does not change.
+
+```elixir
+{:ok, response} =
+  Req.patch(manage_req,
+    url: "/api-keys/#{rw_key_id}",
+    json: %{
+      "name" => "Upload script, thesis #{suffix}",
+      "expires_at" => end_of_semester |> DateTime.add(30 * 86_400, :second) |> DateTime.to_iso8601(),
+      "contact" => nil
+    }
+  )
+
+IO.puts("Status: #{response.status}")
+response.body["data"] |> Map.take(["name", "role", "expires_at", "contact", "note", "updated_at"])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "contact" => nil,
+  "expires_at" => "2027-03-16T15:45:03.000000Z",
+  "name" => "Upload script, thesis 6594",
+  "note" => "Nightly item upload, until the end of the semester",
+  "role" => "read_write",
+  "updated_at" => "2026-11-16T15:45:03.178591Z"
+}
+```
+
+What `PATCH` refuses, with `422` and a `details` map:
+
+```elixir
+patch_key = fn body ->
+  {:ok, response} = Req.patch(manage_req, url: "/api-keys/#{rw_key_id}", json: body)
+  {response.status, response.body["details"]}
+end
+
+%{
+  "role (fixed at creation)" => patch_key.(%{"role" => "read_only"}),
+  "expires_at in the past" => patch_key.(%{"expires_at" => "2020-01-01T00:00:00Z"}),
+  "empty name" => patch_key.(%{"name" => ""}),
+  "name of another key" => patch_key.(%{"name" => "Anna - field data #{suffix}"})
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "empty name" => {422, %{"name" => ["can't be blank"]}},
+  "expires_at in the past" => {422, %{"expires_at" => ["must be in the future"]}},
+  "name of another key" => {422, %{"name" => ["has already been taken"]}},
+  "role (fixed at creation)" => {422,
+   %{
+     "role" => ["cannot be changed; issue a new key with the role you need and delete this one"]
+   }}
+}
+```
+
+```elixir
+# An empty PATCH is a no-op: nothing changes, not even updated_at
+{:ok, before} = Req.get(manage_req, url: "/api-keys/#{rw_key_id}")
+{:ok, response} = Req.patch(manage_req, url: "/api-keys/#{rw_key_id}", json: %{})
+
+IO.puts("Status: #{response.status}")
+IO.puts("updated_at unchanged: #{before.body["data"]["updated_at"] == response.body["data"]["updated_at"]}")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+updated_at unchanged: true
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+### Rotate a key
+
+Rotation issues a new secret for the same key (same id, name, role and `expires_at`). The
+old secret stops working immediately. Use it when a key may have leaked, or when someone
+lost theirs.
+
+```elixir
+{:ok, response} = Req.post(manage_req, url: "/api-keys/#{rw_key_id}/rotate")
+
+IO.puts("Status: #{response.status}")
+IO.puts(response.body["message"])
+
+old_rw_key = rw_key
+rw_key = response.body["data"]["key"]
+
+{:ok, old_secret} = Req.get(manage_client.(old_rw_key), url: "/collections")
+{:ok, new_secret} = Req.get(manage_client.(rw_key), url: "/collections")
+
+%{
+  "new key_prefix" => response.body["data"]["key_prefix"],
+  "expires_at (never moved by rotate)" => response.body["data"]["expires_at"],
+  "old secret" => old_secret.status,
+  "new secret" => new_secret.status
+}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Status: 200
+API key rotated successfully. Store the new key now; it cannot be shown again, and the old one no longer works.
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "expires_at (never moved by rotate)" => "2027-03-16T15:45:03.000000Z",
+  "new key_prefix" => "stac_rw_qN1o",
+  "new secret" => 200,
+  "old secret" => 401
+}
+```
+
+### Expiry
+
+An expired key is invalid everywhere straight away. Rotating does not bring it back, since
+`expires_at` is the admin's final date. To revive a key, `PATCH` a future `expires_at`.
+
+```elixir
+{:ok, response} =
+  Req.post(manage_req,
+    url: "/api-keys",
+    json: %{
+      "name" => "Short-lived #{suffix}",
+      "role" => "read_write",
+      "expires_at" => DateTime.utc_now() |> DateTime.add(3, :second) |> DateTime.to_iso8601()
+    }
+  )
+
+short_key = response.body["data"]["key"]
+short_key_id = response.body["data"]["id"]
+
+check = fn key ->
+  {:ok, public} = Req.get(stac_client.(key), url: "/collections/#{demo_collection}")
+  {:ok, manage} = Req.get(manage_client.(key), url: "/collections")
+  %{"private collection" => public.status, "management API" => manage.status}
+end
+
+valid = check.(short_key)
+Process.sleep(4_000)
+expired = check.(short_key)
+
+{:ok, _} =
+  Req.patch(manage_req,
+    url: "/api-keys/#{short_key_id}",
+    json: %{"expires_at" => DateTime.utc_now() |> DateTime.add(86_400, :second) |> DateTime.to_iso8601()}
+  )
+
+%{"valid" => valid, "expired" => expired, "after PATCH expires_at" => check.(short_key)}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  "after PATCH expires_at" => %{"management API" => 200, "private collection" => 200},
+  "expired" => %{"management API" => 401, "private collection" => 404},
+  "valid" => %{"management API" => 200, "private collection" => 200}
+}
+```
+
+### Web browser
+
+Personal keys also work in the web browser: open `/stac/web/browse`, click the lock icon
+and paste the key. A read-only key shows private catalogs; a read-write key also shows the
+Management API in the docs (`/stac/api/v1/docs`). An unlocked browser session stays unlocked
+until it ends or the lock is used, even if its key expires or is deleted meanwhile.
+
+```elixir
+"#{base_url}/stac/web/browse"
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"http://localhost:4000/stac/web/browse"
+```
+
+### Delete keys
+
+Deleting a key is permanent and takes effect immediately.
+
+```elixir
+deleted =
+  for id <- [ro_key_id, rw_key_id, short_key_id] do
+    {:ok, response} = Req.delete(manage_req, url: "/api-keys/#{id}")
+    {id, response.status}
+  end
+
+{:ok, after_delete} = Req.get(stac_client.(ro_key), url: "/collections/#{demo_collection}")
+IO.puts("Deleted read-only key on the private collection: #{after_delete.status}")
+
+# Clean up the demo catalog (cascades to its collection and items)
+{:ok, response} = Req.delete(manage_req, url: "/catalogs/#{demo_catalog}")
+IO.puts("Demo catalog deleted: #{response.status} #{inspect(response.body["cascade_deleted"])}")
+
+deleted
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Deleted read-only key on the private collection: 404
+Demo catalog deleted: 200 %{"catalogs" => 0, "collections" => 1, "items" => 1}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[{9, 200}, {10, 200}, {11, 200}]
 ```
 
 ## Complete Workflow Example
@@ -851,6 +1229,7 @@ Here's a complete example showing the full lifecycle:
 ```elixir
 # 1. Create a demo hierarchy
 IO.puts("1. Creating demo catalog...")
+
 demo_catalog = %{
   "id" => "demo-catalog-#{:rand.uniform(10000)}",
   "title" => "Demo Catalog",
@@ -863,6 +1242,7 @@ IO.puts("   Created catalog: #{catalog_id}")
 
 # 2. Create a collection under it
 IO.puts("\n2. Creating demo collection...")
+
 demo_collection = %{
   "id" => "demo-collection-#{:rand.uniform(10000)}",
   "title" => "Demo Collection",
@@ -890,58 +1270,117 @@ IO.puts("   Collection exists: #{collection_verify.body["id"]}")
 
 # 4. Update the catalog
 IO.puts("\n4. Updating catalog title...")
-{:ok, update_response} = Req.patch(manage_req,
-  url: "/catalogs/#{catalog_id}",
-  json: %{"id" => catalog_id, "title" => "Updated Demo Catalog"}
-)
+
+{:ok, update_response} =
+  Req.patch(manage_req,
+    url: "/catalogs/#{catalog_id}",
+    json: %{"id" => catalog_id, "title" => "Updated Demo Catalog"}
+  )
+
 IO.puts("   New title: #{update_response.body["data"]["title"]}")
 
 # 5. Clean up - cascade delete everything
 IO.puts("\n5. Cleaning up (cascade delete)...")
 {:ok, delete_response} = Req.delete(manage_req, url: "/catalogs/#{catalog_id}")
 IO.puts("   Deleted successfully!")
-IO.puts("   Cascade summary:")
-IO.inspect(delete_response.body["cascade_deleted"], pretty: true)
+IO.puts("   Cascade summary: #{inspect(delete_response.body["cascade_deleted"])}")
 
 # 6. Verify deletion
 IO.puts("\n6. Verifying deletion...")
+
 case Req.get(manage_req, url: "/catalogs/#{catalog_id}") do
   {:ok, %{status: 404}} -> IO.puts("   ✓ Catalog successfully deleted")
   {:ok, _} -> IO.puts("   ✗ Catalog still exists!")
 end
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+1. Creating demo catalog...
+   Created catalog: demo-catalog-8314
+
+2. Creating demo collection...
+   Created collection: demo-collection-8500
+
+3. Verifying resources...
+   Catalog exists: demo-catalog-8314
+   Collection exists: demo-collection-8500
+
+4. Updating catalog title...
+   New title: Updated Demo Catalog
+
+5. Cleaning up (cascade delete)...
+   Deleted successfully!
+   Cascade summary: %{"catalogs" => 0, "collections" => 1, "items" => 0}
+
+6. Verifying deletion...
+   ✓ Catalog successfully deleted
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
 ## Error Handling Examples
 
 ```elixir
-# Try to create a catalog without authentication (should return 401)
-# The manage API always requires a valid RW key
+# Create a catalog without authentication -> 401
+# The Management API always requires a valid RW key
 no_auth_req = Req.new(base_url: base_url <> manage_version)
 
 case Req.post(no_auth_req, url: "/catalogs", json: %{"id" => "test"}) do
   {:ok, %{status: 401} = response} ->
     IO.puts("Expected 401 Unauthorized:")
-    IO.inspect(response.body)
+    response.body
+
   other ->
     IO.puts("Unexpected response:")
-    IO.inspect(other)
+    other
 end
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+Expected 401 Unauthorized:
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{"error" => "Unauthorized", "message" => "Missing X-API-Key header"}
+```
+
 ```elixir
-# Try to get a non-existent catalog
+# Get a non-existent catalog -> 404
 case Req.get(manage_req, url: "/catalogs/definitely-does-not-exist") do
   {:ok, %{status: 404} = response} ->
     IO.puts("Expected 404 Not Found:")
-    IO.inspect(response.body)
+    response.body
+
   other ->
     IO.puts("Unexpected response:")
-    IO.inspect(other)
+    other
 end
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+Expected 404 Not Found:
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{"error" => "Catalog not found"}
+```
+
 ```elixir
-# Try to create a catalog with missing required fields
+# Create a catalog with missing required fields -> 400
 invalid_catalog = %{
   "title" => "No ID Catalog",
   "description" => "This is missing the required 'id' field"
@@ -950,17 +1389,30 @@ invalid_catalog = %{
 case Req.post(manage_req, url: "/catalogs", json: invalid_catalog) do
   {:ok, %{status: 400} = response} ->
     IO.puts("Expected 400 Bad Request:")
-    IO.inspect(response.body)
+    response.body
+
   other ->
     IO.puts("Unexpected response:")
-    IO.inspect(other)
+    other
 end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Expected 400 Bad Request:
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{"error" => "PUT requires all fields. Missing required fields: id"}
 ```
 
 ## Helper Functions
 
-Reusable helper functions. Pass `manage_req` (authenticated, manage base URL) for catalog
-operations, and `req` (public STAC API base URL) for browsing collections/items.
+Reusable helpers. Pass `manage_req` (authenticated, manage base URL) for catalog and key
+operations, and `req` (public STAC API base URL) for browsing collections and items.
 
 ```elixir
 defmodule STACHelpers do
@@ -1015,12 +1467,117 @@ defmodule STACHelpers do
 end
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+{:module, STACHelpers,
+ <<70, 79, 82, 49, 0, 0, 17, 120, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 1, 107, 0, 0, 0,
+   38, 18, 69, 108, 105, 120, 105, 114, 46, 83, 84, 65, 67, 72, 101, 108, 112, 101, 114,
+   115, 8, 95, 95, 105, ...>>, {:delete_catalog, 2}}
+```
+
 ```elixir
-# Use the helper functions
+defmodule STACKeys do
+  @moduledoc """
+  Personal API key management. Every function needs a client with the static
+  STAC_API_KEY (manage_req); issued keys get 401 on these endpoints.
+  """
+
+  @doc "List keys (never includes secrets)."
+  def list(manage_req) do
+    case Req.get(manage_req, url: "/api-keys") do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["data"]}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc """
+  Issue a key. `opts`: `:role` ("read_only" default, or "read_write"),
+  `:expires_at` (DateTime), `:contact`, `:note`. Returns `{:ok, secret, key}`;
+  the secret is only available here.
+  """
+  def create(manage_req, name, opts \\ []) do
+    body =
+      %{
+        "name" => name,
+        "role" => opts[:role],
+        "expires_at" => opts[:expires_at] && DateTime.to_iso8601(opts[:expires_at]),
+        "contact" => opts[:contact],
+        "note" => opts[:note]
+      }
+      |> Map.reject(fn {_, v} -> is_nil(v) end)
+
+    case Req.post(manage_req, url: "/api-keys", json: body) do
+      {:ok, %{status: 201, body: %{"data" => data}}} -> {:ok, data["key"], Map.delete(data, "key")}
+      {:ok, %{status: 422, body: body}} -> {:error, body["details"]}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Change name, expires_at, contact or note. Only the given fields change; nil clears."
+  def update(manage_req, id, changes) do
+    case Req.patch(manage_req, url: "/api-keys/#{id}", json: changes) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["data"]}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, %{status: 422, body: body}} -> {:error, body["details"]}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "New secret for the same key; the old one stops working. Returns `{:ok, secret, key}`."
+  def rotate(manage_req, id) do
+    case Req.post(manage_req, url: "/api-keys/#{id}/rotate") do
+      {:ok, %{status: 200, body: %{"data" => data}}} -> {:ok, data["key"], Map.delete(data, "key")}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Delete a key; it stops working immediately."
+  def delete(manage_req, id) do
+    case Req.delete(manage_req, url: "/api-keys/#{id}") do
+      {:ok, %{status: 200}} -> :ok
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      error -> error
+    end
+  end
+
+  @doc "Keys that were never used, or not in the last `days` days."
+  def unused(manage_req, days \\ 90) do
+    cutoff = DateTime.add(DateTime.utc_now(), -days * 86_400, :second)
+
+    with {:ok, keys} <- list(manage_req) do
+      {:ok,
+       Enum.filter(keys, fn key ->
+         case key["last_used_at"] && DateTime.from_iso8601(key["last_used_at"]) do
+           {:ok, used, _} -> DateTime.compare(used, cutoff) == :lt
+           _ -> true
+         end
+       end)}
+    end
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, STACKeys,
+ <<70, 79, 82, 49, 0, 0, 28, 36, 66, 69, 65, 77, 65, 116, 85, 56, 0, 0, 2, 13, 0, 0, 0,
+   63, 15, 69, 108, 105, 120, 105, 114, 46, 83, 84, 65, 67, 75, 101, 121, 115, 8, 95, 95,
+   105, 110, 102, 111, ...>>, {:unused, 2}}
+```
+
+```elixir
+# Use the catalog helpers
 {:ok, catalogs} = STACHelpers.list_catalogs(manage_req)
 IO.puts("Found #{length(catalogs)} catalogs")
 
-# Create a catalog using helper
 new_catalog = %{
   "id" => "helper-test-#{:rand.uniform(10000)}",
   "title" => "Created via Helper",
@@ -1028,7 +1585,66 @@ new_catalog = %{
 }
 
 case STACHelpers.create_catalog(manage_req, new_catalog) do
-  {:ok, catalog} -> IO.puts("Created: #{catalog["id"]}")
-  {:error, reason} -> IO.puts("Error: #{inspect(reason)}")
+  {:ok, catalog} ->
+    IO.puts("Created: #{catalog["id"]}")
+    {:ok, cascade} = STACHelpers.delete_catalog(manage_req, catalog["id"])
+    IO.puts("Deleted again: #{inspect(cascade)}")
+
+  {:error, reason} ->
+    IO.puts("Error: #{inspect(reason)}")
 end
 ```
+
+<!-- livebook:{"output":true} -->
+
+```
+Found 13 catalogs
+Created: helper-test-574
+Deleted again: %{"catalogs" => 0, "collections" => 0, "items" => 0}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+```elixir
+# Use the key helpers: issue, rotate, find unused keys, delete
+{:ok, secret, key} =
+  STACKeys.create(manage_req, "Helper demo #{suffix}",
+    role: "read_only",
+    expires_at: DateTime.add(DateTime.utc_now(), 30 * 86_400, :second),
+    note: "Created by STACKeys.create/3"
+  )
+
+IO.puts("Issued #{key["name"]} (#{mask.(secret)}), expires #{key["expires_at"]}")
+
+{:ok, new_secret, _key} = STACKeys.rotate(manage_req, key["id"])
+IO.puts("Rotated, new secret #{mask.(new_secret)}")
+
+{:error, details} = STACKeys.update(manage_req, key["id"], %{"role" => "read_write"})
+IO.puts("Role change refused: #{inspect(details)}")
+
+{:ok, unused} = STACKeys.unused(manage_req)
+IO.puts("Keys unused for 90 days: #{Enum.map_join(unused, ", ", & &1["name"])}")
+
+STACKeys.delete(manage_req, key["id"])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Issued Helper demo 6594 (stac_ro_5peL…), expires 2026-12-16T15:45:07.647057Z
+Rotated, new secret stac_ro_eCxs…
+Role change refused: %{"role" => ["cannot be changed; issue a new key with the role you need and delete this one"]}
+Keys unused for 90 days: Helper demo 6594
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+<!-- livebook:{"offset":44272,"stamp":{"token":"XCP.GomrdXoqN4DDSLmVB-q1PiWHyJfDTYL4f3lZB8sfawkLXy30ucimyMZFiSmUVUpWZn5WYPVtq29-6kuaSC8k6dMo9ID9n2usJKtast8Zs3V6ArjHeSvcobD1PxgCzHcMrJCHO48R6HJQfLhENPM","version":2}} -->
