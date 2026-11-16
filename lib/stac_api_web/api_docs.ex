@@ -127,7 +127,9 @@ defmodule StacApiWeb.ApiDocs do
         base: "/stac/manage/v1",
         description:
           "Administrative CRUD for catalogs, collections and items. Every request needs a " <>
-            "read-write X-API-Key; missing or read-only keys get 401. Not part of the STAC spec.",
+            "read-write X-API-Key (the static one or an issued read_write key); missing or " <>
+            "read-only keys get 401. The api-keys endpoints accept only the static STAC_API_KEY. " <>
+            "Not part of the STAC spec.",
         endpoints: management_endpoints()
       },
       %{
@@ -500,7 +502,7 @@ defmodule StacApiWeb.ApiDocs do
   defp api_keys_endpoints do
     base = "/stac/manage/v1/api-keys"
     id_param = path_param("id", "Numeric API key id", "1")
-    unauthorized = err(401, "Missing or non-RW key")
+    unauthorized = err(401, "Missing key, or not the static read-write key (STAC_API_KEY)")
 
     [
       %{
@@ -509,7 +511,8 @@ defmodule StacApiWeb.ApiDocs do
         path: base,
         summary: "List API keys",
         description:
-          "All issued read-only keys, newest first. Only the non-secret key_prefix is shown; " <>
+          "All issued keys, newest first, with role, expires_at, contact and note. Only the " <>
+            "non-secret key_prefix is shown; " <>
             "last_used_at is null for keys that were never used and accurate to about an hour otherwise.",
         auth: :rw,
         params: [],
@@ -533,39 +536,52 @@ defmodule StacApiWeb.ApiDocs do
         path: base,
         summary: "Issue API key",
         description:
-          "Issues a personal read-only key. The raw secret is returned once, under data.key, " <>
-            "and cannot be retrieved again (only rotated). Names are trimmed, 1-100 characters and unique.",
+          "Issues a personal key with a role: read_only (default, secret starts with stac_ro_) or " <>
+            "read_write (stac_rw_). The role is fixed at creation. expires_at (optional, in the " <>
+            "future) ends the key automatically; contact and note are optional. The raw secret is " <>
+            "returned once, under data.key, and cannot be retrieved again (only rotated). " <>
+            "Names are trimmed, 1-100 characters and unique.",
         auth: :rw,
         params: [],
         request_body: %{
-          description: "Name of the key",
+          description: "Name, role and optional expiry, contact and note",
           schema: "ApiKeyBody",
-          example: %{"name" => "Alice (soil project)"}
+          example: %{
+            "name" => "Alice (soil project)",
+            "role" => "read_write",
+            "expires_at" => "2027-02-28T23:59:59Z",
+            "contact" => "alice@example.org",
+            "note" => "Thesis data uploads, until end of semester"
+          }
         },
         responses: [
           created("Issued key including its one-time secret", "ApiKeyResult"),
           unauthorized,
-          err(422, "Validation failed (blank, too long or duplicate name)")
+          err(422, "Validation failed (name, unknown role, or expires_at not in the future)")
         ]
       },
       %{
         id: "manage-api-keys-update",
         method: "PATCH",
         path: "#{base}/{id}",
-        summary: "Rename API key",
-        description: "Changes the name. The secret is untouched; use rotate for that.",
+        summary: "Edit API key",
+        description:
+          "Changes name, expires_at, contact and note; fields that are not sent stay as they are " <>
+            "(expires_at: null removes the expiry). The role cannot be changed: a body with role " <>
+            "gets 422, issue a new key and delete the old one instead. The secret is untouched; " <>
+            "use rotate for that.",
         auth: :rw,
         params: [id_param],
         request_body: %{
-          description: "New name",
-          schema: "ApiKeyBody",
-          example: %{"name" => "Alice (thesis)"}
+          description: "Fields to change",
+          schema: "ApiKeyUpdateBody",
+          example: %{"name" => "Alice (thesis)", "expires_at" => "2027-06-30T23:59:59Z"}
         },
         responses: [
           ok(@json, "Updated key", "ApiKeyResult"),
           unauthorized,
           err(404, "Not found"),
-          err(422, "Validation failed")
+          err(422, "Validation failed (including a role in the body)")
         ]
       },
       %{
@@ -574,8 +590,10 @@ defmodule StacApiWeb.ApiDocs do
         path: "#{base}/{id}/rotate",
         summary: "Rotate API key",
         description:
-          "Issues a new secret for the same key (same id and name). The old secret stops " <>
-            "working immediately. The new secret is returned once, under data.key.",
+          "Issues a new secret for the same key (same id, name and role). The old secret stops " <>
+            "working immediately. The new secret is returned once, under data.key. Rotation never " <>
+            "moves expires_at, which is returned in the response: an expired key can be rotated " <>
+            "but stays expired. To revive it, PATCH expires_at to a future date.",
         auth: :rw,
         params: [id_param],
         request_body: nil,
@@ -886,7 +904,8 @@ defmodule StacApiWeb.ApiDocs do
               if(include_management,
                 do:
                   "Read-only keys unlock private catalogs on the STAC API; read-write keys additionally " <>
-                    "allow the Management API.",
+                    "allow catalogs, collections and items in the Management API. Only the static " <>
+                    "STAC_API_KEY manages API keys.",
                 else: "An API key unlocks private catalogs on the STAC API."
               )
           }
@@ -974,6 +993,7 @@ defmodule StacApiWeb.ApiDocs do
     :BulkImportResult,
     :ApiKey,
     :ApiKeyBody,
+    :ApiKeyUpdateBody,
     :ApiKeyList,
     :ApiKeyResult
   ]
@@ -1179,7 +1199,14 @@ defmodule StacApiWeb.ApiDocs do
         properties: %{
           id: %{type: "integer"},
           name: %{type: "string"},
-          key_prefix: %{type: "string", description: "First 12 characters of the secret"},
+          role: %{type: "string", enum: ["read_only", "read_write"]},
+          expires_at: %{type: "string", format: "date-time", nullable: true},
+          contact: %{type: "string", nullable: true},
+          note: %{type: "string", nullable: true},
+          key_prefix: %{
+            type: "string",
+            description: "First 12 characters of the secret (stac_ro_... or stac_rw_...)"
+          },
           last_used_at: %{type: "string", format: "date-time", nullable: true},
           inserted_at: %{type: "string", format: "date-time"},
           updated_at: %{type: "string", format: "date-time"},
@@ -1192,7 +1219,23 @@ defmodule StacApiWeb.ApiDocs do
       ApiKeyBody: %{
         type: "object",
         required: ["name"],
-        properties: %{name: %{type: "string", minLength: 1, maxLength: 100}}
+        properties: %{
+          name: %{type: "string", minLength: 1, maxLength: 100},
+          role: %{type: "string", enum: ["read_only", "read_write"], default: "read_only"},
+          expires_at: %{type: "string", format: "date-time", nullable: true},
+          contact: %{type: "string", maxLength: 255, nullable: true},
+          note: %{type: "string", nullable: true}
+        }
+      },
+      ApiKeyUpdateBody: %{
+        type: "object",
+        description: "All fields optional. role is not accepted (422).",
+        properties: %{
+          name: %{type: "string", minLength: 1, maxLength: 100},
+          expires_at: %{type: "string", format: "date-time", nullable: true},
+          contact: %{type: "string", maxLength: 255, nullable: true},
+          note: %{type: "string", nullable: true}
+        }
       },
       ApiKeyList: %{
         type: "object",

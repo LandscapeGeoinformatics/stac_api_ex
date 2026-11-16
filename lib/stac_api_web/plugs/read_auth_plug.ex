@@ -10,12 +10,15 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
     2. a static read-only key (`STAC_API_KEY_RO`) -> `:read_only`
     3. a personalized key issued through the API key management endpoints
        (stored hashed in the `api_keys` table, see `StacApi.Data.ApiKey`)
-       -> `:read_only`; each use refreshes the key's `last_used_at`
+       -> `:read_write` or `:read_only` according to the key's role; each use
+       refreshes the key's `last_used_at`. An expired key is not accepted.
 
   Assigns on the conn:
 
     * `:auth_level` - `:read_write`, `:read_only`, or `nil`
     * `:authenticated` - `true` or `false`
+    * `:api_key` - the issued `StacApi.Data.ApiKey`, or `nil` for a static
+      key or no key
 
   A missing or invalid key never halts the request; it just leaves the conn
   unauthenticated so public content is still served.
@@ -42,20 +45,17 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   """
   def call(conn, _opts) do
     case authenticate(conn) do
-      {:ok, :read_write} ->
+      {:ok, level, api_key} ->
         conn
-        |> assign(:auth_level, :read_write)
+        |> assign(:auth_level, level)
         |> assign(:authenticated, true)
-
-      {:ok, :read_only} ->
-        conn
-        |> assign(:auth_level, :read_only)
-        |> assign(:authenticated, true)
+        |> assign(:api_key, api_key)
 
       {:error, _reason} ->
         conn
         |> assign(:auth_level, nil)
         |> assign(:authenticated, false)
+        |> assign(:api_key, nil)
     end
   end
 
@@ -69,13 +69,13 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
 
       cond do
         Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
-          {:ok, :read_write}
+          {:ok, :read_write, nil}
 
         Enum.any?(ro_keys, &secure_compare(api_key, &1)) ->
-          {:ok, :read_only}
+          {:ok, :read_only, nil}
 
-        issued_key_valid?(api_key) ->
-          {:ok, :read_only}
+        issued = issued_key(api_key) ->
+          {:ok, ApiKey.auth_level(issued), issued}
 
         true ->
           {:error, "Invalid API key"}
@@ -83,17 +83,12 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
     end
   end
 
-  # Returns true if `api_key` belongs to a personalized key issued via
-  # /stac/manage/v1/api-keys, and records the use (throttled to once an hour).
-  # Issued keys only ever grant read access.
-  defp issued_key_valid?(api_key) do
-    case ApiKey.get_by_secret(api_key) do
-      nil ->
-        false
-
-      issued ->
-        ApiKey.touch_last_used(issued)
-        true
+  # The unexpired issued key (see /stac/manage/v1/api-keys) for `api_key`, or
+  # nil. Records the use (throttled to once an hour).
+  defp issued_key(api_key) do
+    with %ApiKey{} = issued <- ApiKey.get_by_secret(api_key) do
+      ApiKey.touch_last_used(issued)
+      issued
     end
   end
 

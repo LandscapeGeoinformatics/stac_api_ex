@@ -187,7 +187,7 @@ These endpoints are publicly accessible and STAC-conformant. They respect privat
 
 ### 2. Management API — Requires Authentication (`/stac/manage/v1`)
 
-All endpoints under this namespace require the `X-API-Key` header with a **read-write key**. These endpoints are not STAC-conformant and are intended for internal data management only.
+All endpoints under this namespace require the `X-API-Key` header with a **read-write key**: the static `STAC_API_KEY` or an issued `read_write` key. The API key endpoints are the exception and accept only the static `STAC_API_KEY`. These endpoints are not STAC-conformant and are intended for internal data management only.
 
 #### Catalogs (Full CRUD)
 
@@ -217,18 +217,18 @@ All endpoints under this namespace require the `X-API-Key` header with a **read-
 - `PATCH /stac/manage/v1/items/:id` - Partial update of an item
 - `DELETE /stac/manage/v1/items/:id` - Delete an item
 
-#### API Keys (personal read-only keys)
+#### API Keys (personal keys)
 
 - `GET /stac/manage/v1/api-keys` - List keys (never includes secrets)
 - `GET /stac/manage/v1/api-keys/:id` - Get a specific key
-- `POST /stac/manage/v1/api-keys` - Create a key from a `name`; the secret is returned once, under `data.key`
-- `PATCH /stac/manage/v1/api-keys/:id` - Rename a key (the secret is unchanged)
-- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret; the old one stops working immediately
+- `POST /stac/manage/v1/api-keys` - Create a key from a `name` and optional `role` (`read_only` default, or `read_write`), `expires_at`, `contact`, `note`; the secret is returned once, under `data.key`
+- `PATCH /stac/manage/v1/api-keys/:id` - Change `name`, `expires_at`, `contact` or `note` (the secret is unchanged; a `role` in the body gives 422)
+- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret with the same role; the old one stops working immediately. `expires_at` is returned and never moved by a rotation, so an expired key stays expired until `PATCH` sets a future `expires_at`
 - `DELETE /stac/manage/v1/api-keys/:id` - Permanently delete a key
 
-Fields returned for a key: `id`, `name`, `key_prefix`, `last_used_at`, `inserted_at`,
-`updated_at`, and `key` (create and rotate only). See
-[Personalized read-only keys](#personalized-read-only-keys) for how they authenticate.
+Fields returned for a key: `id`, `name`, `role`, `expires_at`, `contact`, `note`,
+`key_prefix`, `last_used_at`, `inserted_at`, `updated_at`, and `key` (create and rotate
+only). See [Personalized keys](#personalized-keys) for how they authenticate.
 
 Errors: `404` for an unknown or non-numeric id; `422` with `{"error": "Validation failed",
 "details": {"name": [...]}}` for a blank, over-long (more than 100 characters) or duplicate
@@ -420,28 +420,41 @@ API keys are configured in the application config and can be set via environment
 - `STAC_API_KEY` - Sets the read-write API key
 - `STAC_API_KEY_RO` - Sets the read-only API key
 
-#### Personalized read-only keys
+#### Personalized keys
 
-On top of the two static keys, read-write users can issue any number of named, read-only
-keys through the API key endpoints (see [API Keys](#api-keys-personal-read-only-keys)).
-They are meant for giving individual people or scripts their own key that can be
-revoked or rotated on its own.
+On top of the two static keys, the static read-write key (`STAC_API_KEY`) can issue any
+number of named keys through the API key endpoints (see
+[API Keys](#api-keys-personal-keys)). They are meant for giving individual people or
+scripts their own key that can be revoked, rotated or set to expire on its own.
 
-- **Access:** the same as the static read-only key. They unlock private catalogs through
-  `ReadAuthPlug` and through the web browser unlock form. They are rejected by `AuthPlug`,
-  so they can never write or manage keys.
+- **Role:** `read_only` or `read_write`, fixed when the key is created (`PATCH` cannot
+  change it; issue a new key and delete the old one). The secret starts with `stac_ro_` or
+  `stac_rw_` to match, so `key_prefix` always tells the role.
+- **Access:** a `read_only` key is the same as the static read-only key: it unlocks
+  private catalogs through `ReadAuthPlug` and the web browser unlock form. A `read_write`
+  key additionally passes `AuthPlug` for catalogs, collections, items and bulk import, and
+  unlocks the browser at the `:read_write` level (the Management API docs show).
+- **Key management stays with the static key:** the `/api-keys` endpoints sit in their own
+  router scope behind `AuthPlug` with `admin_only: true`, so only the static read-write
+  key (`STAC_API_KEY`) can issue, list, change, rotate or delete keys. An issued key,
+  even a read-write one, gets 401 there. The static keys also remain as break-glass access.
+- **Expiry:** an optional `expires_at`. An expired key is invalid everywhere (public API,
+  management API, browser unlock) and takes effect immediately. `ApiKey.get_by_secret/1`
+  is the one lookup that applies this, used by both plugs and the browser unlock.
+- **Contact and note:** optional free text to record whose key it is and what it is for.
 - **Storage:** the `api_keys` table keeps only a SHA-256 hash of each key (`key_hash`),
-  a short non-secret `key_prefix` for display, the `name`, and `last_used_at`. The raw
-  key (`stac_ro_` followed by random characters) is shown once on creation or rotation
+  a short non-secret `key_prefix` for display, the `name`, `role`, `expires_at`,
+  `contact`, `note` and `last_used_at`. The raw key is shown once on creation or rotation
   and cannot be recovered; rotate to replace it.
 - **Check order:** `ReadAuthPlug` tries the static read-write keys, then the static
   read-only keys, then looks the hash up in `api_keys`. Only a request with a key that
-  matches none of the static keys costs a database query.
-- **`last_used_at`:** refreshed on use by one conditional `UPDATE`, at most once an hour
-  per key, so it is approximate.
+  matches none of the static keys costs a database query. Both plugs assign the issued key
+  as `conn.assigns.api_key` (`nil` for the static keys).
+- **`last_used_at`:** refreshed by both plugs and by the browser unlock, with one
+  conditional `UPDATE`, at most once an hour per key, so it is approximate.
 - **Browser sessions:** the key is checked when the browse session is unlocked. A session
-  that is already unlocked stays unlocked if its key is deleted later, until the session
-  ends or the lock is used.
+  that is already unlocked stays unlocked if its key is deleted or expires later, until
+  the session ends or the lock is used.
 
 #### Request Headers
 

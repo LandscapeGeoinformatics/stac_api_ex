@@ -1,12 +1,19 @@
 defmodule StacApiWeb.ApiKeysCrudController do
   @moduledoc """
-  Management endpoints for personalized, read-only API keys, mounted under
+  Management endpoints for personalized API keys, mounted under
   `/stac/manage/v1/api-keys`.
 
-  Like the rest of the management API, every action requires the master
-  read-write key (`StacApiWeb.Plugs.AuthPlug`). Keys issued here only ever
-  grant read access to the public STAC API (`StacApiWeb.Plugs.ReadAuthPlug`)
-  and are independent of the static `STAC_API_KEY` / `STAC_API_KEY_RO`.
+  Every action requires the static read-write key `STAC_API_KEY`
+  (`StacApiWeb.Plugs.AuthPlug` with `admin_only: true`). Issued keys, even
+  read-write ones, get 401 here, so they can never mint or change keys.
+
+  A key has a `role`, `read_only` (default) or `read_write`, fixed when the key
+  is created: PATCH rejects a `role` with 422, and changing a role means
+  issuing a new key and deleting the old one. Read-only keys read the public
+  STAC API; read-write keys can also write catalogs, collections and items.
+  Secrets start with `stac_ro_` or `stac_rw_` to match the role. Optional
+  `expires_at` (a future ISO 8601 time; `null` = never), `contact` and `note`
+  say how long, for whom and why a key exists.
 
   Only a SHA-256 hash of each secret is stored. The raw secret is returned
   once, under `data.key`, by `create/2` and `rotate/2`; every other response
@@ -15,7 +22,7 @@ defmodule StacApiWeb.ApiKeysCrudController do
   Names are trimmed, 1-100 characters and unique. Responses use `404` for
   unknown ids (including non-numeric ones) and `422` with a `details` map
   (`%{field => [message]}`) for validation errors, e.g. a blank or duplicate
-  name. Each key reports `last_used_at` (`null` if never used, otherwise
+  name or an `expires_at` in the past. Each key reports `last_used_at` (`null` if never used, otherwise
   accurate to about an hour).
   """
   use StacApiWeb, :controller
@@ -44,13 +51,22 @@ defmodule StacApiWeb.ApiKeysCrudController do
 
   @doc """
   POST /stac/manage/v1/api-keys
-  Creates a new read-only key for `params["name"]`. The raw secret is
-  returned once, under `data.key`, and cannot be retrieved again — only
-  rotated.
+  Creates a new key for `params["name"]` with `role` (default `read_only`) and
+  optional `expires_at`, `contact` and `note`. The raw secret is returned
+  once, under `data.key`, and cannot be retrieved again — only rotated.
   """
   def create(conn, params) do
-    {raw_secret, secret_attrs} = ApiKey.generate_secret()
-    attrs = Map.put(secret_attrs, :name, params["name"])
+    role = params["role"] || "read_only"
+    {raw_secret, secret_attrs} = ApiKey.generate_secret(role)
+
+    attrs =
+      Map.merge(secret_attrs, %{
+        name: params["name"],
+        role: role,
+        expires_at: params["expires_at"],
+        contact: params["contact"],
+        note: params["note"]
+      })
 
     case %ApiKey{} |> ApiKey.changeset(attrs) |> Repo.insert() do
       {:ok, api_key} ->
@@ -69,16 +85,22 @@ defmodule StacApiWeb.ApiKeysCrudController do
 
   @doc """
   PATCH /stac/manage/v1/api-keys/:id
-  Renames a key. `name` is the only editable field; the secret is
-  untouched (use `rotate` for that).
+  Edits `name`, `expires_at`, `contact` and `note`; fields that are not sent
+  stay unchanged. The secret is untouched (use `rotate` for that) and the role
+  cannot be changed: a request with `role` gets 422.
   """
   def update(conn, %{"id" => id} = params) do
     case fetch(id) do
       nil ->
         not_found(conn)
 
+      _api_key when is_map_key(params, "role") ->
+        role_change_error(conn)
+
       api_key ->
-        case api_key |> ApiKey.changeset(%{name: params["name"]}) |> Repo.update() do
+        attrs = Map.take(params, ["name", "expires_at", "contact", "note"])
+
+        case api_key |> ApiKey.update_changeset(attrs) |> Repo.update() do
           {:ok, updated} ->
             json(conn, %{
               success: true,
@@ -94,9 +116,13 @@ defmodule StacApiWeb.ApiKeysCrudController do
 
   @doc """
   POST /stac/manage/v1/api-keys/:id/rotate
-  Issues a new secret for an existing key: same id, same name, old secret
-  immediately stops working. The new raw secret is returned once, under
-  `data.key`.
+  Issues a new secret for an existing key: same id, same name and role (so the
+  prefix still matches), old secret immediately stops working. The new raw
+  secret is returned once, under `data.key`.
+
+  `expires_at` is the admin's final date and no rotation moves it: an expired
+  key can be rotated, but the new secret is expired as well. The response
+  returns `expires_at`; to revive the key, PATCH it to a future date.
   """
   def rotate(conn, %{"id" => id}) do
     case fetch(id) do
@@ -104,7 +130,7 @@ defmodule StacApiWeb.ApiKeysCrudController do
         not_found(conn)
 
       api_key ->
-        {raw_secret, secret_attrs} = ApiKey.generate_secret()
+        {raw_secret, secret_attrs} = ApiKey.generate_secret(api_key.role)
 
         case api_key |> ApiKey.changeset(secret_attrs) |> Repo.update() do
           {:ok, updated} ->
@@ -152,6 +178,17 @@ defmodule StacApiWeb.ApiKeysCrudController do
     conn |> put_status(:not_found) |> json(%{error: "API key not found"})
   end
 
+  defp role_change_error(conn) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{
+      error: "Validation failed",
+      details: %{
+        role: ["cannot be changed; issue a new key with the role you need and delete this one"]
+      }
+    })
+  end
+
   defp validation_error(conn, changeset) do
     conn
     |> put_status(:unprocessable_entity)
@@ -165,6 +202,10 @@ defmodule StacApiWeb.ApiKeysCrudController do
       id: api_key.id,
       name: api_key.name,
       key_prefix: api_key.key_prefix,
+      role: api_key.role,
+      expires_at: api_key.expires_at,
+      contact: api_key.contact,
+      note: api_key.note,
       last_used_at: api_key.last_used_at,
       inserted_at: api_key.inserted_at,
       updated_at: api_key.updated_at
