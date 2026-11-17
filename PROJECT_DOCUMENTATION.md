@@ -223,12 +223,27 @@ All endpoints under this namespace require the `X-API-Key` header with a **read-
 - `GET /stac/manage/v1/api-keys/:id` - Get a specific key
 - `POST /stac/manage/v1/api-keys` - Create a key from a `name` and optional `role` (`read_only` default, or `read_write`), `expires_at`, `contact`, `note`; the secret is returned once, under `data.key`
 - `PATCH /stac/manage/v1/api-keys/:id` - Change `name`, `expires_at`, `contact` or `note` (the secret is unchanged; a `role` in the body gives 422)
-- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret with the same role; the old one stops working immediately. `expires_at` is returned and never moved by a rotation, so an expired key stays expired until `PATCH` sets a future `expires_at`
+- `POST /stac/manage/v1/api-keys/:id/rotate` - Issue a new secret with the same role; the old one stops working immediately. Sets `rotated_at` and `rotated_by: "admin"` (which restarts the max-age). `expires_at` is returned and never moved by a rotation, so an expired key stays expired until `PATCH` sets a future `expires_at`
 - `DELETE /stac/manage/v1/api-keys/:id` - Permanently delete a key
 
 Fields returned for a key: `id`, `name`, `role`, `expires_at`, `contact`, `note`,
-`key_prefix`, `last_used_at`, `inserted_at`, `updated_at`, and `key` (create and rotate
-only). See [Personalized keys](#personalized-keys) for how they authenticate.
+`key_prefix`, `last_used_at`, `rotated_at`, `rotated_by`, `inserted_at`, `updated_at`, and
+`key` (create and rotate only). See [Personalized keys](#personalized-keys) for how they
+authenticate.
+
+#### Self-service for key owners
+
+The owner of a personal key manages their own key with the key itself (no admin needed):
+
+- `GET /stac/api/v1/key` - The calling key's `name`, `role`, `key_prefix`, `expires_at`,
+  `rotated_at`, `secret_expires_at` and `last_used_at` (never the secret, the hash,
+  `contact` or `note`)
+- `POST /stac/api/v1/key/rotate` - Issue a new secret, shown once under `data.key`; the old
+  one stops working immediately
+
+Both are in the public `/stac/api/v1` scope behind `ReadAuthPlug`. No valid personal key
+gives 401, the static env keys give 404. See [Personalized keys](#personalized-keys) for
+the guard rails.
 
 Errors: `404` for an unknown or non-numeric id; `422` with `{"error": "Validation failed",
 "details": {"name": [...]}}` for a blank, over-long (more than 100 characters) or duplicate
@@ -442,9 +457,25 @@ scripts their own key that can be revoked, rotated or set to expire on its own.
   management API, browser unlock) and takes effect immediately. `ApiKey.get_by_secret/1`
   is the one lookup that applies this, used by both plugs and the browser unlock.
 - **Contact and note:** optional free text to record whose key it is and what it is for.
+- **Rotation and max-age:** `rotated_at` is when the current secret was issued (created or
+  last rotated); `rotated_by` is `admin` or `self` after a rotation (`null` if never
+  rotated) and both show in the admin listing. The optional `STAC_API_KEY_MAX_AGE_DAYS`
+  (config `:api_key_max_age_days`, off when unset, read in `config/runtime.exs`) makes a
+  secret stop working that many days after `rotated_at`. `ApiKey.get_by_secret/1` applies
+  it together with `expires_at`, so the public API, the management API and the browser
+  unlock all respect it. `ApiKey.secret_expires_at/1` is
+  `min(expires_at, rotated_at + max_age)`, or `nil` when neither applies.
+- **Self-service guard rails:** the owner can rotate their own key (`POST /key/rotate`),
+  with these rules: (1) `expires_at` is the admin's final date, no rotation moves it;
+  (2) the max-age is one global setting the owner cannot change; (3) a self-rotation
+  changes only the secret, `key_prefix`, `rotated_at` and `rotated_by`; (4) only a valid
+  key can rotate itself, otherwise the admin rotates or deletes it; (5) at most one
+  self-rotation per key per hour (429 with `Retry-After`), enforced by one conditional
+  `UPDATE` in `ApiKey.rotate_secret_by_owner/1`; (6) `rotated_by` keeps a self-rotation
+  visible to the admin.
 - **Storage:** the `api_keys` table keeps only a SHA-256 hash of each key (`key_hash`),
   a short non-secret `key_prefix` for display, the `name`, `role`, `expires_at`,
-  `contact`, `note` and `last_used_at`. The raw key is shown once on creation or rotation
+  `contact`, `note`, `last_used_at`, `rotated_at` and `rotated_by`. The raw key is shown once on creation or rotation
   and cannot be recovered; rotate to replace it.
 - **Check order:** `ReadAuthPlug` tries the static read-write keys, then the static
   read-only keys, then looks the hash up in `api_keys`. Only a request with a key that
