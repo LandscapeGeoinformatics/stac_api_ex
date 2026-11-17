@@ -32,6 +32,12 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
   defp with_key(secret),
     do: put_req_header(Phoenix.ConnTest.build_conn(), "x-api-key", secret)
 
+  # Moves the key's expiry into the past; the API itself refuses to create that.
+  defp expire!(id) do
+    past = DateTime.add(DateTime.utc_now(), -60, :second)
+    Repo.update_all(from(k in ApiKey, where: k.id == ^id), set: [expires_at: past])
+  end
+
   # Pretends the current secret was issued `seconds` ago.
   defp issued_ago!(id, seconds) do
     at = DateTime.add(DateTime.utc_now(), -seconds, :second)
@@ -215,6 +221,219 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
       key2 = Repo.get!(ApiKey, id2)
       expected2 = DateTime.add(key2.rotated_at, 5 * 86_400, :second)
       assert DateTime.compare(ApiKey.secret_expires_at(key2), expected2) == :eq
+    end
+  end
+
+  describe "GET /key" do
+    test "returns the key's own data, without secret, hash, contact or note", %{conn: conn} do
+      {id, secret} =
+        create_key!(conn, "mine", %{
+          "role" => "read_write",
+          "expires_at" => future(),
+          "contact" => "owner@example.org",
+          "note" => "admin metadata"
+        })
+
+      resp = secret |> with_key() |> get("#{@public}/key") |> json_response(200)
+
+      assert Map.keys(resp["data"]) |> Enum.sort() ==
+               ~w(expires_at key_prefix last_used_at name role rotated_at secret_expires_at)
+
+      assert resp["data"]["name"] == "mine"
+      assert resp["data"]["role"] == "read_write"
+      assert resp["data"]["key_prefix"] == String.slice(secret, 0, 12)
+      assert resp["data"]["secret_expires_at"] == resp["data"]["expires_at"]
+      refute inspect(resp) =~ secret
+      refute inspect(resp) =~ Repo.get!(ApiKey, id).key_hash
+    end
+
+    test "works for a read-only key too", %{conn: conn} do
+      {_id, secret} = create_key!(conn, "reader")
+
+      resp = secret |> with_key() |> get("#{@public}/key") |> json_response(200)
+      assert resp["data"]["role"] == "read_only"
+      assert resp["data"]["expires_at"] == nil
+      assert resp["data"]["secret_expires_at"] == nil
+    end
+
+    test "secret_expires_at follows the max-age when it ends first", %{conn: conn} do
+      previous = Application.get_env(:stac_api, :api_key_max_age_days)
+      on_exit(fn -> Application.put_env(:stac_api, :api_key_max_age_days, previous) end)
+      Application.put_env(:stac_api, :api_key_max_age_days, 5)
+
+      {id, secret} = create_key!(conn, "ages", %{"expires_at" => future(30 * 86_400)})
+
+      resp = secret |> with_key() |> get("#{@public}/key") |> json_response(200)
+      expected = DateTime.add(Repo.get!(ApiKey, id).rotated_at, 5 * 86_400, :second)
+
+      assert {:ok, returned, 0} = DateTime.from_iso8601(resp["data"]["secret_expires_at"])
+      assert DateTime.compare(returned, expected) == :eq
+    end
+  end
+
+  describe "POST /key/rotate" do
+    test "returns a new secret once and rejects the old one right away", %{conn: conn} do
+      {id, old_secret} = create_key!(conn, "self-rotating", %{"role" => "read_write"})
+      before = Repo.get!(ApiKey, id)
+
+      resp = old_secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+      new_secret = resp["data"]["key"]
+
+      assert "stac_rw_" <> _ = new_secret
+      assert new_secret != old_secret
+      assert resp["data"]["key_prefix"] == String.slice(new_secret, 0, 12)
+      assert json_response(get(with_key(old_secret), "#{@public}/key"), 401)
+      assert json_response(get(with_key(new_secret), "#{@public}/key"), 200)
+
+      # The secret is shown once: later reads do not contain it.
+      again = new_secret |> with_key() |> get("#{@public}/key") |> json_response(200)
+      refute Map.has_key?(again["data"], "key")
+
+      after_rotate = Repo.get!(ApiKey, id)
+      assert after_rotate.rotated_by == "self"
+      assert after_rotate.key_prefix != before.key_prefix
+      assert DateTime.compare(after_rotate.rotated_at, before.rotated_at) != :lt
+    end
+
+    test "changes nothing but the secret, the prefix and the rotation info", %{conn: conn} do
+      {id, secret} =
+        create_key!(conn, "unchanged", %{
+          "role" => "read_write",
+          "expires_at" => future(),
+          "contact" => "owner@example.org",
+          "note" => "stays"
+        })
+
+      before = Repo.get!(ApiKey, id)
+      secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+      after_rotate = Repo.get!(ApiKey, id)
+
+      assert after_rotate.role == before.role
+      assert after_rotate.name == before.name
+      assert after_rotate.contact == before.contact
+      assert after_rotate.note == before.note
+      assert DateTime.compare(after_rotate.expires_at, before.expires_at) == :eq
+    end
+
+    test "works for a read-only key and keeps its prefix kind", %{conn: conn} do
+      {_id, secret} = create_key!(conn, "ro-rotating")
+
+      resp = secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+      assert "stac_ro_" <> _ = resp["data"]["key"]
+      assert resp["data"]["role"] == "read_only"
+    end
+
+    test "a self-rotation is visible in the admin listing", %{conn: conn} do
+      {id, secret} = create_key!(conn, "visible")
+      secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+
+      shown = conn |> get("#{@path}/#{id}") |> json_response(200)
+      assert shown["data"]["rotated_by"] == "self"
+    end
+
+    test "a rotated key still stops working at expires_at", %{conn: conn} do
+      {id, secret} = create_key!(conn, "final-date", %{"expires_at" => future()})
+
+      new_secret =
+        secret
+        |> with_key()
+        |> post("#{@public}/key/rotate")
+        |> json_response(200)
+        |> get_in(["data", "key"])
+
+      expire!(id)
+
+      assert json_response(get(with_key(new_secret), "#{@public}/key"), 401)
+    end
+
+    test "a second self-rotation within an hour gets 429 with Retry-After", %{conn: conn} do
+      {id, secret} = create_key!(conn, "twice")
+
+      first = secret |> with_key() |> post("#{@public}/key/rotate")
+      new_secret = json_response(first, 200)["data"]["key"]
+
+      second = new_secret |> with_key() |> post("#{@public}/key/rotate")
+      assert json_response(second, 429)
+      assert [retry_after] = get_resp_header(second, "retry-after")
+      assert String.to_integer(retry_after) in 1..3600
+
+      # The refused rotation changed nothing: the secret still works.
+      assert json_response(get(with_key(new_secret), "#{@public}/key"), 200)
+
+      # An hour later it is allowed again.
+      issued_ago!(id, 3601)
+      assert json_response(post(with_key(new_secret), "#{@public}/key/rotate"), 200)
+    end
+
+    test "an admin rotation does not count towards the self-rotation limit", %{conn: conn} do
+      {id, secret} = create_key!(conn, "admin-then-self")
+      secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+
+      admin_secret =
+        conn |> post("#{@path}/#{id}/rotate") |> json_response(200) |> get_in(["data", "key"])
+
+      assert json_response(post(with_key(admin_secret), "#{@public}/key/rotate"), 200)
+    end
+
+    test "a key that is past max-age cannot rotate itself, the admin rotate revives it",
+         %{conn: conn} do
+      previous = Application.get_env(:stac_api, :api_key_max_age_days)
+      on_exit(fn -> Application.put_env(:stac_api, :api_key_max_age_days, previous) end)
+      Application.put_env(:stac_api, :api_key_max_age_days, 30)
+
+      {id, secret} = create_key!(conn, "too-late-to-renew")
+      issued_ago!(id, 31 * 86_400)
+
+      assert json_response(post(with_key(secret), "#{@public}/key/rotate"), 401)
+
+      revived =
+        conn |> post("#{@path}/#{id}/rotate") |> json_response(200) |> get_in(["data", "key"])
+
+      assert json_response(get(with_key(revived), "#{@public}/key"), 200)
+    end
+
+    test "a stale struct cannot rotate again (concurrent rotation)", %{conn: conn} do
+      {id, _secret} = create_key!(conn, "racing")
+      loaded = Repo.get!(ApiKey, id)
+
+      assert {:ok, _, _} = ApiKey.rotate_secret_by_owner(loaded)
+      assert {:error, :stale} = ApiKey.rotate_secret_by_owner(loaded)
+    end
+  end
+
+  describe "who may use /key" do
+    test "no key, an invalid key or an expired key get 401", %{conn: conn} do
+      {id, secret} = create_key!(conn, "soon-gone", %{"expires_at" => future()})
+      expire!(id)
+
+      for {label, c} <- [
+            {"no key", Phoenix.ConnTest.build_conn()},
+            {"invalid", with_key("stac_ro_not-a-real-key")},
+            {"expired", with_key(secret)}
+          ] do
+        assert json_response(get(c, "#{@public}/key"), 401), "GET with #{label}"
+        assert json_response(post(c, "#{@public}/key/rotate"), 401), "POST with #{label}"
+      end
+    end
+
+    test "the static env keys get 404, never a 500" do
+      %{read_write: [rw | _], read_only: [ro | _]} = Application.fetch_env!(:stac_api, :api_keys)
+
+      for key <- [rw, ro] do
+        assert json_response(get(with_key(key), "#{@public}/key"), 404)
+        assert json_response(post(with_key(key), "#{@public}/key/rotate"), 404)
+      end
+    end
+
+    test "a key only ever sees and rotates itself", %{conn: conn} do
+      {other_id, other_secret} = create_key!(conn, "someone-else")
+      {_id, mine} = create_key!(conn, "me")
+
+      mine |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+
+      # The other key is untouched and still works with its old secret.
+      assert Repo.get!(ApiKey, other_id).rotated_by == nil
+      assert json_response(get(with_key(other_secret), "#{@public}/key"), 200)
     end
   end
 end

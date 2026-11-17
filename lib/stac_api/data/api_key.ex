@@ -30,6 +30,10 @@ defmodule StacApi.Data.ApiKey do
 
   @roles ["read_only", "read_write"]
   @rotators ["admin", "self"]
+
+  # A key may rotate itself at most this often.
+  @self_rotation_interval_seconds 3600
+
   @prefixes %{"read_only" => "stac_ro_", "read_write" => "stac_rw_"}
 
   # last_used_at is refreshed at most this often, to avoid a write per request.
@@ -216,6 +220,56 @@ defmodule StacApi.Data.ApiKey do
     case Repo.update(changeset) do
       {:ok, updated} -> {:ok, updated, raw_secret}
       {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Rotates the secret of `api_key` on behalf of its owner (self-service).
+
+  Like `rotate_secret/2` with `"self"`, but limited to one self-rotation per
+  key per hour, because whoever holds a leaked key could otherwise rotate it
+  back and forth. The check and the write are one conditional UPDATE, so two
+  concurrent requests cannot both rotate the same secret.
+
+  Returns `{:ok, api_key, raw_secret}`, `{:error, {:rate_limited, retry_after}}`
+  (seconds until the next self-rotation is allowed) or `{:error, :stale}` when
+  the secret was already replaced by someone else in the meantime.
+  """
+  def rotate_secret_by_owner(%__MODULE__{id: id, key_hash: old_hash, role: role}) do
+    now = DateTime.utc_now()
+    cutoff = DateTime.add(now, -@self_rotation_interval_seconds, :second)
+    {raw_secret, %{key_hash: hash, key_prefix: prefix}} = generate_secret(role)
+
+    query =
+      from k in __MODULE__,
+        where:
+          k.id == ^id and k.key_hash == ^old_hash and
+            (is_nil(k.rotated_by) or k.rotated_by != "self" or k.rotated_at <= ^cutoff),
+        select: k
+
+    case Repo.update_all(query,
+           set: [
+             key_hash: hash,
+             key_prefix: prefix,
+             rotated_at: now,
+             rotated_by: "self",
+             updated_at: now
+           ]
+         ) do
+      {1, [updated]} -> {:ok, updated, raw_secret}
+      {0, _} -> rotation_refused(id, old_hash, now)
+    end
+  end
+
+  # Why the conditional UPDATE changed nothing: rate limit or lost race.
+  defp rotation_refused(id, old_hash, now) do
+    case Repo.get(__MODULE__, id) do
+      %__MODULE__{key_hash: ^old_hash, rotated_by: "self", rotated_at: rotated_at} ->
+        next = DateTime.add(rotated_at, @self_rotation_interval_seconds, :second)
+        {:error, {:rate_limited, max(DateTime.diff(next, now), 1)}}
+
+      _ ->
+        {:error, :stale}
     end
   end
 
