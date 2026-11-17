@@ -12,6 +12,9 @@ defmodule StacApi.Data.ApiKey do
   everywhere (`get_by_secret/1` no longer returns it). `contact` and `note`
   are optional free text recording whose key it is and what it is for.
 
+  `rotated_at` is when the current secret was issued (created or last
+  rotated) and `rotated_by` is `"admin"` or `"self"` after a rotation.
+
   Only `key_hash` is persisted. The raw secret exists only in memory at
   creation/rotation time and in the response body returned to the caller
   at that moment — it cannot be recovered afterwards, only rotated.
@@ -23,6 +26,7 @@ defmodule StacApi.Data.ApiKey do
   alias StacApi.Repo
 
   @roles ["read_only", "read_write"]
+  @rotators ["admin", "self"]
   @prefixes %{"read_only" => "stac_ro_", "read_write" => "stac_rw_"}
 
   # last_used_at is refreshed at most this often, to avoid a write per request.
@@ -37,6 +41,10 @@ defmodule StacApi.Data.ApiKey do
     field :contact, :string
     field :note, :string
     field :last_used_at, :utc_datetime_usec
+    # When the current secret was issued (created or last rotated), and who
+    # rotated it ("admin" or "self"; nil if never rotated).
+    field :rotated_at, :utc_datetime_usec, read_after_writes: true
+    field :rotated_by, :string
 
     timestamps()
   end
@@ -138,6 +146,30 @@ defmodule StacApi.Data.ApiKey do
     end
 
     :ok
+  end
+
+  @doc """
+  Replaces the secret of `api_key` with a fresh one and records the rotation.
+
+  Only the secret, `key_prefix`, `rotated_at` and `rotated_by` change: the
+  role, name, `expires_at`, `contact` and `note` stay as they are, so a
+  rotation can never move the admin's `expires_at`. `rotated_by` is `"admin"`
+  or `"self"`. Returns `{:ok, api_key, raw_secret}`; the raw secret is shown to
+  the caller once. Returns `{:error, changeset}` if the update fails.
+  """
+  def rotate_secret(%__MODULE__{} = api_key, rotated_by) when rotated_by in @rotators do
+    {raw_secret, secret_attrs} = generate_secret(api_key.role)
+
+    changeset =
+      api_key
+      |> cast(secret_attrs, [:key_hash, :key_prefix])
+      |> change(rotated_at: DateTime.utc_now(), rotated_by: rotated_by)
+      |> unique_constraint(:key_hash)
+
+    case Repo.update(changeset) do
+      {:ok, updated} -> {:ok, updated, raw_secret}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   @doc """
