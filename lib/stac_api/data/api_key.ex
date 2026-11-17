@@ -9,8 +9,11 @@ defmodule StacApi.Data.ApiKey do
   stays with the static STAC_API_KEY.
 
   A key can have an `expires_at`; once it has passed the key is invalid
-  everywhere (`get_by_secret/1` no longer returns it). `contact` and `note`
-  are optional free text recording whose key it is and what it is for.
+  everywhere (`get_by_secret/1` no longer returns it). With the optional
+  max-age configured (`STAC_API_KEY_MAX_AGE_DAYS`) the secret also stops
+  working that many days after `rotated_at`; see `secret_expires_at/1`.
+  `contact` and `note` are optional free text recording whose key it is and
+  what it is for.
 
   `rotated_at` is when the current secret was issued (created or last
   rotated) and `rotated_by` is `"admin"` or `"self"` after a rotation.
@@ -111,13 +114,57 @@ defmodule StacApi.Data.ApiKey do
   def get_by_secret(raw_secret) when is_binary(raw_secret) do
     now = DateTime.utc_now()
 
-    Repo.one(
+    query =
       from k in __MODULE__,
         where: k.key_hash == ^hash(raw_secret) and (is_nil(k.expires_at) or k.expires_at > ^now)
-    )
+
+    query
+    |> within_max_age(now)
+    |> Repo.one()
   end
 
   def get_by_secret(_), do: nil
+
+  # With a max-age configured, the secret must have been issued less than that
+  # many days ago. Without one, nothing is added.
+  defp within_max_age(query, now) do
+    case max_age_days() do
+      nil ->
+        query
+
+      days ->
+        cutoff = DateTime.add(now, -days * 86_400, :second)
+        where(query, [k], k.rotated_at > ^cutoff)
+    end
+  end
+
+  @doc """
+  The configured max-age of a secret in days (`STAC_API_KEY_MAX_AGE_DAYS`), or
+  `nil` when it is off.
+  """
+  def max_age_days, do: Application.get_env(:stac_api, :api_key_max_age_days)
+
+  @doc """
+  The moment the current secret of `api_key` stops working, or `nil`.
+
+  This is `min(expires_at, rotated_at + max_age)`: the admin's `expires_at`
+  and, when a max-age is configured, the end of the secret's max-age. `nil`
+  when neither applies.
+  """
+  def secret_expires_at(%__MODULE__{expires_at: expires_at, rotated_at: rotated_at}) do
+    max_age_end =
+      case max_age_days() do
+        nil -> nil
+        days -> DateTime.add(rotated_at, days * 86_400, :second)
+      end
+
+    [expires_at, max_age_end]
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> nil
+      dates -> Enum.min(dates, DateTime)
+    end
+  end
 
   @doc """
   The access level an issued key grants: `:read_write` or `:read_only`.

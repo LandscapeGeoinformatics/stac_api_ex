@@ -20,6 +20,28 @@ if System.get_env("PHX_SERVER") do
   config :stac_api, StacApiWeb.Endpoint, server: true
 end
 
+# Optional max-age of the secret of an issued key, in days
+# (STAC_API_KEY_MAX_AGE_DAYS). Not set = off. When set, the secret stops
+# working that many days after the key was issued or last rotated, so the
+# owner has to rotate before that. One value for all keys.
+max_age_days =
+  case System.get_env("STAC_API_KEY_MAX_AGE_DAYS") do
+    value when value in [nil, ""] ->
+      nil
+
+    value ->
+      case Integer.parse(value) do
+        {days, ""} when days > 0 ->
+          days
+
+        _ ->
+          raise "STAC_API_KEY_MAX_AGE_DAYS must be a positive whole number of days, " <>
+                  "got: #{inspect(value)}"
+      end
+  end
+
+config :stac_api, :api_key_max_age_days, max_age_days
+
 if config_env() == :prod do
 
   database_url =
