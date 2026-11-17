@@ -18,10 +18,12 @@ defmodule StacApiWeb.SearchController do
       end
 
     authenticated = conn.assigns[:authenticated] || false
+    kind = request_kind(conn.method)
 
     with {:ok, filters} <- ItemFilters.parse(search_params),
-         {:ok, fields} <- ItemFields.parse(search_params, request_kind(conn.method)) do
-      run_search(conn, search_params, authenticated, filters, fields)
+         {:ok, fields} <- ItemFields.parse(search_params, kind),
+         {:ok, limit} <- Search.effective_limit(search_params) do
+      run_search(conn, kind, search_params, authenticated, filters, fields, limit)
     else
       {:error, parameter, reason} ->
         conn
@@ -32,7 +34,7 @@ defmodule StacApiWeb.SearchController do
 
   # Both API paths pass the same parsed filters to Search, preventing silent
   # fallbacks to an unfiltered result set.
-  defp run_search(conn, search_params, authenticated, filters, fields) do
+  defp run_search(conn, kind, search_params, authenticated, filters, fields, limit) do
     items =
       Search.search(search_params, authenticated, filters)
       |> Enum.map(&ensure_item_struct/1)
@@ -51,7 +53,7 @@ defmodule StacApiWeb.SearchController do
     # POST links repeat the request body as it was sent; only GET links need
     # the comma-separated form of fields.
     link_params =
-      case request_kind(conn.method) do
+      case kind do
         :post -> search_params
         :get -> ItemFields.pagination_params(search_params, fields)
       end
@@ -61,11 +63,11 @@ defmodule StacApiWeb.SearchController do
       "features" => features,
       "numberMatched" => total_count,
       "numberReturned" => length(features),
-      "links" => LinkResolver.create_search_links(conn, link_params, total_count),
+      "links" => LinkResolver.create_search_links(kind, link_params, limit, total_count),
       "context" => %{
         "returned" => length(features),
         "matched" => total_count,
-        "limit" => parse_int(search_params["limit"] || "10")
+        "limit" => limit
       }
     }
 
@@ -103,14 +105,4 @@ defmodule StacApiWeb.SearchController do
 
   defp request_kind("POST"), do: :post
   defp request_kind(_method), do: :get
-
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {num, _} -> num
-      :error -> 0
-    end
-  end
-
-  defp parse_int(num) when is_integer(num), do: num
-  defp parse_int(_), do: 0
 end

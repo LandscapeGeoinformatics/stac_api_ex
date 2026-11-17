@@ -155,36 +155,37 @@ defmodule StacApiWeb.LinkResolver do
   @doc """
   Creates a list of standard STAC links for search results.
 
-  A GET search answers with GET links. A POST search answers with POST links
-  (`"method": "POST"`) that carry the full request body with the new `offset`
-  as `"body"`, without `merge`, so a client repeats the POST as it is.
+  A GET search (`:get`) answers with GET links. A POST search (`:post`) answers
+  with POST links (`"method": "POST"`) that carry the full request body with the
+  new `offset` as `"body"`, without `merge`, so a client repeats the POST as it
+  is. `limit` is the effective page size from `StacApi.Data.Search.effective_limit/1`,
+  so the offsets step by what was really returned.
   """
-  def create_search_links(conn, params, total_count) do
-    current_limit = parse_int(params["limit"] || "10")
+  def create_search_links(kind, params, limit, total_count) when kind in [:get, :post] do
     current_offset = parse_int(params["offset"] || "0")
 
     links = [
-      search_link(conn, "self", params),
+      search_link(kind, "self", params),
       create_link("root", "/stac/api/v1/")
     ]
 
     links =
       if current_offset > 0 do
-        prev_params = Map.put(params, "offset", max(0, current_offset - current_limit))
-        [search_link(conn, "prev", prev_params) | links]
+        prev_params = Map.put(params, "offset", max(0, current_offset - limit))
+        [search_link(kind, "prev", prev_params) | links]
       else
         links
       end
 
-    if current_offset + current_limit < total_count do
-      next_params = Map.put(params, "offset", current_offset + current_limit)
-      [search_link(conn, "next", next_params) | links]
+    if current_offset + limit < total_count do
+      next_params = Map.put(params, "offset", current_offset + limit)
+      [search_link(kind, "next", next_params) | links]
     else
       links
     end
   end
 
-  defp search_link(%{method: "POST"}, rel, params) do
+  defp search_link(:post, rel, params) do
     create_link(rel, "/stac/api/v1/search",
       type: "application/geo+json",
       method: "POST",
@@ -192,7 +193,7 @@ defmodule StacApiWeb.LinkResolver do
     )
   end
 
-  defp search_link(_conn, rel, params) do
+  defp search_link(:get, rel, params) do
     create_link(rel, "/stac/api/v1/search?#{build_query_string(params)}",
       type: "application/geo+json"
     )
@@ -299,7 +300,11 @@ defmodule StacApiWeb.LinkResolver do
       {key, ""} when key in ["fields", :fields] -> false
       {_, value} -> is_nil(value) or value == ""
     end)
-    |> Enum.map(fn {k, v} -> "#{k}=#{URI.encode(query_value(v))}" end)
+    # encode_www_form also escapes + and &, so a +02:00 offset or an id with &
+    # comes back unchanged when the link is followed.
+    |> Enum.map(fn {k, v} ->
+      "#{URI.encode_www_form(to_string(k))}=#{URI.encode_www_form(query_value(v))}"
+    end)
     |> Enum.join("&")
   end
 

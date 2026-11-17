@@ -383,7 +383,7 @@ defmodule StacApiWeb.ApiDocs do
           "collections=estonia-sentinel2-ndvi&datetime=2020-04-01T00:00:00Z/2020-10-31T23:59:59Z&limit=5",
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, or fields parameter")
+          err(400, "Invalid datetime, bbox, fields, or limit parameter")
         ]
       },
       %{
@@ -401,7 +401,7 @@ defmodule StacApiWeb.ApiDocs do
         request_body: search_body(),
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, or fields parameter")
+          err(400, "Invalid datetime, bbox, fields, or limit parameter")
         ]
       },
       %{

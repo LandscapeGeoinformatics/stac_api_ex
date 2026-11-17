@@ -39,6 +39,21 @@ defmodule StacApiWeb.SearchPaginationLinksTest do
 
   defp link(response, rel), do: Enum.find(response["links"], &(&1["rel"] == rel))
 
+  defp follow(%{"method" => "POST", "body" => body}),
+    do: build_conn() |> post(~p"/stac/api/v1/search", body) |> json_response(200)
+
+  defp follow(%{"href" => href}), do: build_conn() |> get(href) |> json_response(200)
+
+  # Ids of this page and of every page reached by following next.
+  defp collect_ids(response) do
+    page_ids = Enum.map(response["features"], & &1["id"])
+
+    case link(response, "next") do
+      nil -> page_ids
+      next_link -> page_ids ++ collect_ids(follow(next_link))
+    end
+  end
+
   test "POST search with a Point or Polygon intersects returns the matching items", %{conn: conn} do
     point_response =
       conn
@@ -168,5 +183,106 @@ defmodule StacApiWeb.SearchPaginationLinksTest do
     assert Jason.decode!(query["sortby"]) == [%{"field" => "id", "direction" => "asc"}]
 
     assert build_conn() |> get(next_link["href"]) |> json_response(200)
+  end
+
+  test "limit above 100 returns 100 per page and following next gives every item once" do
+    auth_conn = authenticated_conn(build_conn())
+
+    post(auth_conn, ~p"/stac/manage/v1/collections", %{
+      "id" => "links-many",
+      "description" => "More items than the maximum page size",
+      "license" => "CC-BY-4.0"
+    })
+
+    # Distinct datetimes, so the datetime order is unambiguous across pages.
+    expected =
+      for n <- 1..120 do
+        id = "many-#{n}"
+
+        post(auth_conn, ~p"/stac/manage/v1/items", %{
+          "id" => id,
+          "collection_id" => "links-many",
+          "geometry" => %{"type" => "Point", "coordinates" => [26.0, 58.0]},
+          "bbox" => [26.0, 58.0, 26.0, 58.0],
+          "properties" => %{
+            "datetime" => DateTime.add(~U[2023-01-01 00:00:00Z], n * 60) |> DateTime.to_iso8601()
+          }
+        })
+
+        id
+      end
+
+    get_first =
+      build_conn()
+      |> get(~p"/stac/api/v1/search", %{"collections" => "links-many", "limit" => "150"})
+      |> json_response(200)
+
+    post_first =
+      build_conn()
+      |> post(~p"/stac/api/v1/search", %{"collections" => ["links-many"], "limit" => 150})
+      |> json_response(200)
+
+    for first_page <- [get_first, post_first] do
+      assert length(first_page["features"]) == 100
+      assert first_page["context"]["limit"] == 100
+
+      collected = collect_ids(first_page)
+      assert length(collected) == 120
+      assert Enum.sort(collected) == Enum.sort(expected)
+    end
+  end
+
+  test "limit below 1 or not an integer returns 400", %{conn: conn} do
+    for limit <- ["0", "-1", "2.0", "abc"] do
+      response =
+        get(conn, ~p"/stac/api/v1/search", %{
+          "collections" => "links-collection",
+          "limit" => limit
+        })
+
+      assert json_response(response, 400)["error"] =~ "limit"
+    end
+
+    for limit <- [0, 2.0] do
+      response =
+        post(build_conn(), ~p"/stac/api/v1/search", %{
+          "collections" => ["links-collection"],
+          "limit" => limit
+        })
+
+      assert json_response(response, 400)["error"] =~ "limit"
+    end
+  end
+
+  test "GET links keep a + offset in datetime and an & in an id", %{conn: conn} do
+    post(authenticated_conn(build_conn()), ~p"/stac/manage/v1/items", %{
+      "id" => "links-a&b",
+      "collection_id" => "links-collection",
+      "geometry" => %{"type" => "Point", "coordinates" => [26.5, 58.3]},
+      "bbox" => [26.5, 58.3, 26.5, 58.3],
+      "properties" => %{"datetime" => "2024-01-04T00:00:00Z"}
+    })
+
+    params = %{
+      "ids" => "links-a&b,links-tartu,links-elva",
+      "datetime" => "2024-01-01T12:00:00+02:00/2024-01-05T02:00:00+02:00"
+    }
+
+    all_at_once = conn |> get(~p"/stac/api/v1/search", params) |> json_response(200)
+    assert ids(all_at_once) == ["links-a&b", "links-elva", "links-tartu"]
+
+    first_page =
+      build_conn()
+      |> get(~p"/stac/api/v1/search", Map.put(params, "limit", "1"))
+      |> json_response(200)
+
+    query =
+      link(first_page, "next")["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+    assert query["datetime"] == params["datetime"]
+    assert query["ids"] == params["ids"]
+
+    assert follow(link(first_page, "self"))["features"] == first_page["features"]
+    assert Enum.sort(collect_ids(first_page)) == ids(all_at_once)
   end
 end
