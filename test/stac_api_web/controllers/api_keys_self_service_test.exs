@@ -436,4 +436,30 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
       assert json_response(get(with_key(other_secret), "#{@public}/key"), 200)
     end
   end
+
+  describe "documentation" do
+    test "the public docs and the OpenAPI document list /key and /key/rotate" do
+      html = Phoenix.ConnTest.build_conn() |> get("#{@public}/docs") |> html_response(200)
+      assert html =~ "/stac/api/v1/key/rotate"
+      assert html =~ "Personal key required"
+
+      openapi =
+        Phoenix.ConnTest.build_conn()
+        |> put_req_header("accept", "application/json")
+        |> get("#{@public}/openapi.json")
+        |> json_response(200)
+
+      assert get_in(openapi, ["paths", "/stac/api/v1/key", "get"])
+      assert get_in(openapi, ["paths", "/stac/api/v1/key/rotate", "post"])
+      assert get_in(openapi, ["components", "schemas", "OwnKey"])
+    end
+
+    test "the management docs describe rotated_at and rotated_by", %{conn: conn} do
+      openapi = conn |> get("#{@public}/openapi.json") |> json_response(200)
+      props = get_in(openapi, ["components", "schemas", "ApiKey", "properties"])
+
+      assert props["rotated_at"]
+      assert props["rotated_by"]["enum"] == ["admin", "self"]
+    end
+  end
 end

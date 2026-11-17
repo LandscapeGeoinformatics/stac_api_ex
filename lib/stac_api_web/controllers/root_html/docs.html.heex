@@ -67,7 +67,7 @@
           Start at the landing page, follow its <code class="font-mono text-xs bg-gray-100 px-1 rounded">links</code>, and page through collections and items.
           All responses are JSON; item responses are GeoJSON.
         </p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div class="bg-white border border-gray-200 rounded-lg p-3">
             <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">1. Discover</p>
             <a href="/stac/api/v1/collections" target="_blank" class="font-mono text-xs text-blue-600 hover:underline break-all">GET /stac/api/v1/collections</a>
@@ -97,7 +97,7 @@
           Reading public data needs no credentials. An API key sent in the
           <code class="font-mono text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header unlocks private catalogs<%= if @show_management, do: "; keys come in two levels", else: "" %>:
         </p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div :for={level <- @auth_levels} class="bg-white border border-gray-200 rounded-lg p-3">
             <% {label, class, hint} = auth_badge(level) %>
             <span class={["inline-block px-2 py-0.5 rounded text-xs font-medium mb-2", class]}><%= label %></span>

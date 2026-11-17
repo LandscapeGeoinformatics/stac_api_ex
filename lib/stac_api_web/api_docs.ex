@@ -12,8 +12,10 @@ defmodule StacApiWeb.ApiDocs do
     * `id` – anchor / operationId
     * `method`, `path` – path uses OpenAPI `{param}` placeholders
     * `summary`, `description`
-    * `auth` – `:public`, `:optional` (X-API-Key unlocks private catalogs) or
-      `:rw` (read-write key required, 401 otherwise)
+    * `auth` – `:public`, `:optional` (X-API-Key unlocks private catalogs),
+      `:key` (an issued personal key, RO or RW, identifies the caller: 401
+      without one, 404 for the static keys) or `:rw` (read-write key
+      required, 401 otherwise)
     * `params` – list of `%{name, in, type, required, description, example}`
     * `request_body` – `%{description, schema, example}` or nil
     * `responses` – list of `%{status, media, description, schema}`
@@ -117,7 +119,8 @@ defmodule StacApiWeb.ApiDocs do
         base: "/stac/api/v1",
         description:
           "OGC API – Features / STAC 1.0.0 conformant read endpoints. Public without a key; " <>
-            "an optional X-API-Key additionally exposes private catalogs.",
+            "an optional X-API-Key additionally exposes private catalogs. Owners of a personal key " <>
+            "can look at it and renew it themselves with GET /key and POST /key/rotate.",
         endpoints: stac_api_endpoints()
       },
       %{
@@ -405,6 +408,49 @@ defmodule StacApiWeb.ApiDocs do
         ]
       },
       %{
+        id: "key-show",
+        method: "GET",
+        path: "/stac/api/v1/key",
+        summary: "Show your own API key",
+        description:
+          "For the owner of a personal key (see the README): returns the calling key's own " <>
+            "name, role, key_prefix, expires_at, rotated_at, secret_expires_at and last_used_at. " <>
+            "secret_expires_at is the date the current secret stops working, " <>
+            "min(expires_at, rotated_at + max-age), or null when neither applies, so scripts can " <>
+            "renew in time. Never returns the secret, the hash, contact or note. The static " <>
+            "STAC_API_KEY / STAC_API_KEY_RO are not personal keys and get 404.",
+        auth: :key,
+        params: [],
+        request_body: nil,
+        responses: [
+          ok(@json, "The calling key", "OwnKeyResult"),
+          err(401, "No key, or an invalid, expired or aged-out key"),
+          err(404, "A static env key, not a personal key")
+        ]
+      },
+      %{
+        id: "key-rotate",
+        method: "POST",
+        path: "/stac/api/v1/key/rotate",
+        summary: "Rotate your own API key",
+        description:
+          "Issues a new secret for the calling key; the old one stops working immediately. The " <>
+            "new secret is returned once, under data.key. Only the secret, key_prefix and " <>
+            "rotated_at change: role, name, expires_at (the admin's final date), contact and note " <>
+            "stay as they are. A key that is past expires_at or past the max-age cannot rotate " <>
+            "itself (401); the admin rotates or deletes it. At most one self-rotation per key and " <>
+            "hour, otherwise 429 with a Retry-After header. The static keys get 404.",
+        auth: :key,
+        params: [],
+        request_body: nil,
+        responses: [
+          ok(@json, "The key with its new one-time secret", "OwnKeyResult"),
+          err(401, "No key, or an invalid, expired or aged-out key"),
+          err(404, "A static env key, not a personal key"),
+          err(429, "This key already rotated itself within the last hour")
+        ]
+      },
+      %{
         id: "openapi",
         method: "GET",
         path: "/stac/api/v1/openapi.json",
@@ -591,7 +637,9 @@ defmodule StacApiWeb.ApiDocs do
         summary: "Rotate API key",
         description:
           "Issues a new secret for the same key (same id, name and role). The old secret stops " <>
-            "working immediately. The new secret is returned once, under data.key. Rotation never " <>
+            "working immediately. The new secret is returned once, under data.key. It sets " <>
+            "rotated_at (which restarts the max-age, if one is configured) and rotated_by " <>
+            "\"admin\"; unlike a self-rotation it has no rate limit. Rotation never " <>
             "moves expires_at, which is returned in the response: an expired key can be rotated " <>
             "but stays expired. To revive it, PATCH expires_at to a future date.",
         auth: :rw,
@@ -846,7 +894,9 @@ defmodule StacApiWeb.ApiDocs do
   Relative URL to open a GET endpoint in the browser. Nil for other methods and
   for read-write endpoints, which a plain browser request cannot authenticate.
   """
-  def try_href(%{method: "GET", auth: auth} = ep) when auth != :rw, do: example_path(ep)
+  def try_href(%{method: "GET", auth: auth} = ep) when auth not in [:rw, :key],
+    do: example_path(ep)
+
   def try_href(_), do: nil
 
   @doc "A curl invocation for the endpoint."
@@ -856,7 +906,11 @@ defmodule StacApiWeb.ApiDocs do
     parts =
       ["curl -s"] ++
         if(ep.method != "GET", do: ["-X #{ep.method}"], else: []) ++
-        if(ep.auth == :rw, do: [~s(-H "X-API-Key: $STAC_API_KEY")], else: []) ++
+        case ep.auth do
+          :rw -> [~s(-H "X-API-Key: $STAC_API_KEY")]
+          :key -> [~s(-H "X-API-Key: $MY_API_KEY")]
+          _ -> []
+        end ++
         case ep.request_body do
           %{example: example} when is_map(example) ->
             [~s(-H "Content-Type: application/json"), ~s(-d '#{Jason.encode!(example)}')]
@@ -953,6 +1007,7 @@ defmodule StacApiWeb.ApiDocs do
 
     case ep.auth do
       :rw -> Map.put(op, :security, [%{ApiKeyAuth: []}])
+      :key -> Map.put(op, :security, [%{ApiKeyAuth: []}])
       :optional -> Map.put(op, :security, [%{}, %{ApiKeyAuth: []}])
       _ -> op
     end
@@ -1024,6 +1079,44 @@ defmodule StacApiWeb.ApiDocs do
       Error: %{
         type: "object",
         properties: %{error: %{type: "string"}, message: %{type: "string"}}
+      },
+      OwnKey: %{
+        type: "object",
+        properties: %{
+          name: %{type: "string"},
+          role: %{type: "string", enum: ["read_only", "read_write"]},
+          key_prefix: %{type: "string", description: "First 12 characters of the secret"},
+          expires_at: %{
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "The admin's final date; rotation never moves it"
+          },
+          rotated_at: %{
+            type: "string",
+            format: "date-time",
+            description: "When the current secret was issued (created or last rotated)"
+          },
+          secret_expires_at: %{
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "min(expires_at, rotated_at + max-age); null when neither applies"
+          },
+          last_used_at: %{type: "string", format: "date-time", nullable: true},
+          key: %{
+            type: "string",
+            description: "Raw secret; present only in the rotate response"
+          }
+        }
+      },
+      OwnKeyResult: %{
+        type: "object",
+        properties: %{
+          success: %{type: "boolean"},
+          message: %{type: "string"},
+          data: schema_ref("OwnKey")
+        }
       },
       Conformance: %{
         type: "object",
@@ -1208,6 +1301,17 @@ defmodule StacApiWeb.ApiDocs do
             description: "First 12 characters of the secret (stac_ro_... or stac_rw_...)"
           },
           last_used_at: %{type: "string", format: "date-time", nullable: true},
+          rotated_at: %{
+            type: "string",
+            format: "date-time",
+            description: "When the current secret was issued (created or last rotated)"
+          },
+          rotated_by: %{
+            type: "string",
+            enum: ["admin", "self"],
+            nullable: true,
+            description: "Who last rotated the secret; null if never rotated"
+          },
           inserted_at: %{type: "string", format: "date-time"},
           updated_at: %{type: "string", format: "date-time"},
           key: %{
