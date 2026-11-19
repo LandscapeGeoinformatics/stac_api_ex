@@ -98,6 +98,9 @@ while `POST` / `PUT` / `PATCH` return them as `null`.
 
 The **public** STAC API does not use these modules — it has its own representations in
 `CollectionsController.sanitize_collection/1` and `StacApi.Data.Search.serialize_item_for_api/1`.
+The latter is the only public Item serializer: `/search`, `/collections/:id/items` and
+`/collections/:id/items/:item_id` all return the same Item JSON (string keys, `properties` as
+stored, no top-level `datetime`, the same generated and stored links).
 
 ---
 

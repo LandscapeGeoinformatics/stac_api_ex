@@ -41,10 +41,8 @@ defmodule StacApiWeb.SearchController do
 
     features =
       Enum.map(items, fn item ->
-        serialized = Search.serialize_item_for_api(item)
-
-        serialized
-        |> Map.put("links", LinkResolver.resolve_links(serialized["links"] || []))
+        item
+        |> Search.serialize_item_for_api()
         |> ItemFields.project(fields)
       end)
 

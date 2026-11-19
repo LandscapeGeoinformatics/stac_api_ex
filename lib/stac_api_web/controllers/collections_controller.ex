@@ -1,6 +1,6 @@
 defmodule StacApiWeb.CollectionsController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{Catalog, Collection, ItemAsset, ItemFields}
+  alias StacApi.Data.{Catalog, Collection, ItemFields, Search}
   alias StacApi.Repo
   alias StacApiWeb.LinkResolver
   import Ecto.Query
@@ -163,17 +163,8 @@ defmodule StacApiWeb.CollectionsController do
 
               sanitized_items =
                 Enum.map(items, fn item ->
-                  sanitized = sanitize_item(item)
-                  assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
-                  sanitized = Map.put(sanitized, :assets, assets)
-
-                  custom_links = item.links || []
-
-                  links =
-                    StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
-
-                  sanitized
-                  |> Map.put(:links, links)
+                  item
+                  |> Search.serialize_item_for_api()
                   |> ItemFields.project(fields)
                 end)
 
@@ -321,18 +312,9 @@ defmodule StacApiWeb.CollectionsController do
               |> json(%{error: "Item not found"})
 
             item ->
-              sanitized_item = sanitize_item(item)
-              assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
-              sanitized_item = Map.put(sanitized_item, :assets, assets)
-
-              custom_links = item.links || []
-
-              resolved_links =
-                StacApiWeb.DynamicLinkGenerator.generate_item_links(item, custom_links)
-
               conn
               |> put_resp_content_type("application/geo+json")
-              |> json(Map.put(sanitized_item, :links, resolved_links))
+              |> json(Search.serialize_item_for_api(item))
           end
       end
     rescue
@@ -374,29 +356,4 @@ defmodule StacApiWeb.CollectionsController do
   defp maybe_put_collection_field(map, _key, nil), do: map
   defp maybe_put_collection_field(map, _key, []), do: map
   defp maybe_put_collection_field(map, key, value), do: Map.put(map, key, value)
-
-  defp sanitize_item(item) do
-    %{
-      type: "Feature",
-      stac_version: item.stac_version || "",
-      stac_extensions: item.stac_extensions || [],
-      id: item.id || "",
-      geometry: item.geometry,
-      bbox: item.bbox || [],
-      datetime: item.datetime,
-      properties: item.properties || %{},
-      links: item.links || [],
-      collection: item.collection_id
-    }
-  end
-
-  # Reconstruct assets from normalized table back to STAC format
-  defp reconstruct_item_assets(item_id, stac_extensions) do
-    assets = Repo.all(from(a in ItemAsset, where: a.item_id == ^item_id))
-
-    Enum.reduce(assets, %{}, fn asset, acc ->
-      asset_data = ItemAsset.to_stac_asset(asset, stac_extensions)
-      Map.put(acc, asset.asset_key, asset_data)
-    end)
-  end
 end
