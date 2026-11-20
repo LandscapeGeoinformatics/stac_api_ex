@@ -14,8 +14,10 @@ defmodule StacApiWeb.ApiDocs do
     * `summary`, `description`
     * `auth` – `:public`, `:optional` (X-API-Key unlocks private catalogs),
       `:key` (an issued personal key, RO or RW, identifies the caller: 401
-      without one, 404 for the static keys) or `:rw` (read-write key
-      required, 401 otherwise)
+      without one, 404 for the static keys), `:rw` (read-write key required,
+      the static one or an issued read_write key, 401 otherwise) or `:admin`
+      (only the static `STAC_API_KEY`: the api-keys endpoints, where even an
+      issued read_write key gets 401)
     * `params` – list of `%{name, in, type, required, description, example}`
     * `request_body` – `%{description, schema, example}` or nil
     * `responses` – list of `%{status, media, description, schema}`
@@ -560,7 +562,7 @@ defmodule StacApiWeb.ApiDocs do
           "All issued keys, newest first, with role, expires_at, contact and note. Only the " <>
             "non-secret key_prefix is shown; " <>
             "last_used_at is null for keys that were never used and accurate to about an hour otherwise.",
-        auth: :rw,
+        auth: :admin,
         params: [],
         request_body: nil,
         responses: [ok(@json, "API key list", "ApiKeyList"), unauthorized]
@@ -571,7 +573,7 @@ defmodule StacApiWeb.ApiDocs do
         path: "#{base}/{id}",
         summary: "Get API key",
         description: "A single issued key. The secret is never returned.",
-        auth: :rw,
+        auth: :admin,
         params: [id_param],
         request_body: nil,
         responses: [ok(@json, "API key", "ApiKeyResult"), unauthorized, err(404, "Not found")]
@@ -587,7 +589,7 @@ defmodule StacApiWeb.ApiDocs do
             "with an offset such as Z or +02:00, in the future) ends the key automatically; contact and note are optional. The raw secret is " <>
             "returned once, under data.key, and cannot be retrieved again (only rotated). " <>
             "Names are trimmed, 1-100 characters and unique.",
-        auth: :rw,
+        auth: :admin,
         params: [],
         request_body: %{
           description: "Name, role and optional expiry, contact and note",
@@ -619,7 +621,7 @@ defmodule StacApiWeb.ApiDocs do
             "(expires_at: null removes the expiry). The role cannot be changed: a body with role " <>
             "gets 422, issue a new key and delete the old one instead. The secret is untouched; " <>
             "use rotate for that.",
-        auth: :rw,
+        auth: :admin,
         params: [id_param],
         request_body: %{
           description: "Fields to change",
@@ -645,7 +647,7 @@ defmodule StacApiWeb.ApiDocs do
             "\"admin\"; unlike a self-rotation it has no rate limit. Rotation never " <>
             "moves expires_at, which is returned in the response: an expired key can be rotated " <>
             "but stays expired. To revive it, PATCH expires_at to a future date.",
-        auth: :rw,
+        auth: :admin,
         params: [id_param],
         request_body: nil,
         responses: [
@@ -660,7 +662,7 @@ defmodule StacApiWeb.ApiDocs do
         path: "#{base}/{id}",
         summary: "Delete API key",
         description: "Permanently deletes the key; it stops authenticating immediately.",
-        auth: :rw,
+        auth: :admin,
         params: [id_param],
         request_body: nil,
         responses: [ok(@json, "Deleted", nil), unauthorized, err(404, "Not found")]
@@ -897,7 +899,7 @@ defmodule StacApiWeb.ApiDocs do
   Relative URL to open a GET endpoint in the browser. Nil for other methods and
   for read-write endpoints, which a plain browser request cannot authenticate.
   """
-  def try_href(%{method: "GET", auth: auth} = ep) when auth not in [:rw, :key],
+  def try_href(%{method: "GET", auth: auth} = ep) when auth not in [:rw, :admin, :key],
     do: example_path(ep)
 
   def try_href(_), do: nil
@@ -911,6 +913,7 @@ defmodule StacApiWeb.ApiDocs do
         if(ep.method != "GET", do: ["-X #{ep.method}"], else: []) ++
         case ep.auth do
           :rw -> [~s(-H "X-API-Key: $STAC_API_KEY")]
+          :admin -> [~s(-H "X-API-Key: $STAC_API_KEY")]
           :key -> [~s(-H "X-API-Key: $MY_API_KEY")]
           _ -> []
         end ++
@@ -1010,6 +1013,7 @@ defmodule StacApiWeb.ApiDocs do
 
     case ep.auth do
       :rw -> Map.put(op, :security, [%{ApiKeyAuth: []}])
+      :admin -> Map.put(op, :security, [%{ApiKeyAuth: []}])
       :key -> Map.put(op, :security, [%{ApiKeyAuth: []}])
       :optional -> Map.put(op, :security, [%{}, %{ApiKeyAuth: []}])
       _ -> op

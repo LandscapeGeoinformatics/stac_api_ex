@@ -35,6 +35,11 @@ defmodule StacApiWeb.RootHTML do
       {"RW key required", "bg-red-50 text-red-700 border border-red-200",
        "X-API-Key with a read-write key, else 401."}
 
+  def auth_badge(:admin),
+    do:
+      {"Static RW key only", "bg-purple-50 text-purple-700 border border-purple-200",
+       "X-API-Key with the static STAC_API_KEY. Issued keys, even read-write ones, get 401."}
+
   def auth_badge(_), do: auth_badge(:public)
 
   def status_class(status) when status < 300, do: "bg-green-100 text-green-800"

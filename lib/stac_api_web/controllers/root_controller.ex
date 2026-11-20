@@ -246,7 +246,7 @@ defmodule StacApiWeb.RootController do
     |> assign(
       :auth_levels,
       if(show_management,
-        do: [:public, :optional, :key, :rw],
+        do: [:public, :optional, :key, :rw, :admin],
         else: [:public, :optional, :key]
       )
     )

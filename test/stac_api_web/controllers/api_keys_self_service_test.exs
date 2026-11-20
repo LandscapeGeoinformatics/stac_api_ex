@@ -488,6 +488,35 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
       assert get_in(openapi, ["components", "schemas", "OwnKey"])
     end
 
+    test "the api-keys endpoints are :admin in the docs, the data endpoints stay :rw" do
+      management =
+        StacApiWeb.ApiDocs.groups(include_management: true)
+        |> Enum.find(&(&1.id == "management-api"))
+
+      {keys, others} =
+        Enum.split_with(management.endpoints, &String.starts_with?(&1.id, "manage-api-keys-"))
+
+      assert length(keys) == 6
+      assert Enum.all?(keys, &(&1.auth == :admin))
+      assert Enum.all?(others, &(&1.auth == :rw))
+
+      assert {"Static RW key only", _, hint} = StacApiWeb.RootHTML.auth_badge(:admin)
+      assert hint =~ "even read-write ones"
+    end
+
+    test "the api-keys operations in the OpenAPI document still require the API key", %{
+      conn: conn
+    } do
+      openapi = conn |> get("#{@public}/openapi.json") |> json_response(200)
+
+      for {path, method} <- [
+            {"/stac/manage/v1/api-keys", "get"},
+            {"/stac/manage/v1/api-keys/{id}/rotate", "post"}
+          ] do
+        assert get_in(openapi, ["paths", path, method, "security"]) == [%{"ApiKeyAuth" => []}]
+      end
+    end
+
     test "the management docs describe rotated_at and rotated_by", %{conn: conn} do
       openapi = conn |> get("#{@public}/openapi.json") |> json_response(200)
       props = get_in(openapi, ["components", "schemas", "ApiKey", "properties"])
