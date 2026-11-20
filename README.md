@@ -639,6 +639,8 @@ curl -X POST http://localhost:4000/stac/manage/v1/api-keys \
     "key": "stac_rw_Qm3xT7...",
     "key_prefix": "stac_rw_Qm3x",
     "last_used_at": null,
+    "rotated_at": "2026-10-23T11:02:41.318204Z",
+    "rotated_by": null,
     "inserted_at": "2026-10-23T11:02:41.318204Z",
     "updated_at": "2026-10-23T11:02:41.318204Z"
   }
@@ -650,7 +652,7 @@ cannot be looked up later. If it gets lost, rotate it to get a new one.
 
 | Request | What it does |
 |---|---|
-| `GET /stac/manage/v1/api-keys` | List all keys (name, role, expiry, contact, note, `key_prefix`, `last_used_at`; never the secret) |
+| `GET /stac/manage/v1/api-keys` | List all keys (name, role, expiry, contact, note, `key_prefix`, `last_used_at`, `rotated_at`, `rotated_by`; never the secret) |
 | `GET /stac/manage/v1/api-keys/:id` | Show one key |
 | `POST /stac/manage/v1/api-keys` | Create a key from a `name`, optional `role`, `expires_at`, `contact`, `note` |
 | `PATCH /stac/manage/v1/api-keys/:id` | Change `name`, `expires_at`, `contact` or `note`; the secret and the role stay the same |
@@ -664,7 +666,9 @@ A few things that are good to know:
 - The role cannot be changed. A `PATCH` that contains `role` gets a `422`; to change a
   role, create a new key and delete the old one. This way a leaked read-only key can never
   become a write key.
-- `expires_at` must lie in the future when you set it (`422` otherwise). `"expires_at": null`
+- `expires_at` must be RFC 3339 with an offset, like `2027-02-28T23:59:59Z` or
+  `2027-02-28T23:59:59+02:00`; a time without an offset is not guessed as UTC but gets a
+  `422`. It must also lie in the future when you set it (`422` otherwise). `"expires_at": null`
   in a `PATCH` removes the expiry, and a new date renews an expired key. A browser session
   that is already unlocked stays unlocked until it ends, even after its key expired.
 - `key_prefix` is the first characters of the key. Use it to tell which key is which in the
@@ -672,8 +676,59 @@ A few things that are good to know:
 - `last_used_at` shows when a key was last used, which helps to find keys nobody uses
   anymore. It is `null` for a key that was never used, and it is only updated about once
   an hour, so treat it as approximate.
+- `rotated_at` is when the current secret was issued (created or last rotated) and
+  `rotated_by` is `admin` or `self` after a rotation (`null` for a key that was never
+  rotated). A rotation by the key's owner shows up here, so you can spot one the owner did
+  not do.
 - After you run `mix ecto.migrate`, the keys live in the `api_keys` table. Keys created
-  before roles existed become `read_only`.
+  before roles existed become `read_only`. Existing keys get the time of the migration as
+  `rotated_at`, so switching the max-age on (see below) does not cut off older keys at once.
+
+#### Renewing your own key (for key owners)
+
+If you were given a personal key, you can look at it and renew it yourself, without asking
+the admin each time. Send your key in the `X-API-Key` header:
+
+```bash
+# When does my key stop working?
+curl -s http://localhost:4000/stac/api/v1/key -H "X-API-Key: $MY_API_KEY"
+
+# Get a new secret; the old one stops working immediately
+curl -s -X POST http://localhost:4000/stac/api/v1/key/rotate -H "X-API-Key: $MY_API_KEY"
+```
+
+`GET /stac/api/v1/key` returns your key's `name`, `role`, `key_prefix`, `expires_at`,
+`rotated_at`, `secret_expires_at` and `last_used_at`. It never returns the secret, and not
+the admin's `contact` and `note`. `secret_expires_at` is the date your current secret stops
+working, so a script can renew in time. It is `null` if nothing limits the key.
+
+`POST /stac/api/v1/key/rotate` returns the new secret **once**, under `data.key`. Store it
+right away and replace the old one everywhere you use it. Things to know:
+
+- Only the secret changes. Your `role`, `name` and `expires_at` stay as they are. The
+  `expires_at` date was set by the admin and is final: renewing the secret never extends it.
+- You can rotate once per hour. A second try within the hour gets `429` (with a
+  `Retry-After` header). Someone with a leaked key could otherwise rotate it back and forth.
+- Only a valid key can rotate itself. If your key is past `expires_at` or past the max-age,
+  you get `401`; ask the admin, who can rotate or delete it.
+- Both endpoints answer `401` without a valid personal key, and `404` for the static
+  `STAC_API_KEY` / `STAC_API_KEY_RO`, which are not personal keys.
+
+#### Max-age of secrets (admin)
+
+Set `STAC_API_KEY_MAX_AGE_DAYS` (a whole number of days) to make every personal key's secret
+stop working that many days after it was issued or last rotated, so owners have to renew
+regularly. It is one setting for all keys and off when not set. A key then works until
+whichever comes first:
+
+```
+secret_expires_at = min(expires_at, rotated_at + max-age)
+```
+
+A secret past its max-age is rejected on the public API, the management API and the browser
+unlock, and cannot rotate itself. The admin brings the key back with
+`POST /stac/manage/v1/api-keys/:id/rotate`, which also restarts the max-age. Switching the
+setting on or off needs a restart, and nothing in the database changes.
 
 ### Browser Interface
 

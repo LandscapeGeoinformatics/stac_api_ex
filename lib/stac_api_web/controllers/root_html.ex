@@ -25,10 +25,20 @@ defmodule StacApiWeb.RootHTML do
       {"Optional key", "bg-primary/40 text-secondary border border-primary",
        "Works without a key; add X-API-Key to also see private catalogs."}
 
+  def auth_badge(:key),
+    do:
+      {"Personal key required", "bg-amber-50 text-amber-700 border border-amber-200",
+       "X-API-Key with your own issued personal key, else 401; the static keys get 404."}
+
   def auth_badge(:rw),
     do:
       {"RW key required", "bg-red-50 text-red-700 border border-red-200",
        "X-API-Key with a read-write key, else 401."}
+
+  def auth_badge(:admin),
+    do:
+      {"Static RW key only", "bg-purple-50 text-purple-700 border border-purple-200",
+       "X-API-Key with the static STAC_API_KEY. Issued keys, even read-write ones, get 401."}
 
   def auth_badge(_), do: auth_badge(:public)
 

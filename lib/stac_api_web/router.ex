@@ -58,6 +58,10 @@ defmodule StacApiWeb.Router do
     get "/collections/:id", CollectionsController, :show
     get "/collections/:id/items", CollectionsController, :items
     get "/collections/:collection_id/items/:item_id", CollectionsController, :show_item
+
+    # Self-service for the owner of an issued key (the key itself is the login)
+    get "/key", KeyController, :show
+    post "/key/rotate", KeyController, :rotate
   end
 
   # API documentation, generated from one catalogue (StacApiWeb.ApiDocs).

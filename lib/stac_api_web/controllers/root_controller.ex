@@ -245,7 +245,10 @@ defmodule StacApiWeb.RootController do
     |> assign(:show_management, show_management)
     |> assign(
       :auth_levels,
-      if(show_management, do: [:public, :optional, :rw], else: [:public, :optional])
+      if(show_management,
+        do: [:public, :optional, :key, :rw, :admin],
+        else: [:public, :optional, :key]
+      )
     )
     |> assign(:groups, ApiDocs.groups(include_management: show_management))
     |> assign(:conformance, ApiDocs.conformance_classes())
