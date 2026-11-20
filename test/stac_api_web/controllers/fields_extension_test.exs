@@ -199,11 +199,6 @@ defmodule StacApiWeb.FieldsExtensionTest do
         "fields" => "id",
         "limit" => "1"
       }),
-      post(build_conn(), ~p"/stac/api/v1/search", %{
-        "collections" => ["fields-collection"],
-        "fields" => %{"include" => ["id"]},
-        "limit" => 1
-      }),
       get(build_conn(), ~p"/stac/api/v1/collections/fields-collection/items", %{
         "fields" => "id",
         "limit" => "1"
@@ -222,11 +217,6 @@ defmodule StacApiWeb.FieldsExtensionTest do
         "fields" => "",
         "limit" => "1"
       }),
-      post(build_conn(), ~p"/stac/api/v1/search", %{
-        "collections" => ["fields-collection"],
-        "fields" => %{},
-        "limit" => 1
-      }),
       get(build_conn(), ~p"/stac/api/v1/collections/fields-collection/items", %{
         "fields" => "",
         "limit" => "1"
@@ -237,6 +227,23 @@ defmodule StacApiWeb.FieldsExtensionTest do
       next_link = json_response(response, 200)["links"] |> Enum.find(&(&1["rel"] == "next"))
       query = next_link["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
       assert query["fields"] == ""
+    end)
+
+    # POST search answers with POST links, so fields stays in the body as sent.
+    Enum.each([%{"include" => ["id"]}, %{}], fn fields ->
+      next_link =
+        build_conn()
+        |> post(~p"/stac/api/v1/search", %{
+          "collections" => ["fields-collection"],
+          "fields" => fields,
+          "limit" => 1
+        })
+        |> json_response(200)
+        |> Map.fetch!("links")
+        |> Enum.find(&(&1["rel"] == "next"))
+
+      assert next_link["method"] == "POST"
+      assert next_link["body"]["fields"] == fields
     end)
   end
 
@@ -257,14 +264,13 @@ defmodule StacApiWeb.FieldsExtensionTest do
         assert feature["properties"]["description"]
       end)
 
-      excluded_next =
-        URI.parse(Enum.find(excluded_response["links"], &(&1["rel"] == "next"))["href"])
-
-      assert URI.decode_query(excluded_next.query)["fields"] == "-assets"
+      excluded_next = Enum.find(excluded_response["links"], &(&1["rel"] == "next"))
+      assert excluded_next["method"] == "POST"
+      assert excluded_next["body"]["fields"] == %{"include" => include, "exclude" => ["assets"]}
 
       second_page =
         conn
-        |> get("#{excluded_next.path}?#{excluded_next.query}")
+        |> post(~p"/stac/api/v1/search", excluded_next["body"])
         |> json_response(200)
 
       Enum.each(second_page["features"], fn feature ->

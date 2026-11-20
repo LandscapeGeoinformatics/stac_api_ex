@@ -167,8 +167,38 @@ defmodule StacApi.Data.Search do
 
   defp filter_by_intersects(query, _), do: query
 
+  @default_limit 10
+  @max_limit 100
+
+  @doc """
+  The page size a search really gets, used for the query and for the paging
+  links alike. Missing means #{@default_limit}; above #{@max_limit} returns
+  #{@max_limit} (the spec asks for the maximum instead of an error); below 1 or
+  not an integer is an error, which the API answers with 400.
+  """
+  @spec effective_limit(map()) :: {:ok, pos_integer()} | {:error, :limit, String.t()}
+  def effective_limit(params) do
+    case Map.get(params, "limit", Map.get(params, :limit)) do
+      nil -> {:ok, @default_limit}
+      "" -> {:ok, @default_limit}
+      limit when is_integer(limit) -> check_limit(limit)
+      limit when is_binary(limit) -> limit |> Integer.parse() |> check_limit()
+      _ -> check_limit(:error)
+    end
+  end
+
+  defp check_limit({limit, ""}), do: check_limit(limit)
+  defp check_limit(limit) when is_integer(limit) and limit >= 1, do: {:ok, min(limit, @max_limit)}
+  defp check_limit(_), do: {:error, :limit, "must be an integer of at least 1"}
+
   defp apply_pagination(query, params) do
-    limit = min(parse_int(params[:limit] || params["limit"] || "10"), 100)
+    # The API validates limit before searching; other callers get the default.
+    limit =
+      case effective_limit(params) do
+        {:ok, limit} -> limit
+        {:error, _, _} -> @default_limit
+      end
+
     offset = parse_int(params[:offset] || params["offset"] || "0")
 
     query

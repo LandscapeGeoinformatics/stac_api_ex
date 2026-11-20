@@ -385,7 +385,7 @@ defmodule StacApiWeb.ApiDocs do
           "collections=estonia-sentinel2-ndvi&datetime=2020-04-01T00:00:00Z/2020-10-31T23:59:59Z&limit=5",
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, or fields parameter")
+          err(400, "Invalid datetime, bbox, fields, or limit parameter")
         ]
       },
       %{
@@ -395,13 +395,15 @@ defmodule StacApiWeb.ApiDocs do
         summary: "Search items (POST)",
         description:
           "Same as the GET search with the filters in a JSON body. Use this form for GeoJSON " <>
-            "intersects geometries and long id lists.",
+            "intersects geometries and long id lists. The self / next / prev links are POST " <>
+            "links: same href, \"method\": \"POST\", and the full request body with the new " <>
+            "offset as \"body\" (no merge, so post the body as it is).",
         auth: :optional,
         params: [],
         request_body: search_body(),
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, or fields parameter")
+          err(400, "Invalid datetime, bbox, fields, or limit parameter")
         ]
       },
       %{
@@ -1013,7 +1015,8 @@ defmodule StacApiWeb.ApiDocs do
         href: %{type: "string"},
         type: %{type: "string"},
         title: %{type: "string"},
-        method: %{type: "string"}
+        method: %{type: "string"},
+        body: %{type: "object", description: "Request body to send with a POST link"}
       }
     }
 
