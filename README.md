@@ -666,7 +666,9 @@ A few things that are good to know:
 - The role cannot be changed. A `PATCH` that contains `role` gets a `422`; to change a
   role, create a new key and delete the old one. This way a leaked read-only key can never
   become a write key.
-- `expires_at` must lie in the future when you set it (`422` otherwise). `"expires_at": null`
+- `expires_at` must be RFC 3339 with an offset, like `2027-02-28T23:59:59Z` or
+  `2027-02-28T23:59:59+02:00`; a time without an offset is not guessed as UTC but gets a
+  `422`. It must also lie in the future when you set it (`422` otherwise). `"expires_at": null`
   in a `PATCH` removes the expiry, and a new date renews an expired key. A browser session
   that is already unlocked stays unlocked until it ends, even after its key expired.
 - `key_prefix` is the first characters of the key. Use it to tell which key is which in the

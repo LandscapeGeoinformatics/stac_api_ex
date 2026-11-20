@@ -100,6 +100,38 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       assert resp["details"]["expires_at"] == ["must be in the future"]
     end
 
+    test "rejects an expires_at without a UTC offset instead of guessing UTC", %{conn: conn} do
+      for value <- [
+            "2099-02-28T23:59:59",
+            "2099-02-28T23:59",
+            "2099-02-28 23:59:59",
+            "2099-02-28"
+          ] do
+        resp =
+          conn
+          |> post(@path, %{"name" => "no-offset", "expires_at" => value})
+          |> json_response(422)
+
+        assert [message] = resp["details"]["expires_at"], "for #{value}"
+        assert message =~ "UTC offset" or message == "is invalid", "for #{value}"
+      end
+
+      assert Repo.aggregate(from(k in ApiKey, where: k.name == "no-offset"), :count) == 0
+    end
+
+    test "accepts Z and numeric offsets and stores the instant in UTC", %{conn: conn} do
+      for {name, value, utc} <- [
+            {"z", "2099-02-28T23:59:59Z", "2099-02-28T23:59:59"},
+            {"plus-two", "2099-03-01T01:59:59+02:00", "2099-02-28T23:59:59"},
+            {"minus-five", "2099-02-28T18:59:59-05:00", "2099-02-28T23:59:59"},
+            {"fraction", "2099-02-28T23:59:59.500Z", "2099-02-28T23:59:59"}
+          ] do
+        resp = conn |> post(@path, %{"name" => name, "expires_at" => value}) |> json_response(201)
+
+        assert String.starts_with?(resp["data"]["expires_at"], utc), "for #{value}"
+      end
+    end
+
     test "rejects an expires_at that is not a timestamp", %{conn: conn} do
       resp =
         conn
@@ -191,6 +223,27 @@ defmodule StacApiWeb.ApiKeysRolesExpiryTest do
       end
 
       assert Repo.get!(ApiKey, id).name == "keep-my-name"
+    end
+
+    test "rejects an expires_at without a UTC offset and keeps the old one", %{conn: conn} do
+      {id, _} = create_key!(conn, "patch-no-offset", %{"expires_at" => future()})
+      before = Repo.get!(ApiKey, id).expires_at
+
+      resp =
+        conn
+        |> patch("#{@path}/#{id}", %{"expires_at" => "2099-02-28T23:59:59"})
+        |> json_response(422)
+
+      assert [message] = resp["details"]["expires_at"]
+      assert message =~ "UTC offset"
+      assert DateTime.compare(Repo.get!(ApiKey, id).expires_at, before) == :eq
+
+      ok =
+        conn
+        |> patch("#{@path}/#{id}", %{"expires_at" => "2099-03-01T01:59:59+02:00"})
+        |> json_response(200)
+
+      assert String.starts_with?(ok["data"]["expires_at"], "2099-02-28T23:59:59")
     end
 
     test "rejects an expires_at in the past", %{conn: conn} do

@@ -583,8 +583,8 @@ defmodule StacApiWeb.ApiDocs do
         summary: "Issue API key",
         description:
           "Issues a personal key with a role: read_only (default, secret starts with stac_ro_) or " <>
-            "read_write (stac_rw_). The role is fixed at creation. expires_at (optional, in the " <>
-            "future) ends the key automatically; contact and note are optional. The raw secret is " <>
+            "read_write (stac_rw_). The role is fixed at creation. expires_at (optional, RFC 3339 " <>
+            "with an offset such as Z or +02:00, in the future) ends the key automatically; contact and note are optional. The raw secret is " <>
             "returned once, under data.key, and cannot be retrieved again (only rotated). " <>
             "Names are trimmed, 1-100 characters and unique.",
         auth: :rw,
@@ -603,7 +603,10 @@ defmodule StacApiWeb.ApiDocs do
         responses: [
           created("Issued key including its one-time secret", "ApiKeyResult"),
           unauthorized,
-          err(422, "Validation failed (name, unknown role, or expires_at not in the future)")
+          err(
+            422,
+            "Validation failed (name, unknown role, or expires_at without an offset or not in the future)"
+          )
         ]
       },
       %{

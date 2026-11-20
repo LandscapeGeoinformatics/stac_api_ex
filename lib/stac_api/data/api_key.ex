@@ -73,6 +73,7 @@ defmodule StacApi.Data.ApiKey do
     |> validate_required([:name, :key_hash, :key_prefix])
     |> validate_inclusion(:role, @roles)
     |> validate_editable_fields()
+    |> validate_expires_at_offset(attrs)
     |> unique_constraint(:key_hash)
     |> put_rotated_at_for_new_key()
   end
@@ -102,6 +103,24 @@ defmodule StacApi.Data.ApiKey do
     |> cast(attrs, [:name, :expires_at, :contact, :note])
     |> validate_required([:name])
     |> validate_editable_fields()
+    |> validate_expires_at_offset(attrs)
+  end
+
+  # RFC 3339 needs an explicit offset ("Z" or "+02:00"). Ecto would quietly read
+  # "2027-02-28T23:59:59" as UTC, so a key could end hours earlier or later than
+  # the admin meant. Reject it instead of guessing. Values Ecto already rejects
+  # ("is invalid") and non-strings (nil, DateTime) are left alone.
+  @offset_regex ~r/[Tt ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|z|[+-]\d{2}(:?\d{2})?)\z/
+
+  defp validate_expires_at_offset(changeset, attrs) do
+    raw = Map.get(attrs, "expires_at") || Map.get(attrs, :expires_at)
+
+    if is_binary(raw) and not Keyword.has_key?(changeset.errors, :expires_at) and
+         not Regex.match?(@offset_regex, raw) do
+      add_error(changeset, :expires_at, "must include a UTC offset, e.g. 2027-02-28T23:59:59Z")
+    else
+      changeset
+    end
   end
 
   # Rules shared by create and update.

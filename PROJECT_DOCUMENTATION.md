@@ -453,7 +453,7 @@ scripts their own key that can be revoked, rotated or set to expire on its own.
   router scope behind `AuthPlug` with `admin_only: true`, so only the static read-write
   key (`STAC_API_KEY`) can issue, list, change, rotate or delete keys. An issued key,
   even a read-write one, gets 401 there. The static keys also remain as break-glass access.
-- **Expiry:** an optional `expires_at`. An expired key is invalid everywhere (public API,
+- **Expiry:** an optional `expires_at` (RFC 3339 with an offset, `422` otherwise; a time without one is not guessed as UTC). An expired key is invalid everywhere (public API,
   management API, browser unlock) and takes effect immediately. `ApiKey.get_by_secret/1`
   is the one lookup that applies this, used by both plugs and the browser unlock.
 - **Contact and note:** optional free text to record whose key it is and what it is for.
