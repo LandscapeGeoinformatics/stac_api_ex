@@ -488,6 +488,17 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
       assert get_in(openapi, ["components", "schemas", "OwnKey"])
     end
 
+    test "the docs page keeps three columns for the three getting-started cards" do
+      html = Phoenix.ConnTest.build_conn() |> get("#{@public}/docs") |> html_response(200)
+
+      # Getting started has three cards in a 3-column grid; only the (wider)
+      # authentication grid uses two columns.
+      assert html =~ ~s(grid grid-cols-1 md:grid-cols-3 gap-3 text-sm)
+      assert html =~ ~s(grid grid-cols-1 md:grid-cols-2 gap-3 text-sm)
+      refute html =~ "two levels"
+      assert html =~ "badge that shows which key it needs"
+    end
+
     test "the api-keys endpoints are :admin in the docs, the data endpoints stay :rw" do
       management =
         StacApiWeb.ApiDocs.groups(include_management: true)
