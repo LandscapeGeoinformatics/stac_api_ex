@@ -25,14 +25,7 @@ defmodule StacApiWeb.Plugs.AuthPlug do
   import Plug.Conn
 
   alias StacApi.Data.ApiKey
-
-  defp get_api_keys do
-    Application.get_env(:stac_api, :api_keys) ||
-      raise """
-      API keys configuration is missing.
-      Set STAC_API_KEY and STAC_API_KEY_RO environment variables.
-      """
-  end
+  alias StacApi.StaticKeys
 
   @doc "Plug callback; `admin_only: true` restricts access to the static read-write key."
   def init(opts), do: opts
@@ -64,10 +57,8 @@ defmodule StacApiWeb.Plugs.AuthPlug do
     if is_nil(api_key) || api_key == "" do
       {:error, "Missing X-API-Key header"}
     else
-      %{read_write: rw_keys} = get_api_keys()
-
       cond do
-        Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
+        StaticKeys.level(api_key) == :read_write ->
           {:ok, nil}
 
         admin_only ->
@@ -92,10 +83,4 @@ defmodule StacApiWeb.Plugs.AuthPlug do
       _ -> nil
     end
   end
-
-  defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
-    Plug.Crypto.secure_compare(a, b)
-  end
-
-  defp secure_compare(_, _), do: false
 end

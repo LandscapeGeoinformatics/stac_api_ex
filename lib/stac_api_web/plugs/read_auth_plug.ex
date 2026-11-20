@@ -27,14 +27,7 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
   import Plug.Conn
 
   alias StacApi.Data.ApiKey
-
-  defp get_api_keys do
-    Application.get_env(:stac_api, :api_keys) ||
-      raise """
-      API keys configuration is missing.
-      Set STAC_API_KEY and STAC_API_KEY_RO environment variables.
-      """
-  end
+  alias StacApi.StaticKeys
 
   @doc "Plug callback; no options are used."
   def init(opts), do: opts
@@ -65,14 +58,9 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
     if is_nil(api_key) || api_key == "" do
       {:error, "No API key provided"}
     else
-      %{read_write: rw_keys, read_only: ro_keys} = get_api_keys()
-
       cond do
-        Enum.any?(rw_keys, &secure_compare(api_key, &1)) ->
-          {:ok, :read_write, nil}
-
-        Enum.any?(ro_keys, &secure_compare(api_key, &1)) ->
-          {:ok, :read_only, nil}
+        level = StaticKeys.level(api_key) ->
+          {:ok, level, nil}
 
         issued = issued_key(api_key) ->
           {:ok, ApiKey.auth_level(issued), issued}
@@ -91,10 +79,4 @@ defmodule StacApiWeb.Plugs.ReadAuthPlug do
       issued
     end
   end
-
-  defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
-    Plug.Crypto.secure_compare(a, b)
-  end
-
-  defp secure_compare(_, _), do: false
 end
