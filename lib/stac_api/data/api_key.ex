@@ -57,9 +57,9 @@ defmodule StacApi.Data.ApiKey do
   end
 
   @doc """
-  Builds a changeset for creating a key, or for replacing its secret on rotate.
+  Builds a changeset for creating a key.
 
-  Casts `:name`, `:key_hash`, `:key_prefix`, `:role`, `:expires_at`,
+  Sets `rotated_at` from the app clock for a new key. Casts `:name`, `:key_hash`, `:key_prefix`, `:role`, `:expires_at`,
   `:contact` and `:note`; name, hash and prefix are required. The name is
   trimmed and must be 1-100 characters and unique; `:key_hash` must be unique.
   `:role` must be `"read_only"` or `"read_write"` and `:expires_at` must lie in
@@ -74,6 +74,20 @@ defmodule StacApi.Data.ApiKey do
     |> validate_inclusion(:role, @roles)
     |> validate_editable_fields()
     |> unique_constraint(:key_hash)
+    |> put_rotated_at_for_new_key()
+  end
+
+  # A new key gets `rotated_at` from the app clock, like every later rotation
+  # and every check (expiry, max-age, hourly limit) does. The database default
+  # `now()` is only for backfilling existing keys in the migration: with two
+  # clocks that are a few milliseconds apart, a rotation right after creating
+  # a key could otherwise land "before" it.
+  defp put_rotated_at_for_new_key(changeset) do
+    if changeset.data.__meta__.state == :built and is_nil(get_field(changeset, :rotated_at)) do
+      put_change(changeset, :rotated_at, DateTime.utc_now())
+    else
+      changeset
+    end
   end
 
   @doc """

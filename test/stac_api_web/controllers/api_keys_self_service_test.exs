@@ -45,6 +45,40 @@ defmodule StacApiWeb.ApiKeysSelfServiceTest do
   end
 
   describe "rotated_at and rotated_by" do
+    test "a new key gets rotated_at from the app clock, not from the database default" do
+      {_raw, secret_attrs} = ApiKey.generate_secret("read_only")
+      before = DateTime.utc_now()
+
+      changeset = ApiKey.changeset(%ApiKey{}, Map.put(secret_attrs, :name, "clock"))
+      rotated_at = Ecto.Changeset.get_change(changeset, :rotated_at)
+
+      assert %DateTime{} = rotated_at
+      assert DateTime.compare(rotated_at, before) != :lt
+      assert DateTime.compare(rotated_at, DateTime.utc_now()) != :gt
+    end
+
+    test "editing or loading an existing key does not touch rotated_at", %{conn: conn} do
+      {id, _} = create_key!(conn, "unchanged-clock")
+      loaded = Repo.get!(ApiKey, id)
+
+      changeset = ApiKey.update_changeset(loaded, %{"note" => "x"})
+      refute Map.has_key?(changeset.changes, :rotated_at)
+
+      changeset = ApiKey.changeset(loaded, %{name: "renamed"})
+      refute Map.has_key?(changeset.changes, :rotated_at)
+    end
+
+    test "rotating right after creating never lands before the creation", %{conn: conn} do
+      for n <- 1..5 do
+        {id, secret} = create_key!(conn, "quick-#{n}")
+        created_at = Repo.get!(ApiKey, id).rotated_at
+
+        secret |> with_key() |> post("#{@public}/key/rotate") |> json_response(200)
+
+        assert DateTime.compare(Repo.get!(ApiKey, id).rotated_at, created_at) != :lt
+      end
+    end
+
     test "a new key has rotated_at set and was never rotated", %{conn: conn} do
       resp = conn |> post(@path, %{"name" => "fresh"}) |> json_response(201)
 
