@@ -10,10 +10,10 @@ defmodule StacApiWeb.ItemJSON do
 
   Note this is deliberately *not* the same rendering as
   `StacApi.Data.Search.serialize_item_for_api/1`, which serves the public read
-  API. That one uses string keys, converts `Geo` structs to plain GeoJSON,
-  merges `datetime` into `properties`, and echoes the stored links rather than
-  generated ones. Unifying the two is worthwhile but changes payloads on one
-  side or the other, so it is not part of this extraction.
+  API. That one uses string keys, converts `Geo` structs to plain GeoJSON and
+  returns `properties` exactly as stored. Unifying the two is worthwhile but
+  changes payloads on one side or the other, so it is not part of this
+  extraction.
   """
 
   alias StacApi.Data.Item
