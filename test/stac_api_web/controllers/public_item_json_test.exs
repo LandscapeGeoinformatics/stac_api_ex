@@ -88,6 +88,50 @@ defmodule StacApiWeb.PublicItemJSONTest do
     assert single["properties"]["datetime"] == "2024-01-02T00:00:00Z"
   end
 
+  test "LineString and MultiPoint items are the same GeoJSON on every endpoint, without crs" do
+    collection = "public-item-geometries"
+    auth_conn = authenticated_conn(build_conn())
+
+    post(auth_conn, ~p"/stac/manage/v1/collections", %{
+      "id" => collection,
+      "description" => "Geometry types beyond Point and Polygon",
+      "license" => "CC-BY-4.0"
+    })
+
+    geometries = %{
+      "line-item" => %{"type" => "LineString", "coordinates" => [[26.7, 58.4], [26.8, 58.5]]},
+      "multipoint-item" => %{
+        "type" => "MultiPoint",
+        "coordinates" => [[26.7, 58.4], [26.8, 58.5]]
+      }
+    }
+
+    for {id, geometry} <- geometries do
+      response =
+        post(auth_conn, ~p"/stac/manage/v1/items", %{
+          "id" => id,
+          "collection_id" => collection,
+          "geometry" => geometry,
+          "bbox" => [26.7, 58.4, 26.8, 58.5],
+          "properties" => %{"datetime" => "2024-01-02T00:00:00Z"}
+        })
+
+      assert response.status == 201
+    end
+
+    search = get_json(~p"/stac/api/v1/search?collections=#{collection}")
+    items = get_json(~p"/stac/api/v1/collections/#{collection}/items")
+
+    for {id, geometry} <- geometries do
+      single = get_json(~p"/stac/api/v1/collections/#{collection}/items/#{id}")
+
+      assert feature(search, id) == single
+      assert feature(items, id) == single
+      assert single["geometry"] == geometry
+      refute Map.has_key?(single["geometry"], "crs")
+    end
+  end
+
   test "no public endpoint returns a top-level datetime", %{conn: conn} do
     post_search =
       conn

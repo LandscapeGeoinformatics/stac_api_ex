@@ -205,34 +205,19 @@ defmodule StacApi.Data.Search do
 
   defp serialize_geometry(nil), do: nil
 
-  defp serialize_geometry(%Geo.Point{coordinates: {x, y}}),
-    do: %{"type" => "Point", "coordinates" => [x, y]}
-
-  defp serialize_geometry(%Geo.Point{coordinates: {x, y, z}}),
-    do: %{"type" => "Point", "coordinates" => [x, y, z]}
-
-  defp serialize_geometry(%Geo.Polygon{coordinates: coords}) do
-    %{"type" => "Polygon", "coordinates" => convert_coords(coords)}
-  end
-
-  defp serialize_geometry(%Geo.MultiPolygon{coordinates: coords}) do
-    %{"type" => "MultiPolygon", "coordinates" => convert_coords(coords)}
-  end
+  # Every Geo struct, as RFC 7946 GeoJSON. Without the srid, Geo.JSON adds no
+  # "crs" member (RFC 7946 removed it).
+  defp serialize_geometry(%_{srid: _} = geometry),
+    do: geometry |> without_srid() |> Geo.JSON.encode!()
 
   defp serialize_geometry(%{"type" => _, "coordinates" => _} = geojson), do: geojson
   defp serialize_geometry(geometry) when is_map(geometry), do: geometry
   defp serialize_geometry(_), do: nil
 
-  defp convert_coords(coords) when is_list(coords) do
-    Enum.map(coords, fn
-      {x, y} -> [x, y]
-      {x, y, z} -> [x, y, z]
-      list when is_list(list) -> convert_coords(list)
-      other -> other
-    end)
-  end
+  defp without_srid(%Geo.GeometryCollection{geometries: geometries} = collection),
+    do: %{collection | srid: nil, geometries: Enum.map(geometries, &without_srid/1)}
 
-  defp convert_coords(other), do: other
+  defp without_srid(geometry), do: %{geometry | srid: nil}
 
   defp serialize_bbox(nil), do: nil
   defp serialize_bbox(bbox) when is_list(bbox), do: bbox
