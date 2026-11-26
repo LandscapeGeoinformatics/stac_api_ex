@@ -6,6 +6,7 @@ defmodule StacApi.Data.Search do
   import Ecto.Query
   alias StacApi.Repo
   alias StacApi.Data.{Item, Collection, ItemAsset, Catalog, ItemFilters}
+  alias StacApiWeb.{DynamicLinkGenerator, LinkResolver}
 
   def search(params \\ %{}, authenticated \\ false) do
     case ItemFilters.parse(params) do
@@ -20,14 +21,15 @@ defmodule StacApi.Data.Search do
       |> build_search_query(params, authenticated, filters)
       |> apply_pagination(params)
 
-    # First get the raw results with geometry as GeoJSON
+    # Geometry is loaded like everywhere else (a Geo struct at full precision),
+    # so /search renders it exactly as the collection item endpoints do.
     raw_results =
       query
       |> select([i], %{
         id: i.id,
         stac_version: i.stac_version,
         stac_extensions: i.stac_extensions,
-        geometry: fragment("ST_AsGeoJSON(?::geometry) as geometry", i.geometry),
+        geometry: i.geometry,
         bbox: i.bbox,
         datetime: i.datetime,
         start_datetime: i.start_datetime,
@@ -53,7 +55,7 @@ defmodule StacApi.Data.Search do
       id: item_map.id,
       stac_version: item_map.stac_version,
       stac_extensions: item_map.stac_extensions,
-      geometry: parse_geometry(item_map.geometry),
+      geometry: item_map.geometry,
       bbox: item_map.bbox,
       datetime: item_map.datetime,
       start_datetime: item_map.start_datetime,
@@ -67,23 +69,6 @@ defmodule StacApi.Data.Search do
       updated_at: item_map.updated_at
     }
   end
-
-  defp parse_geometry(nil), do: nil
-
-  defp parse_geometry(geojson_string) when is_binary(geojson_string) do
-    case Jason.decode(geojson_string) do
-      {:ok, geojson_map} ->
-        case Geo.JSON.decode(geojson_map) do
-          {:ok, geo_struct} -> geo_struct
-          _ -> geojson_map
-        end
-
-      _ ->
-        nil
-    end
-  end
-
-  defp parse_geometry(geometry), do: geometry
 
   def count_search_results(params \\ %{}, authenticated \\ false) do
     case ItemFilters.parse(params) do
@@ -220,9 +205,19 @@ defmodule StacApi.Data.Search do
   defp parse_int(num) when is_integer(num), do: num
   defp parse_int(_), do: 0
 
+  @doc """
+  The public STAC Item, the one shape returned by `/search`,
+  `/collections/:id/items` and `/collections/:id/items/:item_id`.
+
+  `properties` come back as stored: `datetime`, `start_datetime` and
+  `end_datetime` are normalised at write time, so they are not rendered again
+  from the typed columns, and there is no top-level `datetime`. Links are the
+  generated `self` / `root` / `parent` / `collection` links plus the stored ones.
+  """
   def serialize_item_for_api(%Item{} = item) do
     # Reconstruct assets from normalized data
     assets = reconstruct_item_assets(item.id, item.stac_extensions || [])
+    stored_links = item.links |> serialize_links() |> LinkResolver.resolve_links()
 
     %{
       "type" => "Feature",
@@ -231,49 +226,28 @@ defmodule StacApi.Data.Search do
       "id" => item.id,
       "geometry" => item.geometry |> serialize_geometry(),
       "bbox" => item.bbox |> serialize_bbox(),
-      "properties" => item.properties |> serialize_properties(item.datetime),
+      "properties" => item.properties |> serialize_properties(),
       "collection" => item.collection_id,
       "assets" => assets |> serialize_assets(),
-      "links" => item.links |> serialize_links()
+      "links" => DynamicLinkGenerator.generate_item_links(item, stored_links)
     }
   end
 
   defp serialize_geometry(nil), do: nil
 
-  defp serialize_geometry(%Geo.Point{coordinates: {x, y}}),
-    do: %{"type" => "Point", "coordinates" => [x, y]}
-
-  defp serialize_geometry(%Geo.Point{coordinates: {x, y, z}}),
-    do: %{"type" => "Point", "coordinates" => [x, y, z]}
-
-  defp serialize_geometry(%Geo.Polygon{coordinates: coords}) do
-    %{"type" => "Polygon", "coordinates" => convert_coords(coords)}
-  end
-
-  defp serialize_geometry(%Geo.MultiPolygon{coordinates: coords}) do
-    %{"type" => "MultiPolygon", "coordinates" => convert_coords(coords)}
-  end
+  # Every Geo struct, as RFC 7946 GeoJSON. Without the srid, Geo.JSON adds no
+  # "crs" member (RFC 7946 removed it).
+  defp serialize_geometry(%_{srid: _} = geometry),
+    do: geometry |> without_srid() |> Geo.JSON.encode!()
 
   defp serialize_geometry(%{"type" => _, "coordinates" => _} = geojson), do: geojson
   defp serialize_geometry(geometry) when is_map(geometry), do: geometry
   defp serialize_geometry(_), do: nil
 
-  defp convert_coords(coords) when is_list(coords) do
-    Enum.map(coords, fn
-      {x, y} -> [x, y]
-      {x, y, z} -> [x, y, z]
-      list when is_list(list) -> convert_coords(list)
-      other -> other
-    end)
-  end
+  defp without_srid(%Geo.GeometryCollection{geometries: geometries} = collection),
+    do: %{collection | srid: nil, geometries: Enum.map(geometries, &without_srid/1)}
 
-  defp convert_coords(other), do: other
-
-  defp serialize_datetime(%DateTime{} = dt) do
-    DateTime.to_iso8601(dt)
-  end
-
-  defp serialize_datetime(_), do: nil
+  defp without_srid(geometry), do: %{geometry | srid: nil}
 
   defp serialize_bbox(nil), do: nil
   defp serialize_bbox(bbox) when is_list(bbox), do: bbox
@@ -284,16 +258,10 @@ defmodule StacApi.Data.Search do
 
   defp serialize_bbox(bbox), do: bbox
 
-  defp serialize_properties(nil, datetime), do: %{"datetime" => serialize_datetime(datetime)}
+  defp serialize_properties(properties) when is_map(properties),
+    do: deep_serialize_tuples(properties)
 
-  defp serialize_properties(properties, datetime) when is_map(properties) do
-    properties
-    |> deep_serialize_tuples()
-    |> Map.put("datetime", serialize_datetime(datetime))
-  end
-
-  defp serialize_properties(_properties, datetime),
-    do: %{"datetime" => serialize_datetime(datetime)}
+  defp serialize_properties(_properties), do: %{}
 
   defp serialize_assets(nil), do: %{}
 
