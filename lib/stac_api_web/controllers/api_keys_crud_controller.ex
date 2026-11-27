@@ -118,7 +118,8 @@ defmodule StacApiWeb.ApiKeysCrudController do
   POST /stac/manage/v1/api-keys/:id/rotate
   Issues a new secret for an existing key: same id, same name and role (so the
   prefix still matches), old secret immediately stops working. The new raw
-  secret is returned once, under `data.key`.
+  secret is returned once, under `data.key`. It also sets `rotated_at` and
+  `rotated_by: "admin"`.
 
   `expires_at` is the admin's final date and no rotation moves it: an expired
   key can be rotated, but the new secret is expired as well. The response
@@ -130,10 +131,8 @@ defmodule StacApiWeb.ApiKeysCrudController do
         not_found(conn)
 
       api_key ->
-        {raw_secret, secret_attrs} = ApiKey.generate_secret(api_key.role)
-
-        case api_key |> ApiKey.changeset(secret_attrs) |> Repo.update() do
-          {:ok, updated} ->
+        case ApiKey.rotate_secret(api_key, "admin") do
+          {:ok, updated, raw_secret} ->
             json(conn, %{
               success: true,
               message:
@@ -207,6 +206,8 @@ defmodule StacApiWeb.ApiKeysCrudController do
       contact: api_key.contact,
       note: api_key.note,
       last_used_at: api_key.last_used_at,
+      rotated_at: api_key.rotated_at,
+      rotated_by: api_key.rotated_by,
       inserted_at: api_key.inserted_at,
       updated_at: api_key.updated_at
     }

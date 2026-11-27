@@ -612,16 +612,9 @@ defmodule StacApiWeb.StacBrowserController do
   # the session so pages can show write-related content (e.g. the Management
   # API docs) only to sessions unlocked with a read-write key.
   defp browse_key_level(api_key) when is_binary(api_key) and api_key != "" do
-    api_keys = Application.get_env(:stac_api, :api_keys, %{})
-    read_write = Map.get(api_keys, :read_write, []) || []
-    read_only = Map.get(api_keys, :read_only, []) || []
-
     cond do
-      Enum.any?(read_write, &Plug.Crypto.secure_compare(api_key, &1)) ->
-        :read_write
-
-      Enum.any?(read_only, &Plug.Crypto.secure_compare(api_key, &1)) ->
-        :read_only
+      level = StacApi.StaticKeys.level(api_key) ->
+        level
 
       issued = StacApi.Data.ApiKey.get_by_secret(api_key) ->
         StacApi.Data.ApiKey.touch_last_used(issued)

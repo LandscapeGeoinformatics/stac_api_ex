@@ -95,9 +95,10 @@
         <h2 class="text-2xl font-semibold text-secondary mb-3">Authentication</h2>
         <p class="text-sm text-gray-700 mb-4">
           Reading public data needs no credentials. An API key sent in the
-          <code class="font-mono text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header unlocks private catalogs<%= if @show_management, do: "; keys come in two levels", else: "" %>:
+          <code class="font-mono text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header unlocks private catalogs.
+          Every endpoint below carries a badge that shows which key it needs:
         </p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div :for={level <- @auth_levels} class="bg-white border border-gray-200 rounded-lg p-3">
             <% {label, class, hint} = auth_badge(level) %>
             <span class={["inline-block px-2 py-0.5 rounded text-xs font-medium mb-2", class]}><%= label %></span>
@@ -111,7 +112,8 @@
           <tbody class="divide-y divide-gray-200 text-gray-700">
             <tr><td class="py-1.5 pr-4 font-medium">none</td><td class="py-1.5 pr-4">public catalogs only</td><td class="py-1.5">401</td></tr>
             <tr><td class="py-1.5 pr-4 font-medium">read-only</td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">401</td></tr>
-            <tr><td class="py-1.5 pr-4 font-medium">read-write</td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">full access</td></tr>
+            <tr><td class="py-1.5 pr-4 font-medium">read-write (issued)</td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">catalogs, collections, items; 401 on <code class="font-mono text-xs">/api-keys</code></td></tr>
+            <tr><td class="py-1.5 pr-4 font-medium">static <code class="font-mono text-xs">STAC_API_KEY</code></td><td class="py-1.5 pr-4">public + private catalogs</td><td class="py-1.5">full access, including <code class="font-mono text-xs">/api-keys</code></td></tr>
           </tbody>
         </table>
         <p class="text-xs text-gray-500 mt-3">
