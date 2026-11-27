@@ -1,6 +1,6 @@
 defmodule StacApiWeb.CollectionsController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{Catalog, Collection, ItemFields, Search}
+  alias StacApi.Data.{Catalog, Collection, ItemFields, ItemListing, Search}
   alias StacApi.Repo
   alias StacApiWeb.LinkResolver
   import Ecto.Query
@@ -114,11 +114,9 @@ defmodule StacApiWeb.CollectionsController do
     try do
       authenticated = conn.assigns[:authenticated] || false
 
-      limit = parse_int(params["limit"] || "10") |> max(1) |> min(10_000)
-      offset = parse_int(params["offset"] || "0") |> max(0)
-
       with {:ok, filters} <- StacApi.Data.ItemFilters.parse(params),
-           {:ok, fields} <- ItemFields.parse(params, :get) do
+           {:ok, fields} <- ItemFields.parse(params, :get),
+           {:ok, listing} <- ItemListing.parse(params) do
         case Repo.get(Collection, collection_id) do
           nil ->
             conn
@@ -151,15 +149,13 @@ defmodule StacApiWeb.CollectionsController do
               |> put_status(:not_found)
               |> json(%{error: "Collection not found"})
             else
-              base_query =
-                from(i in StacApi.Data.Item,
-                  where: i.collection_id == ^collection_id,
-                  order_by: [desc: i.datetime]
-                )
+              base_query = from(i in StacApi.Data.Item, where: i.collection_id == ^collection_id)
 
               base_query = StacApi.Data.ItemFilters.apply(base_query, filters)
               total_count = Repo.aggregate(base_query, :count, :id)
-              items = Repo.all(from(i in base_query, limit: ^limit, offset: ^offset))
+
+              items = base_query |> ItemListing.apply(listing) |> Repo.all()
+              %{limit: limit, offset: offset} = listing
 
               sanitized_items =
                 Enum.map(items, fn item ->
@@ -170,7 +166,11 @@ defmodule StacApiWeb.CollectionsController do
 
               base_url = Application.get_env(:stac_api, :base_url, "")
               items_base = "#{base_url}/stac/api/v1/collections/#{collection_id}/items"
-              pagination_params = ItemFields.pagination_params(params, fields)
+
+              pagination_params =
+                params
+                |> ItemFields.pagination_params(fields)
+                |> ItemListing.pagination_params(listing)
 
               page_url = fn page_offset ->
                 page_params = [{"limit", limit}, {"offset", page_offset}]
@@ -188,6 +188,11 @@ defmodule StacApiWeb.CollectionsController do
                 page_params =
                   if Map.has_key?(pagination_params, "fields"),
                     do: page_params ++ [{"fields", pagination_params["fields"]}],
+                    else: page_params
+
+                page_params =
+                  if pagination_params["sortby"],
+                    do: page_params ++ [{"sortby", pagination_params["sortby"]}],
                     else: page_params
 
                 "#{items_base}?#{URI.encode_query(page_params)}"
@@ -342,16 +347,6 @@ defmodule StacApiWeb.CollectionsController do
     |> maybe_put_collection_field(:keywords, Map.get(collection, :keywords))
     |> maybe_put_collection_field(:providers, Map.get(collection, :providers))
   end
-
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {num, _} -> num
-      :error -> 0
-    end
-  end
-
-  defp parse_int(num) when is_integer(num), do: num
-  defp parse_int(_), do: 0
 
   defp maybe_put_collection_field(map, _key, nil), do: map
   defp maybe_put_collection_field(map, _key, []), do: map

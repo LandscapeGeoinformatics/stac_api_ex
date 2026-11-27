@@ -5,21 +5,29 @@ defmodule StacApi.Data.Search do
 
   import Ecto.Query
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog, ItemFilters}
+  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog, ItemFilters, ItemListing}
   alias StacApiWeb.{DynamicLinkGenerator, LinkResolver}
 
   def search(params \\ %{}, authenticated \\ false) do
+    # The API answers an invalid sortby, limit or offset with 400 before
+    # searching; other callers get the default order and first page.
+    listing =
+      case ItemListing.parse(params) do
+        {:ok, listing} -> listing
+        {:error, _, _} -> ItemListing.default()
+      end
+
     case ItemFilters.parse(params) do
-      {:ok, filters} -> search(params, authenticated, filters)
+      {:ok, filters} -> search(params, authenticated, filters, listing)
       {:error, _, _} -> []
     end
   end
 
-  def search(params, authenticated, filters) do
+  def search(params, authenticated, filters, listing) do
     query =
       Item
       |> build_search_query(params, authenticated, filters)
-      |> apply_pagination(params)
+      |> ItemListing.apply(listing)
 
     # Geometry is loaded like everywhere else (a Geo struct at full precision),
     # so /search renders it exactly as the collection item endpoints do.
@@ -90,7 +98,6 @@ defmodule StacApi.Data.Search do
     |> ItemFilters.apply(filters)
     |> filter_by_ids(params[:ids] || params["ids"])
     |> filter_by_intersects(params[:intersects] || params["intersects"])
-    |> order_by([i], desc: i.datetime)
   end
 
   defp filter_by_private_catalogs(query, true), do: query
@@ -152,58 +159,9 @@ defmodule StacApi.Data.Search do
 
   defp filter_by_intersects(query, _), do: query
 
-  @default_limit 10
-  @max_limit 100
-
-  @doc """
-  The page size a search really gets, used for the query and for the paging
-  links alike. Missing means #{@default_limit}; above #{@max_limit} returns
-  #{@max_limit} (the spec asks for the maximum instead of an error); below 1 or
-  not an integer is an error, which the API answers with 400.
-  """
-  @spec effective_limit(map()) :: {:ok, pos_integer()} | {:error, :limit, String.t()}
-  def effective_limit(params) do
-    case Map.get(params, "limit", Map.get(params, :limit)) do
-      nil -> {:ok, @default_limit}
-      "" -> {:ok, @default_limit}
-      limit when is_integer(limit) -> check_limit(limit)
-      limit when is_binary(limit) -> limit |> Integer.parse() |> check_limit()
-      _ -> check_limit(:error)
-    end
-  end
-
-  defp check_limit({limit, ""}), do: check_limit(limit)
-  defp check_limit(limit) when is_integer(limit) and limit >= 1, do: {:ok, min(limit, @max_limit)}
-  defp check_limit(_), do: {:error, :limit, "must be an integer of at least 1"}
-
-  defp apply_pagination(query, params) do
-    # The API validates limit before searching; other callers get the default.
-    limit =
-      case effective_limit(params) do
-        {:ok, limit} -> limit
-        {:error, _, _} -> @default_limit
-      end
-
-    offset = parse_int(params[:offset] || params["offset"] || "0")
-
-    query
-    |> limit(^limit)
-    |> offset(^offset)
-  end
-
   defp preload_collections(items) do
     Repo.preload(items, :collection)
   end
-
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {num, _} -> num
-      :error -> 0
-    end
-  end
-
-  defp parse_int(num) when is_integer(num), do: num
-  defp parse_int(_), do: 0
 
   @doc """
   The public STAC Item, the one shape returned by `/search`,

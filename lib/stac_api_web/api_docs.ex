@@ -29,8 +29,10 @@ defmodule StacApiWeb.ApiDocs do
     "https://api.stacspec.org/v1.0.0/item-search",
     "https://api.stacspec.org/v1.0.0-rc.2/item-search#context",
     "https://api.stacspec.org/v1.0.0/item-search#fields",
+    "https://api.stacspec.org/v1.1.0/item-search#sort",
     "https://api.stacspec.org/v1.0.0/ogcapi-features",
     "https://api.stacspec.org/v1.0.0/ogcapi-features#fields",
+    "https://api.stacspec.org/v1.1.0/ogcapi-features#sort",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",
     "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
@@ -74,11 +76,17 @@ defmodule StacApiWeb.ApiDocs do
       String.contains?(uri, "item-search#fields") ->
         "STAC API – Item Search: Fields extension"
 
+      String.contains?(uri, "item-search#sort") ->
+        "STAC API – Item Search: Sort extension"
+
       String.contains?(uri, "item-search") ->
         "STAC API – Item Search"
 
       String.contains?(uri, "ogcapi-features#fields") ->
         "STAC API – Features: Fields extension"
+
+      String.contains?(uri, "ogcapi-features#sort") ->
+        "STAC API – Features: Sort extension"
 
       String.contains?(uri, "stacspec.org") and String.contains?(uri, "ogcapi-features") ->
         "STAC API – Features"
@@ -185,13 +193,20 @@ defmodule StacApiWeb.ApiDocs do
     query(
       "limit",
       "integer",
-      "Page size. Default #{default}, values above #{max} are capped.",
+      "Page size. Default #{default}, values above #{max} are capped. Below 1 or not an integer " <>
+        "returns 400.",
       example: "5"
     )
   end
 
-  defp offset_param,
-    do: query("offset", "integer", "Number of results to skip (default 0).", example: "0")
+  defp offset_param do
+    query(
+      "offset",
+      "integer",
+      "Number of results to skip (default 0). Negative or not an integer returns 400.",
+      example: "0"
+    )
+  end
 
   defp fields_param do
     query(
@@ -199,6 +214,18 @@ defmodule StacApiWeb.ApiDocs do
       "string",
       "Comma-separated field paths. Use -path to exclude a path; without fields the full Item is returned, and fields= returns the default STAC Item fields. Exclude-only requests return the full Item except for the excluded paths.",
       example: "id,collection,properties.datetime"
+    )
+  end
+
+  defp sortby_param do
+    query(
+      "sortby",
+      "string",
+      "Comma-separated sort keys: properties.datetime, id, collection. Prefix - for descending; + " <>
+        "(sent as %2B) or no sign for ascending. Other keys return 400. A range item (datetime null) " <>
+        "sorts by its start_datetime. Without sortby: -properties.datetime. id ascending is always " <>
+        "the last tie-breaker.",
+      example: "-properties.datetime,id"
     )
   end
 
@@ -228,6 +255,7 @@ defmodule StacApiWeb.ApiDocs do
         "URL-encoded GeoJSON geometry; only items whose footprint intersects it are returned.",
         example: nil
       ),
+      sortby_param(),
       limit_param(10, 100),
       offset_param()
     ]
@@ -332,7 +360,8 @@ defmodule StacApiWeb.ApiDocs do
         path: "/stac/api/v1/collections/{collection_id}/items",
         summary: "List items of a collection",
         description:
-          "OGC API – Features items endpoint. Returns a GeoJSON FeatureCollection ordered by datetime, " <>
+          "OGC API – Features items endpoint. Returns a GeoJSON FeatureCollection ordered by sortby " <>
+            "(default newest first), " <>
             "with self / next / prev pagination links and a context block.",
         auth: :optional,
         params: [
@@ -350,14 +379,15 @@ defmodule StacApiWeb.ApiDocs do
             example: "2020-01-01T00:00:00Z/2021-12-31T23:59:59Z"
           ),
           fields_param(),
-          limit_param(10, 10_000),
+          sortby_param(),
+          limit_param(10, 100),
           offset_param()
         ],
         request_body: nil,
         example_query: "datetime=2020-01-01T00:00:00Z/2021-12-31T23:59:59Z&limit=2",
         responses: [
           ok(@geojson, "Item collection", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, or fields parameter"),
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter"),
           err(404, "Collection not found")
         ]
       },
@@ -390,7 +420,7 @@ defmodule StacApiWeb.ApiDocs do
           "collections=estonia-sentinel2-ndvi&datetime=2020-04-01T00:00:00Z/2020-10-31T23:59:59Z&limit=5",
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, fields, or limit parameter")
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter")
         ]
       },
       %{
@@ -408,7 +438,7 @@ defmodule StacApiWeb.ApiDocs do
         request_body: search_body(),
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, fields, or limit parameter")
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter")
         ]
       },
       %{
@@ -1276,6 +1306,19 @@ defmodule StacApiWeb.ApiDocs do
             properties: %{
               include: %{type: "array", items: %{type: "string"}},
               exclude: %{type: "array", items: %{type: "string"}}
+            }
+          },
+          sortby: %{
+            type: "array",
+            description:
+              "Sort extension: applied in the given order, then id ascending as the tie-breaker.",
+            items: %{
+              type: "object",
+              required: ["field"],
+              properties: %{
+                field: %{type: "string", enum: ["properties.datetime", "id", "collection"]},
+                direction: %{type: "string", enum: ["asc", "desc"], default: "asc"}
+              }
             }
           },
           limit: %{type: "integer", minimum: 1, maximum: 100, default: 10},

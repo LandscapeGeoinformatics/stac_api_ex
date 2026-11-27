@@ -158,12 +158,12 @@ defmodule StacApiWeb.LinkResolver do
   A GET search (`:get`) answers with GET links. A POST search (`:post`) answers
   with POST links (`"method": "POST"`) that carry the full request body with the
   new `offset` as `"body"`, without `merge`, so a client repeats the POST as it
-  is. `limit` is the effective page size from `StacApi.Data.Search.effective_limit/1`,
-  so the offsets step by what was really returned.
+  is. `limit` and `offset` are the parsed values from
+  `StacApi.Data.ItemListing.parse/1`, so the offsets step by what was really
+  returned.
   """
-  def create_search_links(kind, params, limit, total_count) when kind in [:get, :post] do
-    current_offset = parse_int(params["offset"] || "0")
-
+  def create_search_links(kind, params, %{limit: limit, offset: current_offset}, total_count)
+      when kind in [:get, :post] do
     links = [
       search_link(kind, "self", params),
       create_link("root", "/stac/api/v1/")
@@ -284,16 +284,6 @@ defmodule StacApiWeb.LinkResolver do
     "#{scheme}://#{conn.host}#{port}"
   end
 
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {int, ""} -> int
-      _ -> 0
-    end
-  end
-
-  defp parse_int(int) when is_integer(int), do: int
-  defp parse_int(_), do: 0
-
   defp build_query_string(params) do
     params
     |> Enum.reject(fn
@@ -309,7 +299,7 @@ defmodule StacApiWeb.LinkResolver do
   end
 
   # Scalars and lists of scalars keep their GET form; nested values (eg. a
-  # GeoJSON geometry or a list of sortby objects) are sent as JSON.
+  # GeoJSON geometry or a nested query object) are sent as JSON.
   defp query_value(list) when is_list(list) do
     if Enum.all?(list, &scalar?/1), do: Enum.join(list, ","), else: Jason.encode!(list)
   end
