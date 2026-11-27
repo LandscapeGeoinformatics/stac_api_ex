@@ -193,13 +193,20 @@ defmodule StacApiWeb.ApiDocs do
     query(
       "limit",
       "integer",
-      "Page size. Default #{default}, values above #{max} are capped.",
+      "Page size. Default #{default}, values above #{max} are capped. Below 1 or not an integer " <>
+        "returns 400.",
       example: "5"
     )
   end
 
-  defp offset_param,
-    do: query("offset", "integer", "Number of results to skip (default 0).", example: "0")
+  defp offset_param do
+    query(
+      "offset",
+      "integer",
+      "Number of results to skip (default 0). Negative or not an integer returns 400.",
+      example: "0"
+    )
+  end
 
   defp fields_param do
     query(
@@ -373,14 +380,14 @@ defmodule StacApiWeb.ApiDocs do
           ),
           fields_param(),
           sortby_param(),
-          limit_param(10, 10_000),
+          limit_param(10, 100),
           offset_param()
         ],
         request_body: nil,
         example_query: "datetime=2020-01-01T00:00:00Z/2021-12-31T23:59:59Z&limit=2",
         responses: [
           ok(@geojson, "Item collection", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, fields, or sortby parameter"),
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter"),
           err(404, "Collection not found")
         ]
       },
@@ -413,7 +420,7 @@ defmodule StacApiWeb.ApiDocs do
           "collections=estonia-sentinel2-ndvi&datetime=2020-04-01T00:00:00Z/2020-10-31T23:59:59Z&limit=5",
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, fields, sortby, or limit parameter")
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter")
         ]
       },
       %{
@@ -431,7 +438,7 @@ defmodule StacApiWeb.ApiDocs do
         request_body: search_body(),
         responses: [
           ok(@geojson, "Matching items", "ItemCollection"),
-          err(400, "Invalid datetime, bbox, fields, sortby, or limit parameter")
+          err(400, "Invalid datetime, bbox, fields, sortby, limit, or offset parameter")
         ]
       },
       %{

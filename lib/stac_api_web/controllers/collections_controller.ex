@@ -114,9 +114,6 @@ defmodule StacApiWeb.CollectionsController do
     try do
       authenticated = conn.assigns[:authenticated] || false
 
-      limit = parse_int(params["limit"] || "10") |> max(1) |> min(10_000)
-      offset = parse_int(params["offset"] || "0") |> max(0)
-
       with {:ok, filters} <- StacApi.Data.ItemFilters.parse(params),
            {:ok, fields} <- ItemFields.parse(params, :get),
            {:ok, listing} <- ItemListing.parse(params) do
@@ -157,12 +154,8 @@ defmodule StacApiWeb.CollectionsController do
               base_query = StacApi.Data.ItemFilters.apply(base_query, filters)
               total_count = Repo.aggregate(base_query, :count, :id)
 
-              items =
-                base_query
-                |> ItemListing.apply(listing)
-                |> limit(^limit)
-                |> offset(^offset)
-                |> Repo.all()
+              items = base_query |> ItemListing.apply(listing) |> Repo.all()
+              %{limit: limit, offset: offset} = listing
 
               sanitized_items =
                 Enum.map(items, fn item ->
@@ -354,16 +347,6 @@ defmodule StacApiWeb.CollectionsController do
     |> maybe_put_collection_field(:keywords, Map.get(collection, :keywords))
     |> maybe_put_collection_field(:providers, Map.get(collection, :providers))
   end
-
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {num, _} -> num
-      :error -> 0
-    end
-  end
-
-  defp parse_int(num) when is_integer(num), do: num
-  defp parse_int(_), do: 0
 
   defp maybe_put_collection_field(map, _key, nil), do: map
   defp maybe_put_collection_field(map, _key, []), do: map

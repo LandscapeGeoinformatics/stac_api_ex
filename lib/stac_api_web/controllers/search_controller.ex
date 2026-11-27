@@ -22,9 +22,8 @@ defmodule StacApiWeb.SearchController do
 
     with {:ok, filters} <- ItemFilters.parse(search_params),
          {:ok, fields} <- ItemFields.parse(search_params, kind),
-         {:ok, listing} <- ItemListing.parse(search_params),
-         {:ok, limit} <- Search.effective_limit(search_params) do
-      run_search(conn, kind, search_params, authenticated, filters, fields, listing, limit)
+         {:ok, listing} <- ItemListing.parse(search_params) do
+      run_search(conn, kind, search_params, authenticated, filters, fields, listing)
     else
       {:error, parameter, reason} ->
         conn
@@ -35,7 +34,7 @@ defmodule StacApiWeb.SearchController do
 
   # Both API paths pass the same parsed filters to Search, preventing silent
   # fallbacks to an unfiltered result set.
-  defp run_search(conn, kind, search_params, authenticated, filters, fields, listing, limit) do
+  defp run_search(conn, kind, search_params, authenticated, filters, fields, listing) do
     items =
       Search.search(search_params, authenticated, filters, listing)
       |> Enum.map(&ensure_item_struct/1)
@@ -67,11 +66,11 @@ defmodule StacApiWeb.SearchController do
       "features" => features,
       "numberMatched" => total_count,
       "numberReturned" => length(features),
-      "links" => LinkResolver.create_search_links(kind, link_params, limit, total_count),
+      "links" => LinkResolver.create_search_links(kind, link_params, listing, total_count),
       "context" => %{
         "returned" => length(features),
         "matched" => total_count,
-        "limit" => limit
+        "limit" => listing.limit
       }
     }
 
