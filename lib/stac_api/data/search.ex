@@ -5,20 +5,29 @@ defmodule StacApi.Data.Search do
 
   import Ecto.Query
   alias StacApi.Repo
-  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog, ItemFilters}
+  alias StacApi.Data.{Item, Collection, ItemAsset, Catalog, ItemFilters, ItemListing}
   alias StacApiWeb.{DynamicLinkGenerator, LinkResolver}
 
   def search(params \\ %{}, authenticated \\ false) do
+    # The API answers an invalid sortby with 400 before searching; other
+    # callers get the default order.
+    listing =
+      case ItemListing.parse(params) do
+        {:ok, listing} -> listing
+        {:error, _, _} -> ItemListing.default()
+      end
+
     case ItemFilters.parse(params) do
-      {:ok, filters} -> search(params, authenticated, filters)
+      {:ok, filters} -> search(params, authenticated, filters, listing)
       {:error, _, _} -> []
     end
   end
 
-  def search(params, authenticated, filters) do
+  def search(params, authenticated, filters, listing) do
     query =
       Item
       |> build_search_query(params, authenticated, filters)
+      |> ItemListing.apply(listing)
       |> apply_pagination(params)
 
     # Geometry is loaded like everywhere else (a Geo struct at full precision),
@@ -90,7 +99,6 @@ defmodule StacApi.Data.Search do
     |> ItemFilters.apply(filters)
     |> filter_by_ids(params[:ids] || params["ids"])
     |> filter_by_intersects(params[:intersects] || params["intersects"])
-    |> order_by([i], desc: i.datetime)
   end
 
   defp filter_by_private_catalogs(query, true), do: query

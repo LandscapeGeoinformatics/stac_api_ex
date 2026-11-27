@@ -180,7 +180,8 @@ defmodule StacApiWeb.SearchPaginationLinksTest do
 
     query = next_link["href"] |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
     assert Jason.decode!(query["query"]) == %{"description" => %{"eq" => "x"}}
-    assert Jason.decode!(query["sortby"]) == [%{"field" => "id", "direction" => "asc"}]
+    # sortby is a known parameter (Sort extension), so it goes back in its GET form.
+    assert query["sortby"] == "id"
 
     assert build_conn() |> get(next_link["href"]) |> json_response(200)
   end

@@ -1,6 +1,6 @@
 defmodule StacApiWeb.SearchController do
   use StacApiWeb, :controller
-  alias StacApi.Data.{Item, ItemFields, ItemFilters, Search}
+  alias StacApi.Data.{Item, ItemFields, ItemFilters, ItemListing, Search}
   alias StacApiWeb.LinkResolver
 
   def index(conn, params) do
@@ -22,8 +22,9 @@ defmodule StacApiWeb.SearchController do
 
     with {:ok, filters} <- ItemFilters.parse(search_params),
          {:ok, fields} <- ItemFields.parse(search_params, kind),
+         {:ok, listing} <- ItemListing.parse(search_params),
          {:ok, limit} <- Search.effective_limit(search_params) do
-      run_search(conn, kind, search_params, authenticated, filters, fields, limit)
+      run_search(conn, kind, search_params, authenticated, filters, fields, listing, limit)
     else
       {:error, parameter, reason} ->
         conn
@@ -34,9 +35,9 @@ defmodule StacApiWeb.SearchController do
 
   # Both API paths pass the same parsed filters to Search, preventing silent
   # fallbacks to an unfiltered result set.
-  defp run_search(conn, kind, search_params, authenticated, filters, fields, limit) do
+  defp run_search(conn, kind, search_params, authenticated, filters, fields, listing, limit) do
     items =
-      Search.search(search_params, authenticated, filters)
+      Search.search(search_params, authenticated, filters, listing)
       |> Enum.map(&ensure_item_struct/1)
 
     total_count = Search.count_search_results(search_params, authenticated, filters)
@@ -49,11 +50,16 @@ defmodule StacApiWeb.SearchController do
       end)
 
     # POST links repeat the request body as it was sent; only GET links need
-    # the comma-separated form of fields.
+    # the comma-separated form of fields and sortby.
     link_params =
       case kind do
-        :post -> search_params
-        :get -> ItemFields.pagination_params(search_params, fields)
+        :post ->
+          search_params
+
+        :get ->
+          search_params
+          |> ItemFields.pagination_params(fields)
+          |> ItemListing.pagination_params(listing)
       end
 
     response = %{

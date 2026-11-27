@@ -309,7 +309,7 @@ defmodule StacApiWeb.LinkResolver do
   end
 
   # Scalars and lists of scalars keep their GET form; nested values (eg. a
-  # GeoJSON geometry or a list of sortby objects) are sent as JSON.
+  # GeoJSON geometry or a nested query object) are sent as JSON.
   defp query_value(list) when is_list(list) do
     if Enum.all?(list, &scalar?/1), do: Enum.join(list, ","), else: Jason.encode!(list)
   end
